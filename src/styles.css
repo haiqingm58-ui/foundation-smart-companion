@@ -331,7 +331,7 @@ button {
   position: relative;
   display: grid;
   min-height: 292px;
-  grid-template-columns: minmax(380px, 0.95fr) minmax(330px, 0.85fr);
+  grid-template-columns: minmax(390px, 0.95fr) minmax(370px, 0.95fr);
   overflow: hidden;
   border: 1px solid #d8e4f2;
   border-radius: 8px;
@@ -383,6 +383,7 @@ button {
   display: grid;
   width: 74px;
   height: 74px;
+  flex: 0 0 74px;
   place-items: center;
   border-radius: 50%;
   background:
@@ -394,9 +395,10 @@ button {
 }
 
 .metric {
-  min-width: 112px;
+  min-width: 96px;
+  flex: 0 0 auto;
   border-left: 1px solid var(--line);
-  padding-left: 22px;
+  padding-left: 18px;
 }
 
 .metric span {
@@ -420,8 +422,13 @@ button {
 
 .heroActions {
   display: flex;
-  gap: 14px;
+  gap: 10px;
   flex-wrap: wrap;
+}
+
+.heroActions .primaryButton,
+.heroActions .ghostButton {
+  padding: 0 16px;
 }
 
 .primaryButton,
@@ -458,15 +465,16 @@ button {
 }
 
 .heroImage {
-  width: 100%;
+  width: 112%;
   height: 100%;
   min-height: 292px;
   object-fit: contain;
-  object-position: center;
+  object-position: center right;
   background:
     linear-gradient(90deg, rgba(255, 255, 255, 0.1), rgba(247, 250, 254, 0.72)),
     #fbfdff;
-  padding: 10px 12px;
+  margin-left: -12%;
+  padding: 4px 8px 4px 0;
 }
 
 .moduleGrid {

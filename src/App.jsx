@@ -25,7 +25,7 @@ import {
   Trophy,
   UserRound,
 } from "lucide-react";
-import foundationSection from "./assets/foundation-section.png";
+import foundationSection from "./assets/foundation-section-compact.png";
 
 const navItems = [
   { id: "overview", label: "课程总览", icon: LayoutDashboard },
