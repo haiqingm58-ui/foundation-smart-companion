@@ -47,6 +47,28 @@ const navItems = [
   { id: "admin", label: "后台管理", icon: Settings },
 ];
 
+const defaultCourseManifest = {
+  courseId: "foundation-engineering",
+  title: "基础工程",
+  platformTitle: "《基础工程》智慧学伴",
+  totalChapters: 7,
+  currentChapterId: "chapter-03",
+  progress: {
+    completedChapters: 3,
+    averageScore: 82,
+  },
+  chapters: [
+    { id: "chapter-01", number: 1, title: "绪论", slug: "introduction" },
+    { id: "chapter-02", number: 2, title: "浅基础", slug: "shallow-foundation" },
+    { id: "chapter-03", number: 3, title: "桩基础", slug: "pile-foundation" },
+    { id: "chapter-04", number: 4, title: "沉井基础", slug: "open-caisson-foundation" },
+    { id: "chapter-05", number: 5, title: "基坑工程", slug: "excavation-engineering" },
+    { id: "chapter-06", number: 6, title: "地基处理", slug: "ground-treatment" },
+    { id: "chapter-07", number: 7, title: "区域性地基", slug: "regional-ground" },
+  ],
+  preKnowledge: ["土的物理性质", "地基中的应力计算", "地基变形计算", "土的抗剪强度", "地基承载力"],
+};
+
 const moduleCards = [
   {
     id: "textbook",
@@ -54,7 +76,6 @@ const moduleCards = [
     icon: BookOpen,
     tone: "blue",
     desc: "按章节浏览导读、公式、图表解释",
-    meta: "当前：桩基础专题",
     action: "进入教材",
   },
   {
@@ -63,7 +84,6 @@ const moduleCards = [
     icon: Network,
     tone: "green",
     desc: "查看章节、知识点、案例、资料关系",
-    meta: "286 个知识点",
     action: "打开图谱",
   },
   {
@@ -72,7 +92,6 @@ const moduleCards = [
     icon: Bot,
     tone: "purple",
     desc: "教材问答、规范问答、学习辅导",
-    meta: "支持引用来源",
     action: "开始提问",
   },
   {
@@ -81,7 +100,6 @@ const moduleCards = [
     icon: BriefcaseBusiness,
     tone: "orange",
     desc: "地基失稳、沉降、桩基、基坑案例",
-    meta: "52 个案例",
     action: "查看案例",
   },
   {
@@ -90,7 +108,6 @@ const moduleCards = [
     icon: LibraryBig,
     tone: "teal",
     desc: "规范、参考教材、课程资料与附件",
-    meta: "GB 50007、JGJ 94、参考教材",
     action: "查看资料",
   },
   {
@@ -99,7 +116,6 @@ const moduleCards = [
     icon: PenLine,
     tone: "amber",
     desc: "章节练习、错题、智能评分",
-    meta: "79 道教材题",
     action: "进入练习",
   },
 ];
@@ -125,22 +141,9 @@ const rankInfo = {
   tip: "学习状态很稳，补齐薄弱点就能冲白金。",
 };
 
-const chapters = [
-  "绪论",
-  "土的物理性质",
-  "地基中的应力计算",
-  "地基变形计算",
-  "土的抗剪强度",
-  "地基承载力",
-  "浅基础",
-  "桩基础",
-  "地基处理",
-  "基坑工程",
-];
-
 const chapterStudyContent = {
   绪论: {
-    label: "学习专题 01",
+    label: "第1章",
     intro: "本专题先建立地基、基础、上部结构共同工作的设计视角，理解承载力、变形和稳定三类控制目标。",
     formulaName: "地基基础设计控制",
     formula: "pk <= fa，s <= [s]",
@@ -200,7 +203,7 @@ const chapterStudyContent = {
     caseText: "可关联承载力不足或软弱下卧层案例，比较修正前后验算结果。",
   },
   浅基础: {
-    label: "学习专题 07",
+    label: "第2章",
     intro: "本专题学习独立基础、条形基础、筏形基础等浅基础形式，重点掌握基底压力和基础尺寸确定。",
     formulaName: "基底平均压力验算",
     formula: "pk = (Fk + Gk) / A <= fa",
@@ -210,7 +213,7 @@ const chapterStudyContent = {
     caseText: "可关联浅基础尺寸初选案例，比较独立基础和筏形基础的适用条件。",
   },
   桩基础: {
-    label: "学习专题 08",
+    label: "第3章",
     intro: "本专题重点包括桩基础类型、单桩竖向承载力、桩侧阻力与桩端阻力、群桩效应和桩基沉降计算。",
     formulaName: "单桩竖向承载力",
     formula: "Ra = u Σ qsi li + Ap qpa",
@@ -219,8 +222,18 @@ const chapterStudyContent = {
     diagram: "图表重点应展示桩侧阻力、桩端阻力、持力层和荷载传递路径。",
     caseText: "可关联钻孔灌注桩、高层建筑桩基和负摩阻力案例。",
   },
+  沉井基础: {
+    label: "第4章",
+    intro: "本章关注沉井基础的构造、下沉施工、刃脚受力、封底和沉井稳定验算，适合与桥梁、水工和深基础施工场景结合学习。",
+    formulaName: "沉井下沉验算",
+    formula: "G - Ff - Rb > 0",
+    derivation:
+      "沉井能否顺利下沉，取决于自重 G 是否足以克服井壁侧面摩阻力 Ff 和刃脚、底部阻力 Rb。若剩余下沉力不足，需要采取加载、减阻或调整施工工艺等措施。",
+    diagram: "图表重点应展示沉井井壁、刃脚、土层摩阻力和下沉力之间的关系。",
+    caseText: "可关联桥梁沉井基础或地下构筑物施工案例，分析下沉偏斜、突沉和封底控制。",
+  },
   地基处理: {
-    label: "学习专题 09",
+    label: "第6章",
     intro: "本专题比较换填、强夯、排水固结、复合地基等处理方法，关注处理前后承载力和变形改善。",
     formulaName: "复合地基承载力",
     formula: "fspk = m fp + β(1 - m) fsk",
@@ -230,7 +243,7 @@ const chapterStudyContent = {
     caseText: "可关联 CFG 桩或软弱地基处理方案，比较处理前后指标变化。",
   },
   基坑工程: {
-    label: "学习专题 10",
+    label: "第5章",
     intro: "本专题关注支护结构、土压力、降水和基坑稳定，理解施工过程对周边环境的影响。",
     formulaName: "主动土压力合力",
     formula: "Ea = 1/2 Ka γ H²",
@@ -238,6 +251,16 @@ const chapterStudyContent = {
       "当墙后填土达到主动极限平衡状态时，水平土压力沿深度近似线性增大，底部压力为 KaγH。三角形压力图的面积即主动土压力合力，因此 Ea = 1/2 KaγH²。",
     diagram: "图表重点应展示土压力三角形分布、支护结构受力和开挖深度 H。",
     caseText: "可关联基坑变形、支护失稳和降水引起周边沉降案例。",
+  },
+  区域性地基: {
+    label: "第7章",
+    intro: "本章关注湿陷性黄土、膨胀土、盐渍土、冻土和山区地基等区域性工程问题，重点是识别特殊土性并选择相应处理措施。",
+    formulaName: "自由膨胀率",
+    formula: "δef = (V - V0) / V0 × 100%",
+    derivation:
+      "膨胀土自由膨胀率由膨胀稳定后的体积 V 与原始体积 V0 的相对增量计算。该指标用于判断膨胀潜势，并为地基处理和基础设计提供依据。",
+    diagram: "图表重点应展示特殊土分布、变形机理和工程处置路径。",
+    caseText: "可关联湿陷性黄土或膨胀土地基案例，比较不同区域性地基的识别指标。",
   },
 };
 
@@ -322,6 +345,58 @@ function useJsonAsset(path, fallback) {
   }, [path]);
 
   return data;
+}
+
+function courseChapters(courseManifest) {
+  return courseManifest?.chapters?.length ? courseManifest.chapters : defaultCourseManifest.chapters;
+}
+
+function chapterTitles(courseManifest) {
+  return courseChapters(courseManifest).map((chapter) => chapter.title);
+}
+
+function currentCourseChapter(courseManifest) {
+  const chapters = courseChapters(courseManifest);
+  return chapters.find((chapter) => chapter.id === courseManifest?.currentChapterId) ?? chapters[0];
+}
+
+function chapterNumberLabel(courseManifest, title) {
+  const chapter = courseChapters(courseManifest).find((item) => item.title === title);
+  return chapter ? `第${chapter.number}章` : "前置知识";
+}
+
+function progressPercent(courseManifest) {
+  const total = courseManifest?.totalChapters ?? courseChapters(courseManifest).length;
+  const completed = courseManifest?.progress?.completedChapters ?? 0;
+  if (!total) {
+    return 0;
+  }
+  return Math.round((completed / total) * 100);
+}
+
+function moduleMeta(cardId, { courseManifest, graphSummary, exerciseBank }) {
+  const totalChapters = courseManifest?.totalChapters ?? courseChapters(courseManifest).length;
+  const currentChapter = currentCourseChapter(courseManifest);
+  const exerciseTotal = exerciseBank?.summary?.total ?? exerciseBank?.exercises?.length ?? 0;
+  const resourceCount = resources.length;
+  const caseCount = caseItems.length;
+
+  switch (cardId) {
+    case "textbook":
+      return `${totalChapters} 章教材 · 当前：第${currentChapter.number}章 ${currentChapter.title}`;
+    case "graph":
+      return graphSummary ? `完整 ${graphSummary.graph_nodes} 节点 · 当前演示 19 节点` : "完整知识库 + 当前演示子图";
+    case "qa":
+      return graphSummary ? `${graphSummary.chunks} 个教材切块` : "支持引用来源";
+    case "cases":
+      return `${caseCount} 个示例案例`;
+    case "resources":
+      return `${resourceCount} 条关联资料`;
+    case "practice":
+      return `${exerciseTotal || 79} 道教材题`;
+    default:
+      return "";
+  }
 }
 
 function keywordTerms(text) {
@@ -973,7 +1048,13 @@ function Metric({ label, value, suffix }) {
   );
 }
 
-function Hero({ onNavigate }) {
+function Hero({ onNavigate, courseManifest }) {
+  const currentChapter = currentCourseChapter(courseManifest);
+  const completedChapters = courseManifest?.progress?.completedChapters ?? 0;
+  const totalChapters = courseManifest?.totalChapters ?? courseChapters(courseManifest).length;
+  const percent = progressPercent(courseManifest);
+  const averageScore = courseManifest?.progress?.averageScore ?? rankInfo.score;
+
   return (
     <section className="heroPanel">
       <div className="heroCopy">
@@ -981,16 +1062,16 @@ function Hero({ onNavigate }) {
         <h1>课程总览</h1>
         <p className="heroText">系统学习地基基础知识，掌握工程分析与设计方法。</p>
         <div className="heroStats">
-          <div className="progressRing" aria-label="学习进度 25%">
-            <span>25%</span>
+          <div className="progressRing" style={{ "--progress": `${percent}%` }} aria-label={`学习进度 ${percent}%`}>
+            <span>{percent}%</span>
           </div>
-          <Metric label="已完成" value="3" suffix=" / 12 章" />
-          <Metric label="平均分" value="82" suffix=" 分" />
+          <Metric label="已完成" value={completedChapters} suffix={` / ${totalChapters} 章`} />
+          <Metric label="平均分" value={averageScore} suffix=" 分" />
         </div>
         <div className="heroActions">
-          <button className="primaryButton" type="button" onClick={() => onNavigate("textbook", { chapter: "桩基础" })}>
+          <button className="primaryButton" type="button" onClick={() => onNavigate("textbook", { chapter: currentChapter.title })}>
             <Play size={17} fill="currentColor" />
-            继续学习桩基础
+            继续学习{currentChapter.title}
           </button>
           <button className="ghostButton" type="button" onClick={() => onNavigate("report")}>
             <Clock3 size={18} />
@@ -1023,7 +1104,10 @@ function ModuleCard({ card, onNavigate }) {
   );
 }
 
-function WeakPanel({ onNavigate }) {
+function WeakPanel({ onNavigate, courseManifest }) {
+  const currentChapter = currentCourseChapter(courseManifest);
+  const quickChapters = courseChapters(courseManifest);
+
   return (
     <aside className="sideStack" aria-label="薄弱环节">
       <section className="weakPanel">
@@ -1048,7 +1132,7 @@ function WeakPanel({ onNavigate }) {
           ))}
         </div>
         <div className="weakActions panelActions">
-          <button type="button" onClick={() => onNavigate("textbook")}>
+          <button type="button" onClick={() => onNavigate("textbook", { chapter: currentChapter.title })}>
             专项复习
           </button>
           <button type="button" onClick={() => onNavigate("practice")}>
@@ -1068,14 +1152,14 @@ function WeakPanel({ onNavigate }) {
           </div>
         </div>
         <div className="chapterGrid">
-          {["绪论", "土的物理性质", "地基承载力", "浅基础", "桩基础", "地基处理", "基坑工程"].map((chapter) => (
+          {quickChapters.map((chapter) => (
             <button
-              className={cx("chapterChip", chapter === "桩基础" && "current")}
+              className={cx("chapterChip", chapter.id === currentChapter.id && "current")}
               type="button"
-              key={chapter}
-              onClick={() => onNavigate("textbook", { chapter })}
+              key={chapter.id}
+              onClick={() => onNavigate("textbook", { chapter: chapter.title })}
             >
-              {chapter}
+              {chapter.title}
             </button>
           ))}
         </div>
@@ -1084,25 +1168,35 @@ function WeakPanel({ onNavigate }) {
   );
 }
 
-function Overview({ onNavigate }) {
+function Overview({ onNavigate, courseManifest }) {
+  const graphSummary = useJsonAsset("/knowledge/build_summary.json", null);
+  const exerciseBank = useJsonAsset("/knowledge/exercises.json", { summary: null, exercises: [] });
+  const cards = moduleCards.map((card) => ({
+    ...card,
+    meta: moduleMeta(card.id, { courseManifest, graphSummary, exerciseBank }),
+  }));
+
   return (
     <div className="overviewLayout">
       <div className="mainStack">
-        <Hero onNavigate={onNavigate} />
+        <Hero onNavigate={onNavigate} courseManifest={courseManifest} />
         <section className="moduleGrid" aria-label="平台模块入口">
-          {moduleCards.map((card) => (
+          {cards.map((card) => (
             <ModuleCard card={card} key={card.id} onNavigate={onNavigate} />
           ))}
         </section>
       </div>
-      <WeakPanel onNavigate={onNavigate} />
+      <WeakPanel onNavigate={onNavigate} courseManifest={courseManifest} />
     </div>
   );
 }
 
-function TextbookPage({ onNavigate, initialChapter }) {
+function TextbookPage({ onNavigate, initialChapter, courseManifest }) {
   const tabs = ["章节导读", "重点公式", "图表解释", "案例关联", "章节练习"];
-  const [activeChapter, setActiveChapter] = useState(initialChapter);
+  const courseChapterTitles = chapterTitles(courseManifest);
+  const manifestChapter = currentCourseChapter(courseManifest);
+  const initialTitle = courseChapterTitles.includes(initialChapter) ? initialChapter : manifestChapter.title;
+  const [activeChapter, setActiveChapter] = useState(initialTitle);
   const [activeTab, setActiveTab] = useState("重点公式");
   const [showDerivation, setShowDerivation] = useState(false);
   const activeContent = chapterStudyContent[activeChapter] ?? chapterStudyContent.桩基础;
@@ -1115,8 +1209,9 @@ function TextbookPage({ onNavigate, initialChapter }) {
   };
 
   useEffect(() => {
-    setActiveChapter(initialChapter);
-  }, [initialChapter]);
+    const nextChapter = courseChapterTitles.includes(initialChapter) ? initialChapter : manifestChapter.title;
+    setActiveChapter(nextChapter);
+  }, [courseChapterTitles.join("|"), initialChapter, manifestChapter.title]);
 
   useEffect(() => {
     setShowDerivation(false);
@@ -1131,14 +1226,16 @@ function TextbookPage({ onNavigate, initialChapter }) {
       />
       <div className="studyLayout">
         <aside className="chapterList">
-          {chapters.map((chapter) => (
+          {courseChapters(courseManifest).map((chapter) => (
             <button
               type="button"
-              className={cx(activeChapter === chapter && "selected")}
-              key={chapter}
-              onClick={() => setActiveChapter(chapter)}
+              aria-label={`第${chapter.number}章 ${chapter.title}`}
+              className={cx(activeChapter === chapter.title && "selected")}
+              key={chapter.id}
+              onClick={() => setActiveChapter(chapter.title)}
             >
-              {chapter}
+              <span>{chapter.number}</span>
+              {chapter.title}
             </button>
           ))}
         </aside>
@@ -1151,7 +1248,7 @@ function TextbookPage({ onNavigate, initialChapter }) {
             ))}
           </div>
           <article className="readingContent">
-            <p className="eyebrow">{activeContent.label}</p>
+            <p className="eyebrow">{chapterNumberLabel(courseManifest, activeChapter)}</p>
             <h2>{activeChapter}</h2>
             <p>{activeContent.intro} 学习时建议把公式、土层条件和工程案例放在一起理解。</p>
             <div className="learningHint">
@@ -1181,12 +1278,12 @@ function TextbookPage({ onNavigate, initialChapter }) {
         </div>
         <aside className="resourceRail">
           <h3>关联资料</h3>
-          <p>JGJ 94 与 GB 50007 可辅助理解本章设计要求。</p>
+          <p>{activeContent.caseText}</p>
           <button type="button" onClick={() => onNavigate("resources")}>
             查看资料
           </button>
           <h3>相关案例</h3>
-          <p>某高层建筑钻孔灌注桩基础设计案例。</p>
+          <p>{activeContent.diagram}</p>
           <button type="button" onClick={() => onNavigate("cases")}>
             查看案例
           </button>
@@ -1365,13 +1462,13 @@ function GraphPage() {
 
   return (
     <section className="pagePanel">
-      <PageHeader label="知识图谱" title="教材知识图谱工作台" desc="从 Markdown 教材自动抽取章节、概念、公式、表格、图片和原文切块关系。" />
+      <PageHeader label="知识图谱" title="教材知识图谱工作台" desc="完整知识库来自教材抽取，当前画布展示可交互演示子图。" />
       {summary && (
         <div className="knowledgeStats" aria-label="知识库统计">
-          <Metric label="图谱节点" value={summary.graph_nodes} />
-          <Metric label="图谱关系" value={summary.graph_edges} />
+          <Metric label="完整节点" value={summary.graph_nodes} />
+          <Metric label="完整关系" value={summary.graph_edges} />
+          <Metric label="当前子图" value={`${graph.nodes.length}/${graph.edges.length}`} />
           <Metric label="教材切块" value={summary.chunks} />
-          <Metric label="公式/表格" value={`${summary.formulas}/${summary.tables}`} />
         </div>
       )}
       <div className="graphWorkbench">
@@ -1931,7 +2028,12 @@ function PracticePage({ initialChapter }) {
   );
 }
 
-function ReportPage() {
+function ReportPage({ courseManifest }) {
+  const reportValues = courseChapters(courseManifest).map((chapter, index) => {
+    const demoValues = [88, 80, 65, 72, 70, 76, 68];
+    return [chapter.title, demoValues[index] ?? 70];
+  });
+
   return (
     <section className="pagePanel">
       <PageHeader label="学习报告" title="学习画像" desc="根据章节学习和练习结果生成复习建议。" />
@@ -1944,14 +2046,7 @@ function ReportPage() {
         </div>
       </div>
       <div className="reportGrid">
-        {[
-          ["土的性质", 85],
-          ["应力计算", 70],
-          ["沉降计算", 62],
-          ["承载力", 58],
-          ["浅基础", 80],
-          ["桩基础", 65],
-        ].map(([name, value]) => (
+        {reportValues.map(([name, value]) => (
           <div className="abilityRow" key={name}>
             <span>{name}</span>
             <div>
@@ -1997,10 +2092,10 @@ function PageHeader({ label, title, desc }) {
   );
 }
 
-function Page({ active, onNavigate, activeChapter }) {
+function Page({ active, onNavigate, activeChapter, courseManifest }) {
   switch (active) {
     case "textbook":
-      return <TextbookPage onNavigate={onNavigate} initialChapter={activeChapter} />;
+      return <TextbookPage onNavigate={onNavigate} initialChapter={activeChapter} courseManifest={courseManifest} />;
     case "graph":
       return <GraphPage />;
     case "qa":
@@ -2012,18 +2107,19 @@ function Page({ active, onNavigate, activeChapter }) {
     case "practice":
       return <PracticePage initialChapter={activeChapter} />;
     case "report":
-      return <ReportPage />;
+      return <ReportPage courseManifest={courseManifest} />;
     case "admin":
       return <AdminPage />;
     default:
-      return <Overview onNavigate={onNavigate} />;
+      return <Overview onNavigate={onNavigate} courseManifest={courseManifest} />;
   }
 }
 
 export function App() {
+  const courseManifest = useJsonAsset("/course-manifest.json", defaultCourseManifest);
   const [active, setActive] = useState("overview");
   const [query, setQuery] = useState("");
-  const [activeChapter, setActiveChapter] = useState("桩基础");
+  const [activeChapter, setActiveChapter] = useState(currentCourseChapter(defaultCourseManifest).title);
   const activeLabel = useMemo(() => navItems.find((item) => item.id === active)?.label ?? "课程总览", [active]);
 
   function handleNavigate(page, options = {}) {
@@ -2046,7 +2142,7 @@ export function App() {
               正在展示与“{query.trim()}”相关的课程内容入口。
             </div>
           )}
-          <Page active={active} onNavigate={handleNavigate} activeChapter={activeChapter} />
+          <Page active={active} onNavigate={handleNavigate} activeChapter={activeChapter} courseManifest={courseManifest} />
         </main>
       </div>
     </div>

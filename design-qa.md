@@ -31,6 +31,23 @@ final result: passed
 
 ---
 
+course manifest qa path: local browser at http://127.0.0.1:5173/
+state: 修复教材章节体系不统一问题，新增 `public/course-manifest.json` 作为课程章节唯一数据源。
+
+**Verification**
+- Data QA: `course-manifest.json`、`public/knowledge/exercises.json` 和 `public/knowledge/build_summary.json` 均为 7 章，章节标题完全一致。
+- Browser QA: 首页显示 `3 / 7 章` 和 `43%`，模块卡片显示 `7 章教材`、`3 个示例案例`、`4 条关联资料`、`79 道教材题`。
+- Browser QA: 首页章节快捷入口只显示 7 个教材章节：绪论、浅基础、桩基础、沉井基础、基坑工程、地基处理、区域性地基。
+- Browser QA: 教材学习页只显示 7 个教材章节，并补上沉井基础、区域性地基。
+- Browser QA: 沉井基础显示“第4章”“沉井下沉验算”；区域性地基显示“第7章”“自由膨胀率”。
+- Browser QA: 从第7章章节练习进入练习中心后，题库自动筛选到“第7章 区域性地基”，显示 9 道题。
+- Browser QA: 知识图谱统计分开显示完整知识库 `9595/20697` 和当前演示子图 `19/17`。
+- Build: `npm run build` passed.
+
+final result: passed
+
+---
+
 textbook formula qa path: local browser at http://127.0.0.1:5173/
 state: 教材学习页修复章节公式硬编码问题，公式、推导、导读说明按当前章节切换。
 

@@ -451,7 +451,7 @@ button {
   border-radius: 50%;
   background:
     radial-gradient(circle at center, #fff 58%, transparent 60%),
-    conic-gradient(var(--blue) 0 25%, #dfe8f4 25% 100%);
+    conic-gradient(var(--blue) 0 var(--progress, 0%), #dfe8f4 var(--progress, 0%) 100%);
   color: #101828;
   font-size: 19px;
   font-weight: 800;
@@ -950,6 +950,9 @@ button {
 }
 
 .chapterList button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   min-height: 39px;
   border-radius: 8px;
   background: transparent;
@@ -959,11 +962,31 @@ button {
   text-align: left;
 }
 
+.chapterList button span {
+  display: inline-flex;
+  width: 24px;
+  height: 24px;
+  flex: 0 0 24px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: #eef2f7;
+  color: #667085;
+  font-size: 12px;
+  font-weight: 800;
+}
+
 .chapterList button:hover,
 .chapterList button.selected {
   background: var(--blue-50);
   color: var(--blue);
   font-weight: 800;
+}
+
+.chapterList button:hover span,
+.chapterList button.selected span {
+  background: #d7e8ff;
+  color: var(--blue);
 }
 
 .readingPane {
