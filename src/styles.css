@@ -239,6 +239,7 @@ button {
 }
 
 .topActions {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 10px;
@@ -262,7 +263,9 @@ button {
 }
 
 .iconButton:hover,
-.userChip:hover {
+.userChip:hover,
+.iconButton.active,
+.userChip.active {
   background: #f1f5fa;
 }
 
@@ -289,6 +292,66 @@ button {
   place-items: center;
   border-radius: 999px;
   background: #e7f0ff;
+  color: var(--blue);
+}
+
+.topPopover {
+  position: absolute;
+  top: calc(100% + 12px);
+  right: 0;
+  z-index: 20;
+  width: min(310px, 82vw);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: white;
+  box-shadow: var(--shadow);
+  padding: 16px;
+}
+
+.topPopover::before {
+  position: absolute;
+  top: -7px;
+  right: 24px;
+  width: 12px;
+  height: 12px;
+  border-top: 1px solid var(--line);
+  border-left: 1px solid var(--line);
+  background: white;
+  content: "";
+  transform: rotate(45deg);
+}
+
+.topPopover strong {
+  display: block;
+  color: var(--ink);
+  font-size: 16px;
+}
+
+.topPopover p {
+  margin: 8px 0 14px;
+  color: #667085;
+  font-size: 13px;
+  line-height: 1.65;
+}
+
+.topPopover button {
+  min-height: 36px;
+  border-radius: 8px;
+  background: var(--blue);
+  color: white;
+  cursor: pointer;
+  padding: 0 12px;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.popoverActions {
+  display: flex;
+  gap: 8px;
+}
+
+.popoverActions button:last-child {
+  background: #eef6ff;
   color: var(--blue);
 }
 
@@ -940,6 +1003,28 @@ button {
   line-height: 1.75;
 }
 
+.learningHint {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 18px 0;
+  border: 1px solid #d7e8ff;
+  border-radius: 8px;
+  background: #f4f9ff;
+  padding: 12px 14px;
+}
+
+.learningHint strong {
+  flex: 0 0 auto;
+  color: var(--blue);
+}
+
+.learningHint span {
+  color: #526174;
+  font-size: 14px;
+  line-height: 1.55;
+}
+
 .formulaBox {
   display: grid;
   grid-template-columns: auto 1fr auto;
@@ -972,7 +1057,8 @@ button {
 .caseCard button,
 .resourceRow button,
 .questionCard button,
-.askBox button {
+.askBox button,
+.inlineActionButton {
   min-height: 38px;
   border-radius: 8px;
   background: var(--blue);
@@ -980,6 +1066,26 @@ button {
   cursor: pointer;
   padding: 0 14px;
   font-weight: 800;
+}
+
+.derivationBox {
+  margin: -4px 0 18px;
+  border: 1px solid #d9eee3;
+  border-radius: 8px;
+  background: #f5fcf8;
+  padding: 14px 16px;
+}
+
+.derivationBox strong {
+  color: var(--green);
+}
+
+.derivationBox p {
+  margin: 6px 0 0;
+}
+
+.inlineActionButton {
+  margin-bottom: 18px;
 }
 
 .contentImage {
@@ -1774,6 +1880,14 @@ button {
   padding: 22px;
 }
 
+.caseCard.active,
+.adminTile.active,
+.resourceRow.active {
+  border-color: #9bc4f5;
+  background: #f6fbff;
+  box-shadow: inset 3px 0 0 var(--blue);
+}
+
 .caseCard span,
 .typePill {
   display: inline-flex;
@@ -1800,6 +1914,49 @@ button {
   color: var(--blue);
 }
 
+.detailPanel {
+  margin-top: 18px;
+  border: 1px solid #d7e8ff;
+  border-radius: 8px;
+  background: #f8fbff;
+  padding: 18px 20px;
+}
+
+.detailPanel.compact {
+  max-width: 880px;
+}
+
+.detailPanel strong {
+  display: block;
+  color: var(--ink);
+  font-size: 18px;
+}
+
+.detailPanel p {
+  margin: 8px 0 0;
+  color: #526174;
+  line-height: 1.65;
+}
+
+.detailTags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 13px;
+}
+
+.detailTags span {
+  display: inline-flex;
+  min-height: 28px;
+  align-items: center;
+  border-radius: 999px;
+  background: white;
+  color: var(--blue);
+  padding: 0 10px;
+  font-size: 12px;
+  font-weight: 800;
+}
+
 .tablePanel {
   overflow: hidden;
 }
@@ -1809,6 +1966,7 @@ button {
   grid-template-columns: 86px minmax(0, 1fr) 160px 88px;
   gap: 16px;
   align-items: center;
+  border: 1px solid transparent;
   min-height: 88px;
   border-bottom: 1px solid var(--soft-line);
   padding: 0 20px;
@@ -1872,6 +2030,11 @@ button {
 
 .scorePanel {
   padding: 24px;
+}
+
+.scorePanel.submitted {
+  border-color: #b7ddc8;
+  background: #f7fcfa;
 }
 
 .scorePanel strong {

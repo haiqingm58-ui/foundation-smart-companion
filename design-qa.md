@@ -31,6 +31,31 @@ final result: passed
 
 ---
 
+interaction qa path: local browser at http://127.0.0.1:5173/
+button coverage: 36 button elements in source, 42 visible click-path assertions in browser
+state: 全平台按钮交互复查，包括顶部快捷按钮、主导航、首页入口、教材 tabs、知识图谱工具、问答检索、案例、资料、练习评分和后台入口。
+
+**Findings**
+- Initial issue: Several buttons had no visible or meaningful action, including header notification/help/user buttons, textbook derivation, QA search, case details, resource viewing, practice scoring, and admin tiles.
+- Initial issue: QA mode switching worked visually through tab styling, but the active mode was not readable in body text, so feedback was too weak.
+
+**Fixes**
+- Header notification/help/user buttons now open contextual popovers with working navigation actions.
+- Textbook tabs switch content; formula derivation expands/collapses; chapter shortcuts can open the selected chapter.
+- QA search button now triggers search explicitly and supports Enter; active QA mode is visible in the notice line.
+- Case and resource view buttons now select the item and reveal a detail panel.
+- Practice submit button now updates the score panel and supports re-scoring.
+- Admin tiles now select a management entry and show its current demo state.
+
+**Verification**
+- Source scan: 36 `<button>` elements, no button missing `onClick` or an intentional disabled state.
+- Browser QA: 42 click-path assertions, 0 failures.
+- Build: `npm run build` passed.
+
+final result: passed
+
+---
+
 source visual reference path: /Users/georisklab02/Documents/教材/foundation-smart-companion/design-shots/graphvis-reference.png
 implementation screenshot path: /Users/georisklab02/Documents/教材/foundation-smart-companion/design-shots/knowledge-graph-workbench-desktop.png
 comparison evidence path: /Users/georisklab02/Documents/教材/foundation-smart-companion/design-shots/graph-qa-comparison.png

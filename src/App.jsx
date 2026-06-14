@@ -661,7 +661,18 @@ function RankPanel({ compact = false }) {
   );
 }
 
-function Header({ query, setQuery }) {
+function Header({ query, setQuery, onNavigate }) {
+  const [openPanel, setOpenPanel] = useState("");
+
+  function togglePanel(panel) {
+    setOpenPanel((current) => (current === panel ? "" : panel));
+  }
+
+  function jumpTo(page) {
+    onNavigate(page);
+    setOpenPanel("");
+  }
+
   return (
     <header className="topbar">
       <label className="searchBox">
@@ -673,20 +684,56 @@ function Header({ query, setQuery }) {
         />
       </label>
       <div className="topActions">
-        <button className="iconButton" type="button" aria-label="通知">
+        <button className={cx("iconButton", openPanel === "notice" && "active")} type="button" aria-label="通知" onClick={() => togglePanel("notice")}>
           <Bell size={20} />
           <span className="dot" />
         </button>
-        <button className="iconButton" type="button" aria-label="帮助">
+        <button className={cx("iconButton", openPanel === "help" && "active")} type="button" aria-label="帮助" onClick={() => togglePanel("help")}>
           <CircleHelp size={20} />
         </button>
-        <button className="userChip" type="button">
+        <button className={cx("userChip", openPanel === "user" && "active")} type="button" onClick={() => togglePanel("user")}>
           <span className="avatar">
             <UserRound size={18} />
           </span>
           <span>张同学</span>
           <ChevronDown size={16} />
         </button>
+        {openPanel && (
+          <div className="topPopover" role="dialog" aria-label="快捷面板">
+            {openPanel === "notice" && (
+              <>
+                <strong>学习提醒</strong>
+                <p>沉降计算和桩侧阻力本周建议复习，已生成 8 道强化题。</p>
+                <button type="button" onClick={() => jumpTo("practice")}>
+                  去练习中心
+                </button>
+              </>
+            )}
+            {openPanel === "help" && (
+              <>
+                <strong>学习助手</strong>
+                <p>可以围绕教材原文、规范条文、章节练习继续提问。</p>
+                <button type="button" onClick={() => jumpTo("qa")}>
+                  打开智能问答
+                </button>
+              </>
+            )}
+            {openPanel === "user" && (
+              <>
+                <strong>张同学</strong>
+                <p>土木工程学院 · 指导老师李老师已绑定</p>
+                <div className="popoverActions">
+                  <button type="button" onClick={() => jumpTo("report")}>
+                    学习报告
+                  </button>
+                  <button type="button" onClick={() => jumpTo("admin")}>
+                    后台管理
+                  </button>
+                </div>
+              </>
+            )}
+          </div>
+        )}
       </div>
     </header>
   );
@@ -719,7 +766,7 @@ function Hero({ onNavigate }) {
           <Metric label="平均分" value="82" suffix=" 分" />
         </div>
         <div className="heroActions">
-          <button className="primaryButton" type="button" onClick={() => onNavigate("textbook")}>
+          <button className="primaryButton" type="button" onClick={() => onNavigate("textbook", { chapter: "桩基础" })}>
             <Play size={17} fill="currentColor" />
             继续学习第八章
           </button>
@@ -804,7 +851,7 @@ function WeakPanel({ onNavigate }) {
               className={cx("chapterChip", chapter === "桩基础" && "current")}
               type="button"
               key={chapter}
-              onClick={() => onNavigate("textbook")}
+              onClick={() => onNavigate("textbook", { chapter })}
             >
               {chapter}
             </button>
@@ -831,8 +878,23 @@ function Overview({ onNavigate }) {
   );
 }
 
-function TextbookPage({ onNavigate }) {
-  const [activeChapter, setActiveChapter] = useState("桩基础");
+function TextbookPage({ onNavigate, initialChapter }) {
+  const tabs = ["章节导读", "重点公式", "图表解释", "案例关联", "章节练习"];
+  const tabCopy = {
+    章节导读: "先把章节目标、核心概念和适用场景串起来，再进入公式和案例。",
+    重点公式: "公式学习重点是适用条件、参数含义和与土层条件的对应关系。",
+    图表解释: "图表用于辅助理解桩基础与土层、持力层和地下水之间的空间关系。",
+    案例关联: "把高层建筑桩基础设计案例与承载力、沉降验算一起复盘。",
+    章节练习: "围绕本章薄弱点生成练习，完成后回到学习报告查看掌握度变化。",
+  };
+  const [activeChapter, setActiveChapter] = useState(initialChapter);
+  const [activeTab, setActiveTab] = useState("重点公式");
+  const [showDerivation, setShowDerivation] = useState(false);
+
+  useEffect(() => {
+    setActiveChapter(initialChapter);
+  }, [initialChapter]);
+
   return (
     <section className="pagePanel">
       <PageHeader
@@ -855,8 +917,8 @@ function TextbookPage({ onNavigate }) {
         </aside>
         <div className="readingPane">
           <div className="tabBar">
-            {["章节导读", "重点公式", "图表解释", "案例关联", "章节练习"].map((tab, index) => (
-              <button className={cx(index === 1 && "active")} type="button" key={tab}>
+            {tabs.map((tab) => (
+              <button className={cx(activeTab === tab && "active")} type="button" key={tab} onClick={() => setActiveTab(tab)}>
                 {tab}
               </button>
             ))}
@@ -868,11 +930,28 @@ function TextbookPage({ onNavigate }) {
               本章重点包括桩基础类型、单桩竖向承载力、桩侧阻力与桩端阻力、群桩效应和桩基沉降计算。
               学习时建议把公式、土层条件和工程案例放在一起理解。
             </p>
+            <div className="learningHint">
+              <strong>{activeTab}</strong>
+              <span>{tabCopy[activeTab]}</span>
+            </div>
             <div className="formulaBox">
               <span>单桩竖向承载力</span>
               <strong>Ra = u Σ qsi li + Ap qpa</strong>
-              <button type="button">展开推导</button>
+              <button type="button" onClick={() => setShowDerivation((value) => !value)}>
+                {showDerivation ? "收起推导" : "展开推导"}
+              </button>
             </div>
+            {showDerivation && (
+              <div className="derivationBox">
+                <strong>推导说明</strong>
+                <p>桩侧阻力按桩周长 u、各土层侧阻力特征值 qsi 与分层厚度 li 累加；桩端阻力按桩端面积 Ap 与端阻力 qpa 计算，两部分共同形成单桩竖向承载力。</p>
+              </div>
+            )}
+            {activeTab === "章节练习" && (
+              <button className="inlineActionButton" type="button" onClick={() => onNavigate("practice")}>
+                进入本章练习
+              </button>
+            )}
             <img className="contentImage" src={foundationSection} alt="桩基础与土层剖面" />
           </article>
         </div>
@@ -1201,17 +1280,26 @@ function GraphPage() {
 function QAPage() {
   const [mode, setMode] = useState("教材问答");
   const [question, setQuestion] = useState("桩侧阻力是如何产生的？影响它的主要因素有哪些？");
+  const [draftQuestion, setDraftQuestion] = useState(question);
+  const [searchCount, setSearchCount] = useState(1);
   const chunks = useJsonAsset("/knowledge/chunks.json", []);
   const modes = ["教材问答", "规范问答", "学习辅导"];
   const results = useMemo(() => searchChunks(chunks, question, 4), [chunks, question]);
   const answer = results[0]?.text ?? "教材索引加载后，会在这里显示最相关的原文依据。";
+
+  function runSearch() {
+    const nextQuestion = draftQuestion.trim() || "桩侧阻力是如何产生的？";
+    setQuestion(nextQuestion);
+    setDraftQuestion(nextQuestion);
+    setSearchCount((count) => count + 1);
+  }
 
   return (
     <section className="pagePanel">
       <PageHeader label="智能问答" title="教材检索问答" desc="已接入《基础工程》Markdown 切块索引，先给出教材原文依据，后续可替换为大模型生成答案。" />
       <div className="teacherNotice">
         <Link2 size={17} />
-        当前检索库来自本书 Markdown：{chunks.length ? `${chunks.length} 个教材块已加载` : "正在加载教材索引"}。
+        当前模式：{mode} · 检索库来自本书 Markdown：{chunks.length ? `${chunks.length} 个教材块已加载` : "正在加载教材索引"}。
       </div>
       <div className="qaShell">
         <div className="segmented">
@@ -1243,8 +1331,19 @@ function QAPage() {
           </div>
         </div>
         <label className="askBox">
-          <input value={question} onChange={(event) => setQuestion(event.target.value)} placeholder={`继续使用${mode}提问…`} />
-          <button type="button">检索</button>
+          <input
+            value={draftQuestion}
+            onChange={(event) => setDraftQuestion(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") {
+                runSearch();
+              }
+            }}
+            placeholder={`继续使用${mode}提问…`}
+          />
+          <button type="button" onClick={runSearch}>
+            检索{searchCount > 1 ? ` ${searchCount - 1}` : ""}
+          </button>
         </label>
       </div>
     </section>
@@ -1252,45 +1351,74 @@ function QAPage() {
 }
 
 function CasesPage() {
+  const [selectedCase, setSelectedCase] = useState(caseItems[0]);
+
   return (
     <section className="pagePanel">
       <PageHeader label="工程案例" title="案例库" desc="把工程问题、教材章节、关联资料和思考题串起来。" />
       <div className="caseGrid">
         {caseItems.map((item) => (
-          <article className="caseCard" key={item.title}>
+          <article className={cx("caseCard", selectedCase.title === item.title && "active")} key={item.title}>
             <span>{item.tag}</span>
             <h3>{item.title}</h3>
             <p>工程背景、问题表现、原因分析、涉及知识点与思考题已整理。</p>
-            <button type="button">查看详情</button>
+            <button type="button" onClick={() => setSelectedCase(item)}>
+              {selectedCase.title === item.title ? "正在查看" : "查看详情"}
+            </button>
           </article>
         ))}
       </div>
+      <section className="detailPanel">
+        <strong>{selectedCase.title}</strong>
+        <p>
+          当前案例已关联“{selectedCase.tag}”知识点，可用于课堂讨论、章节复习和练习题生成。建议先定位工程问题，再回到教材查看设计计算依据。
+        </p>
+        <div className="detailTags">
+          <span>{selectedCase.status}</span>
+          <span>{selectedCase.tag}</span>
+          <span>已关联教材</span>
+        </div>
+      </section>
     </section>
   );
 }
 
 function ResourcesPage() {
+  const [selectedResource, setSelectedResource] = useState(resources[0]);
+
   return (
     <section className="pagePanel">
       <PageHeader label="关联资料" title="资料中心" desc="统一管理规范、参考教材、课程资料和相关附件。" />
       <div className="tablePanel">
         {resources.map((item) => (
-          <div className="resourceRow" key={item.title}>
+          <div className={cx("resourceRow", selectedResource.title === item.title && "active")} key={item.title}>
             <span className="typePill">{item.type}</span>
             <div>
               <strong>{item.title}</strong>
               <p>{item.link}</p>
             </div>
             <em>{item.code}</em>
-            <button type="button">查看</button>
+            <button type="button" onClick={() => setSelectedResource(item)}>
+              {selectedResource.title === item.title ? "已查看" : "查看"}
+            </button>
           </div>
         ))}
       </div>
+      <section className="detailPanel compact">
+        <strong>{selectedResource.title}</strong>
+        <p>
+          已定位到 {selectedResource.code}：重点用于“{selectedResource.link}”。后续可由指导老师补充正式附件、讲义和规范摘录。
+        </p>
+      </section>
     </section>
   );
 }
 
 function PracticePage() {
+  const defaultAnswer = "浅基础是将荷载直接传给地基浅部土层；桩基础通过桩将荷载传递到深部持力层，适用于软弱土层或荷载较大的情况。";
+  const [answer, setAnswer] = useState(defaultAnswer);
+  const [submitted, setSubmitted] = useState(false);
+
   return (
     <section className="pagePanel">
       <PageHeader label="练习中心" title="章节练习与智能评分" desc="客观题规则评分，主观题给出扣分点和补充建议。" />
@@ -1298,17 +1426,21 @@ function PracticePage() {
         <article className="questionCard">
           <span>简答题 · 第八章 桩基础</span>
           <h3>简述浅基础和桩基础的主要区别。</h3>
-          <textarea defaultValue="浅基础是将荷载直接传给地基浅部土层；桩基础通过桩将荷载传递到深部持力层，适用于软弱土层或荷载较大的情况。" />
-          <button type="button">提交评分</button>
+          <textarea value={answer} onChange={(event) => setAnswer(event.target.value)} />
+          <button type="button" onClick={() => setSubmitted(true)}>
+            {submitted ? "重新评分" : "提交评分"}
+          </button>
         </article>
-        <aside className="scorePanel">
-          <strong>72</strong>
+        <aside className={cx("scorePanel", submitted && "submitted")}>
+          <strong>{submitted ? 72 : "--"}</strong>
           <span>/ 100</span>
-          <p>缺少荷载传递机制和适用场景的完整说明。</p>
-          <ul>
-            <li>补充桩侧阻力与桩端阻力</li>
-            <li>说明浅基础适用地基条件</li>
-          </ul>
+          <p>{submitted ? "缺少荷载传递机制和适用场景的完整说明。" : "提交后显示智能评分、扣分点和复习建议。"}</p>
+          {submitted && (
+            <ul>
+              <li>补充桩侧阻力与桩端阻力</li>
+              <li>说明浅基础适用地基条件</li>
+            </ul>
+          )}
         </aside>
       </div>
     </section>
@@ -1350,17 +1482,23 @@ function ReportPage() {
 }
 
 function AdminPage() {
+  const [activeTool, setActiveTool] = useState("上传教材");
+
   return (
     <section className="pagePanel">
       <PageHeader label="后台管理" title="内容管理" desc="用于后续上传教材、资料、案例和题库，目前为展示状态。" />
       <div className="adminGrid">
         {["上传教材", "管理知识点", "维护案例", "导入题库"].map((item) => (
-          <button className="adminTile" type="button" key={item}>
+          <button className={cx("adminTile", activeTool === item && "active")} type="button" key={item} onClick={() => setActiveTool(item)}>
             <Database size={24} />
             {item}
           </button>
         ))}
       </div>
+      <section className="detailPanel compact">
+        <strong>{activeTool}</strong>
+        <p>该入口已可选中展示。生产版本中，这里将由指导老师维护课程资料、答疑内容、案例和题库。</p>
+      </section>
     </section>
   );
 }
@@ -1375,10 +1513,10 @@ function PageHeader({ label, title, desc }) {
   );
 }
 
-function Page({ active, onNavigate }) {
+function Page({ active, onNavigate, activeChapter }) {
   switch (active) {
     case "textbook":
-      return <TextbookPage onNavigate={onNavigate} />;
+      return <TextbookPage onNavigate={onNavigate} initialChapter={activeChapter} />;
     case "graph":
       return <GraphPage />;
     case "qa":
@@ -1401,13 +1539,21 @@ function Page({ active, onNavigate }) {
 export function App() {
   const [active, setActive] = useState("overview");
   const [query, setQuery] = useState("");
+  const [activeChapter, setActiveChapter] = useState("桩基础");
   const activeLabel = useMemo(() => navItems.find((item) => item.id === active)?.label ?? "课程总览", [active]);
+
+  function handleNavigate(page, options = {}) {
+    if (options.chapter) {
+      setActiveChapter(options.chapter);
+    }
+    setActive(page);
+  }
 
   return (
     <div className="appShell">
-      <Sidebar active={active} onNavigate={setActive} />
+      <Sidebar active={active} onNavigate={handleNavigate} />
       <div className="workspace">
-        <Header query={query} setQuery={setQuery} />
+        <Header query={query} setQuery={setQuery} onNavigate={handleNavigate} />
         <main className="content">
           <div className="mobilePageLabel">{activeLabel}</div>
           {query.trim() && (
@@ -1416,7 +1562,7 @@ export function App() {
               正在展示与“{query.trim()}”相关的课程内容入口。
             </div>
           )}
-          <Page active={active} onNavigate={setActive} />
+          <Page active={active} onNavigate={handleNavigate} activeChapter={activeChapter} />
         </main>
       </div>
     </div>
