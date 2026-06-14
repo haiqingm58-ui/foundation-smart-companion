@@ -1,0 +1,62 @@
+{
+  "courseId": "foundation-engineering",
+  "title": "基础工程",
+  "platformTitle": "《基础工程》智慧学伴",
+  "totalChapters": 7,
+  "currentChapterId": "chapter-03",
+  "progress": {
+    "completedChapters": 3,
+    "averageScore": 82
+  },
+  "chapters": [
+    {
+      "id": "chapter-01",
+      "number": 1,
+      "title": "绪论",
+      "slug": "introduction"
+    },
+    {
+      "id": "chapter-02",
+      "number": 2,
+      "title": "浅基础",
+      "slug": "shallow-foundation"
+    },
+    {
+      "id": "chapter-03",
+      "number": 3,
+      "title": "桩基础",
+      "slug": "pile-foundation"
+    },
+    {
+      "id": "chapter-04",
+      "number": 4,
+      "title": "沉井基础",
+      "slug": "open-caisson-foundation"
+    },
+    {
+      "id": "chapter-05",
+      "number": 5,
+      "title": "基坑工程",
+      "slug": "excavation-engineering"
+    },
+    {
+      "id": "chapter-06",
+      "number": 6,
+      "title": "地基处理",
+      "slug": "ground-treatment"
+    },
+    {
+      "id": "chapter-07",
+      "number": 7,
+      "title": "区域性地基",
+      "slug": "regional-ground"
+    }
+  ],
+  "preKnowledge": [
+    "土的物理性质",
+    "地基中的应力计算",
+    "地基变形计算",
+    "土的抗剪强度",
+    "地基承载力"
+  ]
+}
