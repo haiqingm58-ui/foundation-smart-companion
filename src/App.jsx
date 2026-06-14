@@ -99,7 +99,7 @@ const moduleCards = [
     icon: PenLine,
     tone: "amber",
     desc: "章节练习、错题、智能评分",
-    meta: "错题本 18",
+    meta: "79 道教材题",
     action: "进入练习",
   },
 ];
@@ -255,6 +255,125 @@ function searchChunks(chunks, query, limit = 4) {
     .filter((chunk) => chunk.score > 0)
     .sort((a, b) => b.score - a.score)
     .slice(0, limit);
+}
+
+function compactText(text = "", limit = 260) {
+  const clean = text.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+  return clean.length > limit ? `${clean.slice(0, limit)}...` : clean;
+}
+
+function buildAiPrompt(question, mode, results) {
+  const context = results.length
+    ? results
+        .map((item, index) => `${index + 1}. ${item.heading_path} L${item.source_line}: ${compactText(item.text, 360)}`)
+        .join("\n")
+    : "暂无教材检索片段。";
+  return [
+    "你是《基础工程》课程的智慧学伴。请只基于给定教材片段回答，必要时说明还需要查教材。",
+    `问答模式：${mode}`,
+    `学生问题：${question}`,
+    "教材片段：",
+    context,
+    "请用中文回答，结构简洁，包含：直接回答、关键概念、复习提醒。不要编造规范条文编号。",
+  ].join("\n");
+}
+
+function normalizeAiResponse(response) {
+  if (typeof response === "string") {
+    return response;
+  }
+  if (response?.message?.content) {
+    return Array.isArray(response.message.content)
+      ? response.message.content.map((item) => item.text ?? "").join("")
+      : response.message.content;
+  }
+  if (response?.text) {
+    return response.text;
+  }
+  return JSON.stringify(response);
+}
+
+async function callFreeAi(prompt) {
+  if (typeof window === "undefined" || typeof window.puter?.ai?.chat !== "function") {
+    throw new Error("FREE_AI_UNAVAILABLE");
+  }
+  const response = await Promise.race([
+    window.puter.ai.chat(prompt),
+    new Promise((_, reject) => {
+      window.setTimeout(() => reject(new Error("FREE_AI_TIMEOUT")), 12000);
+    }),
+  ]);
+  const text = normalizeAiResponse(response).trim();
+  if (!text) {
+    throw new Error("FREE_AI_EMPTY");
+  }
+  return text;
+}
+
+function displayChapter(chapter = "") {
+  return chapter.replace(/^第(\d+)章\s*/, "第$1章 ");
+}
+
+function normalizeChapterName(chapter = "") {
+  return chapter.replace(/^第\d+章\s*/, "").replace(/\s+/g, "");
+}
+
+function matchExerciseChapter(exerciseChapters, chapterName) {
+  if (!chapterName) {
+    return "全部";
+  }
+  const cleanChapter = chapterName.replace(/\s+/g, "");
+  const direct = exerciseChapters.find((chapter) => chapter.replace(/\s+/g, "") === cleanChapter);
+  if (direct) {
+    return direct;
+  }
+  const simpleName = normalizeChapterName(chapterName);
+  return (
+    exerciseChapters.find((chapter) => {
+      const candidate = chapter.replace(/\s+/g, "");
+      const candidateName = normalizeChapterName(chapter);
+      return candidate.includes(cleanChapter) || candidateName.includes(simpleName) || simpleName.includes(candidateName);
+    }) ?? "全部"
+  );
+}
+
+function exerciseSearchText(exercise) {
+  return [exercise.number, exercise.chapter, exercise.type, exercise.kind, exercise.difficulty, exercise.text, ...(exercise.tags ?? [])]
+    .join(" ")
+    .toLowerCase();
+}
+
+function scoreExerciseAnswer(answer, exercise) {
+  const clean = answer.trim();
+  if (!clean) {
+    return {
+      score: 0,
+      summary: "还没有作答，先写出思路或计算步骤再提交。",
+      feedback: ["建议先列出关键词、公式或判断依据。"],
+      hits: [],
+      missing: exercise?.tags?.slice(0, 3) ?? [],
+    };
+  }
+  const tags = exercise?.tags ?? [];
+  const hits = tags.filter((tag) => clean.includes(tag));
+  const missing = tags.filter((tag) => !clean.includes(tag)).slice(0, 4);
+  const lengthScore = Math.min(28, Math.floor(clean.length / 4));
+  const keywordScore = Math.min(32, hits.length * 14);
+  const structureScore = /因此|所以|首先|其次|计算|验算|比较|可知|确定|分析|结合|形成|位置/.test(clean) ? 10 : 0;
+  const baseScore = exercise?.type === "习题" ? 38 : 48;
+  const score = Math.min(96, baseScore + lengthScore + keywordScore + structureScore);
+  const feedback = [
+    hits.length ? `已覆盖：${hits.slice(0, 4).join("、")}` : "答案里还缺少教材关键词。",
+    missing.length ? `可补充：${missing.join("、")}` : "关键词覆盖较完整，下一步可补充适用条件或计算过程。",
+    clean.length < 80 ? "建议把判断依据或计算步骤写得更完整。" : "表达长度较充分，注意结论和条件要对应。",
+  ];
+  return {
+    score,
+    summary: score >= 85 ? "掌握较好，答案已经比较完整。" : score >= 70 ? "基本掌握，但还可以补足关键条件。" : "建议回到教材对应章节复习后再答一次。",
+    feedback,
+    hits,
+    missing,
+  };
 }
 
 function graphNodeType(node) {
@@ -948,7 +1067,7 @@ function TextbookPage({ onNavigate, initialChapter }) {
               </div>
             )}
             {activeTab === "章节练习" && (
-              <button className="inlineActionButton" type="button" onClick={() => onNavigate("practice")}>
+              <button className="inlineActionButton" type="button" onClick={() => onNavigate("practice", { chapter: activeChapter })}>
                 进入本章练习
               </button>
             )}
@@ -1282,10 +1401,19 @@ function QAPage() {
   const [question, setQuestion] = useState("桩侧阻力是如何产生的？影响它的主要因素有哪些？");
   const [draftQuestion, setDraftQuestion] = useState(question);
   const [searchCount, setSearchCount] = useState(1);
+  const [aiAnswer, setAiAnswer] = useState("");
+  const [aiStatus, setAiStatus] = useState("idle");
+  const [aiError, setAiError] = useState("");
   const chunks = useJsonAsset("/knowledge/chunks.json", []);
   const modes = ["教材问答", "规范问答", "学习辅导"];
   const results = useMemo(() => searchChunks(chunks, question, 4), [chunks, question]);
   const answer = results[0]?.text ?? "教材索引加载后，会在这里显示最相关的原文依据。";
+
+  useEffect(() => {
+    setAiAnswer("");
+    setAiStatus("idle");
+    setAiError("");
+  }, [mode, question]);
 
   function runSearch() {
     const nextQuestion = draftQuestion.trim() || "桩侧阻力是如何产生的？";
@@ -1294,9 +1422,28 @@ function QAPage() {
     setSearchCount((count) => count + 1);
   }
 
+  async function generateAiAnswer() {
+    const nextQuestion = draftQuestion.trim() || "桩侧阻力是如何产生的？";
+    const nextResults = searchChunks(chunks, nextQuestion, 4);
+    setQuestion(nextQuestion);
+    setDraftQuestion(nextQuestion);
+    setSearchCount((count) => count + 1);
+    setAiStatus("loading");
+    setAiError("");
+    try {
+      const responseText = await callFreeAi(buildAiPrompt(nextQuestion, mode, nextResults));
+      setAiAnswer(responseText);
+      setAiStatus("success");
+    } catch {
+      setAiAnswer("");
+      setAiStatus("error");
+      setAiError("免费 API 暂时没有返回，已保留本地教材检索结果。");
+    }
+  }
+
   return (
     <section className="pagePanel">
-      <PageHeader label="智能问答" title="教材检索问答" desc="已接入《基础工程》Markdown 切块索引，先给出教材原文依据，后续可替换为大模型生成答案。" />
+      <PageHeader label="智能问答" title="教材检索问答" desc="已接入《基础工程》Markdown 切块索引，并可调用免费浏览器端 AI 生成答案。" />
       <div className="teacherNotice">
         <Link2 size={17} />
         当前模式：{mode} · 检索库来自本书 Markdown：{chunks.length ? `${chunks.length} 个教材块已加载` : "正在加载教材索引"}。
@@ -1314,9 +1461,13 @@ function QAPage() {
           <div className="bubble assistant">
             <Bot size={20} />
             <div>
-              <p>{answer}</p>
+              <p>{aiAnswer || answer}</p>
               <span>
-                引用：{results[0]?.heading_path ?? "教材索引"} {results[0] ? `L${results[0].source_line}` : ""}
+                {aiStatus === "success"
+                  ? "Puter.js 免费 AI 生成 · 已结合教材检索片段"
+                  : aiStatus === "loading"
+                    ? "正在调用免费 AI 生成答案..."
+                    : aiError || `引用：${results[0]?.heading_path ?? "教材索引"} ${results[0] ? `L${results[0].source_line}` : ""}`}
               </span>
             </div>
           </div>
@@ -1343,6 +1494,9 @@ function QAPage() {
           />
           <button type="button" onClick={runSearch}>
             检索{searchCount > 1 ? ` ${searchCount - 1}` : ""}
+          </button>
+          <button className="secondaryAskButton" type="button" onClick={generateAiAnswer} disabled={aiStatus === "loading"}>
+            {aiStatus === "loading" ? "生成中" : "AI生成"}
           </button>
         </label>
       </div>
@@ -1414,33 +1568,258 @@ function ResourcesPage() {
   );
 }
 
-function PracticePage() {
-  const defaultAnswer = "浅基础是将荷载直接传给地基浅部土层；桩基础通过桩将荷载传递到深部持力层，适用于软弱土层或荷载较大的情况。";
-  const [answer, setAnswer] = useState(defaultAnswer);
+function PracticePage({ initialChapter }) {
+  const exerciseBank = useJsonAsset("/knowledge/exercises.json", { summary: { total: 0, thinking: 0, exercise: 0, chapters: [] }, exercises: [] });
+  const exercises = exerciseBank.exercises ?? [];
+  const summary = exerciseBank.summary ?? {};
+  const exerciseChapters = useMemo(() => {
+    if (summary.chapters?.length) {
+      return summary.chapters;
+    }
+    return Array.from(new Set(exercises.map((item) => item.chapter).filter(Boolean)));
+  }, [exercises, summary.chapters]);
+  const [chapterFilter, setChapterFilter] = useState("全部");
+  const [typeFilter, setTypeFilter] = useState("全部");
+  const [difficultyFilter, setDifficultyFilter] = useState("全部");
+  const [keyword, setKeyword] = useState("");
+  const [selectedExerciseId, setSelectedExerciseId] = useState("");
+  const [answer, setAnswer] = useState("");
   const [submitted, setSubmitted] = useState(false);
+  const chapterKey = exerciseChapters.join("|");
+
+  useEffect(() => {
+    const matchedChapter = matchExerciseChapter(exerciseChapters, initialChapter);
+    if (matchedChapter !== "全部") {
+      setChapterFilter(matchedChapter);
+    }
+  }, [chapterKey, initialChapter]);
+
+  const filteredExercises = useMemo(() => {
+    const cleanKeyword = keyword.trim().toLowerCase();
+    return exercises.filter((exercise) => {
+      const matchesChapter = chapterFilter === "全部" || exercise.chapter === chapterFilter;
+      const matchesType = typeFilter === "全部" || exercise.type === typeFilter;
+      const matchesDifficulty = difficultyFilter === "全部" || exercise.difficulty === difficultyFilter;
+      const matchesKeyword = !cleanKeyword || exerciseSearchText(exercise).includes(cleanKeyword);
+      return matchesChapter && matchesType && matchesDifficulty && matchesKeyword;
+    });
+  }, [chapterFilter, difficultyFilter, exercises, keyword, typeFilter]);
+
+  useEffect(() => {
+    if (!filteredExercises.length) {
+      setSelectedExerciseId("");
+      return;
+    }
+    if (!filteredExercises.some((exercise) => exercise.id === selectedExerciseId)) {
+      setSelectedExerciseId(filteredExercises[0].id);
+      setAnswer("");
+      setSubmitted(false);
+    }
+  }, [filteredExercises, selectedExerciseId]);
+
+  const selectedExercise = filteredExercises.find((exercise) => exercise.id === selectedExerciseId) ?? filteredExercises[0];
+  const selectedIndex = selectedExercise ? filteredExercises.findIndex((exercise) => exercise.id === selectedExercise.id) : -1;
+  const scoreResult = submitted && selectedExercise ? scoreExerciseAnswer(answer, selectedExercise) : null;
+
+  function selectExercise(exercise) {
+    setSelectedExerciseId(exercise.id);
+    setAnswer("");
+    setSubmitted(false);
+  }
+
+  function moveExercise(offset) {
+    if (!filteredExercises.length) {
+      return;
+    }
+    const currentIndex = Math.max(0, selectedIndex);
+    const nextIndex = (currentIndex + offset + filteredExercises.length) % filteredExercises.length;
+    selectExercise(filteredExercises[nextIndex]);
+  }
 
   return (
     <section className="pagePanel">
-      <PageHeader label="练习中心" title="章节练习与智能评分" desc="客观题规则评分，主观题给出扣分点和补充建议。" />
+      <PageHeader
+        label="练习中心"
+        title="全书练习题库"
+        desc={`已导入本书 ${summary.total || exercises.length} 道思考题和习题，可按章节、题型和关键词练习。`}
+      />
+      <div className="practiceSummary" aria-label="题库统计">
+        <article>
+          <strong>{summary.total || exercises.length}</strong>
+          <span>全部题目</span>
+        </article>
+        <article>
+          <strong>{summary.thinking ?? exercises.filter((item) => item.type === "思考题").length}</strong>
+          <span>思考题</span>
+        </article>
+        <article>
+          <strong>{summary.exercise ?? exercises.filter((item) => item.type === "习题").length}</strong>
+          <span>习题</span>
+        </article>
+        <article>
+          <strong>{exerciseChapters.length}</strong>
+          <span>覆盖章节</span>
+        </article>
+      </div>
       <div className="practiceLayout">
-        <article className="questionCard">
-          <span>简答题 · 第八章 桩基础</span>
-          <h3>简述浅基础和桩基础的主要区别。</h3>
-          <textarea value={answer} onChange={(event) => setAnswer(event.target.value)} />
-          <button type="button" onClick={() => setSubmitted(true)}>
-            {submitted ? "重新评分" : "提交评分"}
-          </button>
+        <aside className="exerciseLibrary">
+          <div className="libraryHeader">
+            <strong>题库筛选</strong>
+            <span>{filteredExercises.length} 道</span>
+          </div>
+          <label className="exerciseSearch">
+            <Search size={17} />
+            <input value={keyword} onChange={(event) => setKeyword(event.target.value)} placeholder="搜索题号、概念或关键词" />
+          </label>
+          <div className="filterBlock">
+            <span>章节</span>
+            <div className="exerciseChapterGrid">
+              {["全部", ...exerciseChapters].map((chapter) => (
+                <button className={cx(chapterFilter === chapter && "active")} type="button" key={chapter} onClick={() => setChapterFilter(chapter)}>
+                  {chapter === "全部" ? "全部" : displayChapter(chapter)}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="filterBlock compact">
+            <span>类型</span>
+            <div className="pillGroup">
+              {["全部", "思考题", "习题"].map((type) => (
+                <button className={cx(typeFilter === type && "active")} type="button" key={type} onClick={() => setTypeFilter(type)}>
+                  {type}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="filterBlock compact">
+            <span>难度</span>
+            <div className="pillGroup">
+              {["全部", "基础", "提高"].map((difficulty) => (
+                <button
+                  className={cx(difficultyFilter === difficulty && "active")}
+                  type="button"
+                  key={difficulty}
+                  onClick={() => setDifficultyFilter(difficulty)}
+                >
+                  {difficulty}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="exerciseList" aria-label="练习题列表">
+            {filteredExercises.length ? (
+              filteredExercises.map((exercise) => (
+                <button
+                  className={cx("exerciseItem", selectedExercise?.id === exercise.id && "active")}
+                  type="button"
+                  key={exercise.id}
+                  onClick={() => selectExercise(exercise)}
+                >
+                  <span>
+                    {exercise.number} · {exercise.type}
+                  </span>
+                  <strong>{exercise.text}</strong>
+                  <em>
+                    {displayChapter(exercise.chapter)} · {exercise.difficulty}
+                  </em>
+                </button>
+              ))
+            ) : (
+              <p className="emptyExercise">没有匹配题目，换个筛选条件试试。</p>
+            )}
+          </div>
+        </aside>
+        <article className="questionCard exerciseDetail">
+          {selectedExercise ? (
+            <>
+              <div className="exerciseMeta">
+                <span>{displayChapter(selectedExercise.chapter)}</span>
+                <span>{selectedExercise.type}</span>
+                <span>{selectedExercise.kind}</span>
+                <span>{selectedExercise.difficulty}</span>
+              </div>
+              <h3>
+                {selectedExercise.number} {selectedExercise.text}
+              </h3>
+              {selectedExercise.attachments?.length ? (
+                <div className="attachmentList">
+                  <strong>题目附件</strong>
+                  {selectedExercise.attachments.map((attachment, index) =>
+                    attachment.type === "image" ? (
+                      <figure key={`${attachment.caption}-${index}`}>
+                        <img src={`${import.meta.env.BASE_URL || "/"}knowledge/${attachment.path}`} alt={attachment.caption || "习题附图"} />
+                        <figcaption>{attachment.caption || "习题附图"}</figcaption>
+                      </figure>
+                    ) : (
+                      <div className="tableAttachment" key={`table-${index}`} dangerouslySetInnerHTML={{ __html: attachment.html }} />
+                    ),
+                  )}
+                </div>
+              ) : null}
+              <div className="exerciseTags">
+                {(selectedExercise.tags?.length ? selectedExercise.tags : ["教材原题"]).map((tag) => (
+                  <span key={tag}>{tag}</span>
+                ))}
+              </div>
+              <label className="answerBox">
+                <span>我的作答</span>
+                <textarea
+                  value={answer}
+                  onChange={(event) => {
+                    setAnswer(event.target.value);
+                    setSubmitted(false);
+                  }}
+                  placeholder={selectedExercise.type === "习题" ? "写出计算过程、采用公式、代入数据和结论。" : "写出你的理解，可用关键词和条目组织答案。"}
+                />
+              </label>
+              <div className="exerciseActions">
+                <button className="secondaryAction" type="button" onClick={() => moveExercise(-1)}>
+                  上一题
+                </button>
+                <button className="secondaryAction" type="button" onClick={() => moveExercise(1)}>
+                  下一题
+                </button>
+                <button type="button" onClick={() => setSubmitted(true)}>
+                  {submitted ? "重新评分" : "提交评分"}
+                </button>
+              </div>
+            </>
+          ) : (
+            <p className="emptyExercise">题库正在加载。</p>
+          )}
         </article>
         <aside className={cx("scorePanel", submitted && "submitted")}>
-          <strong>{submitted ? 72 : "--"}</strong>
-          <span>/ 100</span>
-          <p>{submitted ? "缺少荷载传递机制和适用场景的完整说明。" : "提交后显示智能评分、扣分点和复习建议。"}</p>
-          {submitted && (
+          <div className="scoreHeader">
+            <span>智能评分</span>
+            <strong>{scoreResult ? scoreResult.score : "--"}</strong>
+            <em>/ 100</em>
+          </div>
+          <p>{scoreResult ? scoreResult.summary : "提交后显示规则评分、关键词覆盖和复习建议。"}</p>
+          {scoreResult && (
             <ul>
-              <li>补充桩侧阻力与桩端阻力</li>
-              <li>说明浅基础适用地基条件</li>
+              {scoreResult.feedback.map((item) => (
+                <li key={item}>{item}</li>
+              ))}
             </ul>
           )}
+          {selectedExercise && (
+            <div className="sourceTrace">
+              <span>教材来源</span>
+              <strong>
+                {displayChapter(selectedExercise.chapter)} · L{selectedExercise.sourceLine}
+              </strong>
+            </div>
+          )}
+          <button
+            className="clearAnswerButton"
+            type="button"
+            onClick={() => {
+              setAnswer("");
+              setSubmitted(false);
+            }}
+          >
+            清空作答
+          </button>
         </aside>
       </div>
     </section>
@@ -1526,7 +1905,7 @@ function Page({ active, onNavigate, activeChapter }) {
     case "resources":
       return <ResourcesPage />;
     case "practice":
-      return <PracticePage />;
+      return <PracticePage initialChapter={activeChapter} />;
     case "report":
       return <ReportPage />;
     case "admin":

@@ -31,6 +31,26 @@ final result: passed
 
 ---
 
+exercise bank qa path: local browser at http://127.0.0.1:5173/
+state: 练习中心已改为全书题库，读取 `public/knowledge/exercises.json`，并保留章节入口带入筛选。
+
+**Coverage**
+- Extracted textbook exercises: 79 total, 55 思考题, 24 习题, covering 7 chapters.
+- Attachments: copied the 6 exercise images referenced by the extracted bank into `public/knowledge/images/`; table attachment for 7-1 renders as an HTML table.
+
+**Verification**
+- Browser QA: switching chapter filter to 全部 shows 79 道.
+- Browser QA: searching “负摩阻力” narrows to 1 matching exercise and selects it.
+- Browser QA: answer submission updates the score panel, feedback list, and button state.
+- Browser QA: image exercise “图3-41” loads 2 figures with nonzero natural width.
+- Browser QA: table exercise 7-1 renders 33 table cells.
+- Browser QA: 智能问答 `AI生成` button has a 12s timeout fallback when the free Puter.js API script does not expose `puter.ai.chat`, preserving the local textbook answer instead of hanging.
+- Build: `npm run build` passed.
+
+final result: passed
+
+---
+
 interaction qa path: local browser at http://127.0.0.1:5173/
 button coverage: 36 button elements in source, 42 visible click-path assertions in browser
 state: 全平台按钮交互复查，包括顶部快捷按钮、主导航、首页入口、教材 tabs、知识图谱工具、问答检索、案例、资料、练习评分和后台入口。

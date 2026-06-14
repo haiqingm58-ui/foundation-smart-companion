@@ -931,6 +931,8 @@ button {
 .readingPane,
 .inspector,
 .tablePanel,
+.exerciseLibrary,
+.practiceSummary article,
 .questionCard,
 .scorePanel,
 .qaShell,
@@ -1058,6 +1060,7 @@ button {
 .resourceRow button,
 .questionCard button,
 .askBox button,
+.clearAnswerButton,
 .inlineActionButton {
   min-height: 38px;
   border-radius: 8px;
@@ -1851,6 +1854,7 @@ button {
 
 .askBox {
   display: flex;
+  flex-wrap: wrap;
   gap: 12px;
   border-top: 1px solid var(--line);
   padding: 16px;
@@ -1858,10 +1862,22 @@ button {
 
 .askBox input {
   flex: 1;
+  min-width: 260px;
+  min-height: 40px;
   border: 1px solid #d7e0ec;
   border-radius: 8px;
   outline: 0;
   padding: 0 14px;
+}
+
+.askBox .secondaryAskButton {
+  background: #eef6ff;
+  color: var(--blue);
+}
+
+.askBox button:disabled {
+  cursor: wait;
+  opacity: 0.72;
 }
 
 .caseGrid,
@@ -1992,29 +2008,292 @@ button {
   color: var(--blue);
 }
 
-.practiceLayout {
+.practiceSummary {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 300px;
-  gap: 18px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
 }
 
-.questionCard {
-  padding: 24px;
+.practiceSummary article {
+  padding: 17px 18px;
 }
 
-.questionCard span {
+.practiceSummary strong {
+  display: block;
   color: var(--blue);
+  font-size: 28px;
+  line-height: 1;
+}
+
+.practiceSummary span {
+  display: block;
+  margin-top: 8px;
+  color: #667085;
+  font-size: 13px;
   font-weight: 800;
 }
 
+.practiceLayout {
+  display: grid;
+  grid-template-columns: 300px minmax(0, 1fr) 286px;
+  align-items: start;
+  gap: 18px;
+}
+
+.exerciseLibrary,
+.questionCard,
+.scorePanel {
+  padding: 22px;
+}
+
+.libraryHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.libraryHeader strong {
+  color: var(--ink);
+  font-size: 18px;
+}
+
+.libraryHeader span {
+  border-radius: 999px;
+  background: var(--blue-50);
+  color: var(--blue);
+  padding: 5px 10px;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.exerciseSearch {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin: 16px 0;
+  border: 1px solid #d7e0ec;
+  border-radius: 8px;
+  background: #fbfdff;
+  padding: 0 12px;
+}
+
+.exerciseSearch svg {
+  color: #7a8aa0;
+}
+
+.exerciseSearch input {
+  width: 100%;
+  min-height: 40px;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: #27364a;
+}
+
+.filterBlock {
+  display: grid;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.filterBlock > span {
+  color: #667085;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.exerciseChapterGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.pillGroup {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.filterBlock button {
+  min-height: 34px;
+  border: 1px solid #d7e0ec;
+  border-radius: 8px;
+  background: #fbfdff;
+  color: #526174;
+  cursor: pointer;
+  padding: 0 9px;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.filterBlock button.active {
+  border-color: #9bc4f5;
+  background: #eef6ff;
+  color: var(--blue);
+}
+
+.exerciseList {
+  display: grid;
+  max-height: 520px;
+  gap: 8px;
+  margin-top: 18px;
+  overflow: auto;
+  padding-right: 2px;
+}
+
+.exerciseItem {
+  display: grid;
+  gap: 6px;
+  border: 1px solid #e2eaf4;
+  border-radius: 8px;
+  background: white;
+  cursor: pointer;
+  padding: 12px;
+  text-align: left;
+}
+
+.exerciseItem:hover,
+.exerciseItem.active {
+  border-color: #9bc4f5;
+  background: #f6fbff;
+  box-shadow: inset 3px 0 0 var(--blue);
+}
+
+.exerciseItem span {
+  color: var(--blue);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.exerciseItem strong {
+  display: -webkit-box;
+  overflow: hidden;
+  color: #27364a;
+  font-size: 13px;
+  line-height: 1.45;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.exerciseItem em {
+  color: #7a8aa0;
+  font-size: 12px;
+  font-style: normal;
+}
+
+.questionCard.exerciseDetail {
+  min-height: 620px;
+}
+
+.exerciseMeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.exerciseMeta span,
+.exerciseTags span {
+  display: inline-flex;
+  min-height: 28px;
+  align-items: center;
+  border-radius: 999px;
+  padding: 0 10px;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.exerciseMeta span {
+  background: #eef6ff;
+  color: var(--blue);
+}
+
 .questionCard h3 {
-  margin: 14px 0 16px;
-  font-size: 24px;
+  margin: 18px 0;
+  color: var(--ink);
+  font-size: 23px;
+  line-height: 1.62;
+}
+
+.attachmentList {
+  display: grid;
+  gap: 12px;
+  margin: 0 0 18px;
+  border: 1px solid #e2eaf4;
+  border-radius: 8px;
+  background: #fbfdff;
+  padding: 14px;
+}
+
+.attachmentList > strong {
+  color: #27364a;
+  font-size: 14px;
+}
+
+.attachmentList figure {
+  margin: 0;
+}
+
+.attachmentList img {
+  width: 100%;
+  max-height: 280px;
+  object-fit: contain;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: white;
+}
+
+.attachmentList figcaption {
+  margin-top: 8px;
+  color: #667085;
+  font-size: 12px;
+  text-align: center;
+}
+
+.tableAttachment {
+  overflow-x: auto;
+}
+
+.tableAttachment table {
+  width: 100%;
+  border-collapse: collapse;
+  background: white;
+  font-size: 13px;
+}
+
+.tableAttachment td {
+  border: 1px solid #d7e0ec;
+  padding: 8px;
+  color: #27364a;
+}
+
+.exerciseTags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0 0 18px;
+}
+
+.exerciseTags span {
+  background: #fff8df;
+  color: #9a6b00;
+}
+
+.answerBox {
+  display: grid;
+  gap: 10px;
+}
+
+.answerBox span {
+  color: #27364a;
+  font-size: 14px;
+  font-weight: 800;
 }
 
 .questionCard textarea {
   width: 100%;
-  min-height: 170px;
+  min-height: 190px;
   resize: vertical;
   border: 1px solid #d7e0ec;
   border-radius: 8px;
@@ -2024,12 +2303,17 @@ button {
   line-height: 1.7;
 }
 
-.questionCard button {
+.exerciseActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
   margin-top: 14px;
 }
 
-.scorePanel {
-  padding: 24px;
+.exerciseActions .secondaryAction,
+.clearAnswerButton {
+  background: #eef6ff;
+  color: var(--blue);
 }
 
 .scorePanel.submitted {
@@ -2037,20 +2321,72 @@ button {
   background: #f7fcfa;
 }
 
-.scorePanel strong {
-  color: var(--amber);
-  font-size: 54px;
+.scoreHeader {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: baseline;
+  gap: 6px;
 }
 
-.scorePanel span {
+.scoreHeader span {
   color: #526174;
-  font-size: 18px;
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.scoreHeader strong {
+  color: var(--amber);
+  font-size: 48px;
+  line-height: 1;
+}
+
+.scoreHeader em {
+  color: #526174;
+  font-size: 17px;
+  font-style: normal;
 }
 
 .scorePanel p,
 .scorePanel li {
   color: #667085;
   line-height: 1.65;
+}
+
+.scorePanel ul {
+  margin: 14px 0 0;
+  padding-left: 20px;
+}
+
+.sourceTrace {
+  display: grid;
+  gap: 6px;
+  margin-top: 18px;
+  border: 1px solid #d7e8ff;
+  border-radius: 8px;
+  background: #f8fbff;
+  padding: 12px;
+}
+
+.sourceTrace span {
+  color: #667085;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.sourceTrace strong {
+  color: var(--blue);
+  font-size: 13px;
+}
+
+.clearAnswerButton {
+  width: 100%;
+  margin-top: 16px;
+}
+
+.emptyExercise {
+  margin: 0;
+  color: #667085;
+  line-height: 1.7;
 }
 
 .reportGrid {
@@ -2232,6 +2568,14 @@ button {
     grid-template-columns: 1fr;
   }
 
+  .practiceSummary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .exerciseList {
+    max-height: none;
+  }
+
   .resourceRow {
     grid-template-columns: 1fr;
     gap: 8px;
@@ -2266,6 +2610,11 @@ button {
   .formulaBox {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .practiceSummary,
+  .exerciseChapterGrid {
+    grid-template-columns: 1fr;
   }
 
   .metric {
