@@ -54,7 +54,7 @@ const moduleCards = [
     icon: BookOpen,
     tone: "blue",
     desc: "按章节浏览导读、公式、图表解释",
-    meta: "当前：第八章 桩基础",
+    meta: "当前：桩基础专题",
     action: "进入教材",
   },
   {
@@ -137,6 +137,109 @@ const chapters = [
   "地基处理",
   "基坑工程",
 ];
+
+const chapterStudyContent = {
+  绪论: {
+    label: "学习专题 01",
+    intro: "本专题先建立地基、基础、上部结构共同工作的设计视角，理解承载力、变形和稳定三类控制目标。",
+    formulaName: "地基基础设计控制",
+    formula: "pk <= fa，s <= [s]",
+    derivation:
+      "基础设计通常同时满足承载力极限状态和正常使用状态。平均基底压力 pk 由上部荷载与基础自重折算到基底面积得到，需不超过修正后的地基承载力 fa；沉降 s 由土层压缩变形累加得到，需控制在允许值 [s] 内。",
+    diagram: "用一张荷载传递示意图理解上部结构、基础和地基之间的作用路径。",
+    caseText: "可关联不均匀沉降或承载力不足案例，观察设计控制条件如何同时发挥作用。",
+  },
+  土的物理性质: {
+    label: "学习专题 02",
+    intro: "本专题关注含水率、孔隙比、饱和度和重度等指标，它们是后续承载力、沉降和抗剪分析的基础。",
+    formulaName: "三相指标换算",
+    formula: "e = Gs(1 + w)γw / γ - 1",
+    derivation:
+      "由三相图出发，土粒体积 Vs 与孔隙体积 Vv 之比定义为孔隙比 e。含水率 w 反映水质量与土粒质量的比值，Gsγw 表示土粒单位体积重度，结合总重度 γ 可把质量关系转化为体积关系，从而得到孔隙比换算式。",
+    diagram: "图表重点应展示土的三相组成，以及 w、e、Sr、γ 之间的换算路径。",
+    caseText: "可关联填土、软土或地下水位变化案例，理解物理指标对工程判断的影响。",
+  },
+  地基中的应力计算: {
+    label: "学习专题 03",
+    intro: "本专题把基础底面荷载转化为地基内部附加应力，是沉降计算和下卧层验算的前置步骤。",
+    formulaName: "附加应力计算",
+    formula: "σz = α p0",
+    derivation:
+      "在弹性半空间假定下，基底附加压力 p0 向地基内部扩散，某深度处竖向附加应力可写成影响系数 α 与 p0 的乘积。α 由基础形状、计算点位置和深宽比查表或计算得到。",
+    diagram: "图表重点应展示基底压力向下扩散、等应力线和计算点位置。",
+    caseText: "可关联软弱下卧层验算案例，比较不同深度处附加应力衰减规律。",
+  },
+  地基变形计算: {
+    label: "学习专题 04",
+    intro: "本专题围绕地基沉降、沉降差和倾斜控制，理解分层总和法的计算逻辑。",
+    formulaName: "分层总和法",
+    formula: "s = ψs Σ Δsi",
+    derivation:
+      "把压缩层范围内土体按性质和应力变化分层，每层沉降 Δsi 由该层附加应力、压缩模量和厚度确定，再按层累加。经验修正系数 ψs 用来修正计算沉降与实测沉降之间的差异。",
+    diagram: "图表重点应展示压缩层分层、各层附加应力和沉降累加关系。",
+    caseText: "可关联住宅楼不均匀沉降案例，观察沉降差如何影响结构使用。",
+  },
+  土的抗剪强度: {
+    label: "学习专题 05",
+    intro: "本专题解释土体破坏时的抗剪强度来源，为边坡、基坑、承载力和桩侧阻力分析打基础。",
+    formulaName: "库仑抗剪强度",
+    formula: "τf = c + σ tan φ",
+    derivation:
+      "土的抗剪强度由黏聚力 c 和摩擦强度两部分组成。法向应力 σ 增大时，颗粒间摩擦作用增强，摩擦项可表示为 σ tan φ；当剪应力达到 τf 时土体进入破坏状态。",
+    diagram: "图表重点应展示莫尔圆与强度包线的相切关系。",
+    caseText: "可关联基坑稳定、边坡滑动和桩侧摩阻力案例，理解强度参数的工程意义。",
+  },
+  地基承载力: {
+    label: "学习专题 06",
+    intro: "本专题关注地基在荷载作用下的承载能力，核心是承载力特征值修正和基底压力验算。",
+    formulaName: "承载力特征值修正",
+    formula: "fa = fak + ηbγ(b - 3) + ηdγm(d - 0.5)",
+    derivation:
+      "地基承载力特征值 fak 来自载荷试验、经验或规范表值。基础宽度 b 和埋深 d 会改变地基受力与约束条件，因此通过宽度修正项和埋深修正项得到设计采用的 fa。",
+    diagram: "图表重点应展示基础宽度、埋深、持力层和基底压力之间的关系。",
+    caseText: "可关联承载力不足或软弱下卧层案例，比较修正前后验算结果。",
+  },
+  浅基础: {
+    label: "学习专题 07",
+    intro: "本专题学习独立基础、条形基础、筏形基础等浅基础形式，重点掌握基底压力和基础尺寸确定。",
+    formulaName: "基底平均压力验算",
+    formula: "pk = (Fk + Gk) / A <= fa",
+    derivation:
+      "上部结构传来的竖向荷载 Fk 与基础及覆土自重 Gk 共同作用在基底面积 A 上，得到平均基底压力 pk。只要 pk 不超过修正后的承载力 fa，平均压力验算满足要求。",
+    diagram: "图表重点应展示基础底面积、荷载合力位置和基底压力分布。",
+    caseText: "可关联浅基础尺寸初选案例，比较独立基础和筏形基础的适用条件。",
+  },
+  桩基础: {
+    label: "学习专题 08",
+    intro: "本专题重点包括桩基础类型、单桩竖向承载力、桩侧阻力与桩端阻力、群桩效应和桩基沉降计算。",
+    formulaName: "单桩竖向承载力",
+    formula: "Ra = u Σ qsi li + Ap qpa",
+    derivation:
+      "桩侧阻力按桩周长 u、各土层侧阻力特征值 qsi 与分层厚度 li 累加；桩端阻力按桩端面积 Ap 与端阻力 qpa 计算，两部分共同形成单桩竖向承载力。",
+    diagram: "图表重点应展示桩侧阻力、桩端阻力、持力层和荷载传递路径。",
+    caseText: "可关联钻孔灌注桩、高层建筑桩基和负摩阻力案例。",
+  },
+  地基处理: {
+    label: "学习专题 09",
+    intro: "本专题比较换填、强夯、排水固结、复合地基等处理方法，关注处理前后承载力和变形改善。",
+    formulaName: "复合地基承载力",
+    formula: "fspk = m fp + β(1 - m) fsk",
+    derivation:
+      "复合地基由增强体和桩间土共同承担荷载。面积置换率 m 表示增强体分担面积比例，fp 表示增强体承载力贡献，β(1 - m)fsk 表示桩间土折减后的承载力贡献，两者叠加得到 fspk。",
+    diagram: "图表重点应展示增强体、桩间土、褥垫层和荷载分担关系。",
+    caseText: "可关联 CFG 桩或软弱地基处理方案，比较处理前后指标变化。",
+  },
+  基坑工程: {
+    label: "学习专题 10",
+    intro: "本专题关注支护结构、土压力、降水和基坑稳定，理解施工过程对周边环境的影响。",
+    formulaName: "主动土压力合力",
+    formula: "Ea = 1/2 Ka γ H²",
+    derivation:
+      "当墙后填土达到主动极限平衡状态时，水平土压力沿深度近似线性增大，底部压力为 KaγH。三角形压力图的面积即主动土压力合力，因此 Ea = 1/2 KaγH²。",
+    diagram: "图表重点应展示土压力三角形分布、支护结构受力和开挖深度 H。",
+    caseText: "可关联基坑变形、支护失稳和降水引起周边沉降案例。",
+  },
+};
 
 const resources = [
   { title: "建筑地基基础设计规范", code: "GB 50007", type: "规范", link: "浅基础、承载力、沉降" },
@@ -887,7 +990,7 @@ function Hero({ onNavigate }) {
         <div className="heroActions">
           <button className="primaryButton" type="button" onClick={() => onNavigate("textbook", { chapter: "桩基础" })}>
             <Play size={17} fill="currentColor" />
-            继续学习第八章
+            继续学习桩基础
           </button>
           <button className="ghostButton" type="button" onClick={() => onNavigate("report")}>
             <Clock3 size={18} />
@@ -999,20 +1102,25 @@ function Overview({ onNavigate }) {
 
 function TextbookPage({ onNavigate, initialChapter }) {
   const tabs = ["章节导读", "重点公式", "图表解释", "案例关联", "章节练习"];
-  const tabCopy = {
-    章节导读: "先把章节目标、核心概念和适用场景串起来，再进入公式和案例。",
-    重点公式: "公式学习重点是适用条件、参数含义和与土层条件的对应关系。",
-    图表解释: "图表用于辅助理解桩基础与土层、持力层和地下水之间的空间关系。",
-    案例关联: "把高层建筑桩基础设计案例与承载力、沉降验算一起复盘。",
-    章节练习: "围绕本章薄弱点生成练习，完成后回到学习报告查看掌握度变化。",
-  };
   const [activeChapter, setActiveChapter] = useState(initialChapter);
   const [activeTab, setActiveTab] = useState("重点公式");
   const [showDerivation, setShowDerivation] = useState(false);
+  const activeContent = chapterStudyContent[activeChapter] ?? chapterStudyContent.桩基础;
+  const tabCopy = {
+    章节导读: "先把章节目标、核心概念和适用场景串起来，再进入公式和案例。",
+    重点公式: `本专题核心公式是“${activeContent.formulaName}”，重点看适用条件、参数含义和计算边界。`,
+    图表解释: activeContent.diagram,
+    案例关联: activeContent.caseText,
+    章节练习: "围绕本章薄弱点生成练习，完成后回到学习报告查看掌握度变化。",
+  };
 
   useEffect(() => {
     setActiveChapter(initialChapter);
   }, [initialChapter]);
+
+  useEffect(() => {
+    setShowDerivation(false);
+  }, [activeChapter]);
 
   return (
     <section className="pagePanel">
@@ -1043,19 +1151,16 @@ function TextbookPage({ onNavigate, initialChapter }) {
             ))}
           </div>
           <article className="readingContent">
-            <p className="eyebrow">第八章</p>
+            <p className="eyebrow">{activeContent.label}</p>
             <h2>{activeChapter}</h2>
-            <p>
-              本章重点包括桩基础类型、单桩竖向承载力、桩侧阻力与桩端阻力、群桩效应和桩基沉降计算。
-              学习时建议把公式、土层条件和工程案例放在一起理解。
-            </p>
+            <p>{activeContent.intro} 学习时建议把公式、土层条件和工程案例放在一起理解。</p>
             <div className="learningHint">
               <strong>{activeTab}</strong>
               <span>{tabCopy[activeTab]}</span>
             </div>
             <div className="formulaBox">
-              <span>单桩竖向承载力</span>
-              <strong>Ra = u Σ qsi li + Ap qpa</strong>
+              <span>{activeContent.formulaName}</span>
+              <strong>{activeContent.formula}</strong>
               <button type="button" onClick={() => setShowDerivation((value) => !value)}>
                 {showDerivation ? "收起推导" : "展开推导"}
               </button>
@@ -1063,7 +1168,7 @@ function TextbookPage({ onNavigate, initialChapter }) {
             {showDerivation && (
               <div className="derivationBox">
                 <strong>推导说明</strong>
-                <p>桩侧阻力按桩周长 u、各土层侧阻力特征值 qsi 与分层厚度 li 累加；桩端阻力按桩端面积 Ap 与端阻力 qpa 计算，两部分共同形成单桩竖向承载力。</p>
+                <p>{activeContent.derivation}</p>
               </div>
             )}
             {activeTab === "章节练习" && (

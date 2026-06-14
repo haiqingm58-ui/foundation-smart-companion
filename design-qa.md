@@ -31,6 +31,20 @@ final result: passed
 
 ---
 
+textbook formula qa path: local browser at http://127.0.0.1:5173/
+state: 教材学习页修复章节公式硬编码问题，公式、推导、导读说明按当前章节切换。
+
+**Verification**
+- Browser QA: 默认桩基础显示“单桩竖向承载力”与 `Ra = u Σ qsi li + Ap qpa`。
+- Browser QA: 切到浅基础显示“基底平均压力验算”与 `pk = (Fk + Gk) / A <= fa`，展开推导显示浅基础对应说明。
+- Browser QA: 切到基坑工程显示“主动土压力合力”与 `Ea = 1/2 Ka γ H²`。
+- Browser QA: 章节切换会自动收起上一章节推导，避免误以为推导仍属前一章。
+- Build: `npm run build` passed.
+
+final result: passed
+
+---
+
 exercise bank qa path: local browser at http://127.0.0.1:5173/
 state: 练习中心已改为全书题库，读取 `public/knowledge/exercises.json`，并保留章节入口带入筛选。
 
