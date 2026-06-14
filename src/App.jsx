@@ -521,34 +521,186 @@ function exerciseSearchText(exercise) {
     .toLowerCase();
 }
 
+const scoringAliases = {
+  岩土体: ["岩土", "土体", "土层", "天然土层"],
+  承受荷载: ["承受", "荷载", "承载"],
+  结构构件: ["构件", "结构", "基础结构"],
+  传递荷载: ["传递", "上部荷载", "上部结构"],
+  工程意义: ["工程意义", "实际意义", "工程作用", "影响"],
+  设计要求: ["设计要求", "安全", "经济", "正常使用"],
+  适用条件: ["适用条件", "适用范围", "条件"],
+  题给数据: ["已知", "题给", "数据", "表", "取值"],
+  附表数据: ["表", "附表", "数据", "取土深度"],
+  代入过程: ["代入", "带入", "=", "＝", "×", "/", "÷"],
+  计算步骤: ["计算", "求得", "可得", "步骤", "代入"],
+  数值结果: ["结果", "数值", "得", "="],
+  单位: ["单位", "kN", "kPa", "m", "mm", "%", "mL", "㎡"],
+  结论: ["结论", "因此", "所以", "判定", "属于"],
+  等级: ["等级", "级", "判定"],
+  类型: ["类型", "类", "判定"],
+  类: ["类型", "类", "判定"],
+  首先: ["首先", "第一", "一是", "从"],
+  因此: ["因此", "所以", "可知", "综上"],
+};
+
+function countOccurrences(text, term) {
+  if (!term) {
+    return 0;
+  }
+  return text.split(term).length - 1;
+}
+
+function answerHasConcept(answer, concept) {
+  if (!concept) {
+    return false;
+  }
+  if (answer.includes(concept)) {
+    return true;
+  }
+  if (concept === "数值结果") {
+    return /\d+(\.\d+)?/.test(answer);
+  }
+  if (concept === "单位") {
+    return /(kN|kPa|mm|mL|m²|m2|㎡|%|米|厘米|吨|级|类)/i.test(answer);
+  }
+  if (["题给数据", "附表数据"].includes(concept)) {
+    return /\d+(\.\d+)?/.test(answer) && /已知|题给|表|数据|取|测得|原始|增大/.test(answer);
+  }
+  if (concept === "代入过程") {
+    return /\d+(\.\d+)?/.test(answer) && /代入|带入|=|＝|×|÷|\/|\*/.test(answer);
+  }
+  if (concept === "计算步骤") {
+    return /\d+(\.\d+)?/.test(answer) && /计算|求得|可得|得|步骤|代入|判定/.test(answer);
+  }
+  return (scoringAliases[concept] ?? []).some((alias) => answer.includes(alias));
+}
+
+function fallbackRubric(exercise) {
+  const tags = exercise?.tags?.length ? exercise.tags : ["教材概念"];
+  if (exercise?.type === "习题") {
+    return [
+      { criterion: "选用正确公式或判别方法", weight: 25, requiredConcepts: tags },
+      { criterion: "整理题给条件并完整代入", weight: 25, requiredConcepts: ["题给数据", "代入过程", "计算步骤"] },
+      { criterion: "给出数值结果、单位或等级判定", weight: 30, requiredConcepts: ["数值结果", "单位", "结论"] },
+      { criterion: "说明验算过程和工程结论", weight: 20, requiredConcepts: ["验算", "因此", "结论"] },
+    ];
+  }
+  return [
+    { criterion: "说明核心概念或定义", weight: 30, requiredConcepts: tags },
+    { criterion: "解释作用机理或适用条件", weight: 30, requiredConcepts: ["适用条件", "设计要求"] },
+    { criterion: "指出工程意义、区别或设计要求", weight: 25, requiredConcepts: [...tags.slice(0, 2), "工程意义"] },
+    { criterion: "表达准确、层次清楚", weight: 15, requiredConcepts: ["首先", "因此"] },
+  ];
+}
+
+function scoreCriterion(answer, criterion) {
+  const required = criterion.requiredConcepts ?? [];
+  const matched = required.filter((concept) => answerHasConcept(answer, concept));
+  const ratio = required.length ? matched.length / required.length : 0;
+  const partial = required.length && matched.length ? 0.25 : 0;
+  const score = Math.round(criterion.weight * Math.min(1, ratio + partial));
+  return {
+    ...criterion,
+    matched,
+    missing: required.filter((concept) => !matched.includes(concept)),
+    score: Math.min(criterion.weight, score),
+  };
+}
+
+function detectKeywordStuffing(answer, concepts) {
+  const clean = answer.replace(/\s+/g, "");
+  const repeated = concepts
+    .map((concept) => ({ concept, count: countOccurrences(clean, concept) }))
+    .filter((item) => item.concept.length >= 2 && item.count >= 4);
+  const hasReasoning = /因为|因此|所以|首先|其次|定义|区别|公式|代入|计算|验算|结论|适用|影响|导致/.test(answer);
+  const uniqueRatio = clean ? new Set(clean).size / clean.length : 1;
+  return {
+    isStuffing: (repeated.length > 0 && !hasReasoning) || (clean.length > 24 && uniqueRatio < 0.22),
+    repeated,
+  };
+}
+
+function clampScore(value) {
+  return Math.max(0, Math.min(100, Math.round(value)));
+}
+
 function scoreExerciseAnswer(answer, exercise) {
   const clean = answer.trim();
+  const rubric = exercise?.rubric?.length ? exercise.rubric : fallbackRubric(exercise);
+  const expectedConcepts = exercise?.expectedConcepts?.length ? exercise.expectedConcepts : exercise?.tags ?? [];
   if (!clean) {
     return {
       score: 0,
       summary: "还没有作答，先写出思路或计算步骤再提交。",
       feedback: ["建议先列出关键词、公式或判断依据。"],
+      criteria: rubric.map((criterion) => ({ ...criterion, matched: [], missing: criterion.requiredConcepts ?? [], score: 0 })),
+      issues: [],
+      misconceptionsHit: [],
+      confidence: 0,
+      needsTeacherReview: false,
       hits: [],
-      missing: exercise?.tags?.slice(0, 3) ?? [],
+      missing: expectedConcepts.slice(0, 4),
     };
   }
-  const tags = exercise?.tags ?? [];
-  const hits = tags.filter((tag) => clean.includes(tag));
-  const missing = tags.filter((tag) => !clean.includes(tag)).slice(0, 4);
-  const lengthScore = Math.min(28, Math.floor(clean.length / 4));
-  const keywordScore = Math.min(32, hits.length * 14);
-  const structureScore = /因此|所以|首先|其次|计算|验算|比较|可知|确定|分析|结合|形成|位置/.test(clean) ? 10 : 0;
-  const baseScore = exercise?.type === "习题" ? 38 : 48;
-  const score = Math.min(96, baseScore + lengthScore + keywordScore + structureScore);
+
+  const criteria = rubric.map((criterion) => scoreCriterion(clean, criterion));
+  const totalRaw = criteria.reduce((sum, criterion) => sum + criterion.score, 0);
+  const totalRequired = criteria.reduce((sum, criterion) => sum + (criterion.requiredConcepts?.length ?? 0), 0);
+  const totalMatched = criteria.reduce((sum, criterion) => sum + criterion.matched.length, 0);
+  const misconceptionsHit = (exercise?.misconceptions ?? []).filter((item) => clean.includes(item));
+  const stuffing = detectKeywordStuffing(clean, expectedConcepts);
+  const issues = [];
+
+  if (misconceptionsHit.length) {
+    issues.push(`疑似概念误区：${misconceptionsHit.join("；")}`);
+  }
+  if (stuffing.isStuffing) {
+    issues.push("疑似关键词堆砌，建议补充因果说明、公式来源或判断依据。");
+  }
+  if (exercise?.requiresNumericAnswer && !/\d+(\.\d+)?/.test(clean)) {
+    issues.push("计算题缺少明确数值结果。");
+  }
+  if (exercise?.requiresNumericAnswer && !/(kN|kPa|mm|mL|m²|m2|㎡|%|米|厘米|吨|级|类)/i.test(clean)) {
+    issues.push("计算题建议写明单位、类型或等级判定。");
+  }
+
+  const penalty =
+    misconceptionsHit.length * 16 +
+    (stuffing.isStuffing ? 14 : 0) +
+    (exercise?.requiresNumericAnswer && !/\d+(\.\d+)?/.test(clean) ? 12 : 0) +
+    (exercise?.requiresNumericAnswer && !/(kN|kPa|mm|mL|m²|m2|㎡|%|米|厘米|吨|级|类)/i.test(clean) ? 8 : 0);
+  const score = clampScore(totalRaw - penalty);
+  const coverage = totalRequired ? totalMatched / totalRequired : 0;
+  const lengthAdequacy = Math.min(1, clean.length / (exercise?.requiresNumericAnswer ? 160 : 110));
+  const issuePenalty = Math.min(0.45, issues.length * 0.12);
+  const confidence = Math.max(0.05, Math.min(0.98, coverage * 0.72 + lengthAdequacy * 0.2 + (issues.length ? 0 : 0.08) - issuePenalty));
+  const reviewThreshold = exercise?.teacherReviewBelowConfidence ?? (exercise?.requiresNumericAnswer ? 0.68 : 0.55);
+  const needsTeacherReview = confidence < reviewThreshold || (exercise?.requiresNumericAnswer && score >= 80);
+  const hits = expectedConcepts.filter((concept) => answerHasConcept(clean, concept));
+  const missing = expectedConcepts.filter((concept) => !answerHasConcept(clean, concept)).slice(0, 5);
+  const weakestCriterion = [...criteria].sort((a, b) => a.score / a.weight - b.score / b.weight)[0];
   const feedback = [
-    hits.length ? `已覆盖：${hits.slice(0, 4).join("、")}` : "答案里还缺少教材关键词。",
-    missing.length ? `可补充：${missing.join("、")}` : "关键词覆盖较完整，下一步可补充适用条件或计算过程。",
-    clean.length < 80 ? "建议把判断依据或计算步骤写得更完整。" : "表达长度较充分，注意结论和条件要对应。",
+    hits.length ? `已覆盖：${hits.slice(0, 5).join("、")}` : "答案里还缺少本题核心概念。",
+    missing.length ? `建议补充：${missing.join("、")}` : "核心概念覆盖较完整，注意把结论和条件对应起来。",
+    weakestCriterion?.missing?.length
+      ? `薄弱评分点：${weakestCriterion.criterion}，可补充 ${weakestCriterion.missing.slice(0, 3).join("、")}。`
+      : "分项评分点覆盖较均衡。",
   ];
+
   return {
     score,
-    summary: score >= 85 ? "掌握较好，答案已经比较完整。" : score >= 70 ? "基本掌握，但还可以补足关键条件。" : "建议回到教材对应章节复习后再答一次。",
+    summary:
+      score >= 85
+        ? "掌握较好，答案已覆盖主要评分点。"
+        : score >= 70
+          ? "基本掌握，但还可以补足关键条件或计算细节。"
+          : "建议回到教材对应章节复习后再答一次。",
     feedback,
+    criteria,
+    issues,
+    misconceptionsHit,
+    confidence,
+    needsTeacherReview,
     hits,
     missing,
   };
@@ -1898,6 +2050,7 @@ function ResourcesPage({ initialResourceTitle }) {
 
 function PracticePage({ initialChapter, initialExerciseId }) {
   const exerciseBank = useJsonAsset("/knowledge/exercises.json", { summary: { total: 0, thinking: 0, exercise: 0, chapters: [] }, exercises: [] });
+  const rubricBank = useJsonAsset("/knowledge/exercise_rubrics.json", { items: {} });
   const exercises = exerciseBank.exercises ?? [];
   const summary = exerciseBank.summary ?? {};
   const exerciseChapters = useMemo(() => {
@@ -1963,8 +2116,19 @@ function PracticePage({ initialChapter, initialExerciseId }) {
   }, [filteredExercises, selectedExerciseId]);
 
   const selectedExercise = filteredExercises.find((exercise) => exercise.id === selectedExerciseId) ?? filteredExercises[0];
+  const selectedRubric = selectedExercise ? rubricBank.items?.[selectedExercise.id] : null;
+  const selectedExerciseWithRubric = selectedExercise
+    ? {
+        ...selectedExercise,
+        rubric: selectedRubric?.rubric,
+        misconceptions: selectedRubric?.misconceptions,
+        expectedConcepts: selectedRubric?.expectedConcepts,
+        requiresNumericAnswer: selectedRubric?.requiresNumericAnswer,
+        teacherReviewBelowConfidence: selectedRubric?.teacherReviewBelowConfidence,
+      }
+    : null;
   const selectedIndex = selectedExercise ? filteredExercises.findIndex((exercise) => exercise.id === selectedExercise.id) : -1;
-  const scoreResult = submitted && selectedExercise ? scoreExerciseAnswer(answer, selectedExercise) : null;
+  const scoreResult = submitted && selectedExerciseWithRubric ? scoreExerciseAnswer(answer, selectedExerciseWithRubric) : null;
 
   function selectExercise(exercise) {
     setSelectedExerciseId(exercise.id);
@@ -2141,11 +2305,44 @@ function PracticePage({ initialChapter, initialExerciseId }) {
           </div>
           <p>{scoreResult ? scoreResult.summary : "提交后显示规则评分、关键词覆盖和复习建议。"}</p>
           {scoreResult && (
-            <ul>
-              {scoreResult.feedback.map((item) => (
-                <li key={item}>{item}</li>
-              ))}
-            </ul>
+            <>
+              <div className="criterionList" aria-label="评分点明细">
+                {scoreResult.criteria.map((criterion) => (
+                  <div className="criterionRow" key={criterion.criterion}>
+                    <div>
+                      <strong>{criterion.criterion}</strong>
+                      <span>
+                        {criterion.score} / {criterion.weight}
+                      </span>
+                    </div>
+                    <div className="criterionMeter" aria-hidden="true">
+                      <i style={{ width: `${Math.round((criterion.score / criterion.weight) * 100)}%` }} />
+                    </div>
+                    <p>
+                      {criterion.matched.length ? `已命中：${criterion.matched.join("、")}` : "暂未命中本项关键点"}
+                      {criterion.missing.length ? `；待补充：${criterion.missing.slice(0, 3).join("、")}` : ""}
+                    </p>
+                  </div>
+                ))}
+              </div>
+              <ul>
+                {scoreResult.feedback.map((item) => (
+                  <li key={item}>{item}</li>
+                ))}
+              </ul>
+              {scoreResult.issues.length ? (
+                <div className="qualityWarnings" role="status" aria-live="polite">
+                  <strong>质量提醒</strong>
+                  {scoreResult.issues.map((issue) => (
+                    <span key={issue}>{issue}</span>
+                  ))}
+                </div>
+              ) : null}
+              <div className={cx("confidenceBadge", scoreResult.needsTeacherReview && "review")}>
+                <span>评分置信度 {Math.round(scoreResult.confidence * 100)}%</span>
+                <strong>{scoreResult.needsTeacherReview ? "建议教师复核" : "可作为自测参考"}</strong>
+              </div>
+            </>
           )}
           {selectedExercise && (
             <div className="sourceTrace">

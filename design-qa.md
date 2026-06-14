@@ -31,6 +31,24 @@ final result: passed
 
 ---
 
+rubric scoring qa path: local browser at http://localhost:5173/foundation-smart-companion/
+state: 练习中心已从字数/关键词打分改为 rubric 分项评分，读取 `public/knowledge/exercise_rubrics.json`。
+
+**Coverage**
+- Generated rubric entries: 79 total, matching every exercise in `public/knowledge/exercises.json`.
+- Numeric rubric entries: 24, limited to textbook 习题/计算设计题；55 道思考题使用概念解释 rubric。
+- Score panel now shows four scoring criteria, matched/missing concepts, quality warnings, confidence, and teacher review advice.
+
+**Verification**
+- Browser QA: 对 1-1 输入重复“地基/基础”关键词，得分 35，触发“疑似关键词堆砌”和“建议教师复核”。
+- Browser QA: 对 1-1 输入完整概念解释，得分 94，无质量提醒，置信度 88%。
+- Browser QA: 对 7-1 计算题输入无数值/单位的文字回答，得分 11，触发缺少数值结果、单位/等级判定提醒。
+- Build: `npm run build` passed.
+
+final result: passed
+
+---
+
 global search qa path: local browser at http://127.0.0.1:5173/
 state: 顶部全局搜索从提示文案改为真实分组搜索结果，覆盖教材章节、教材原文、知识图谱、工程案例、关联资料和练习题。
 
