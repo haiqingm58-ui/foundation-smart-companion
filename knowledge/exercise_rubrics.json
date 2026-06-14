@@ -1,0 +1,4460 @@
+{
+  "version": 3,
+  "source": "generated from textbook exercise tags, chapter mapping, and domain concept hints",
+  "total": 79,
+  "items": {
+    "ch1-思考题-1": {
+      "questionId": "ch1-思考题-1",
+      "rubric": [
+        {
+          "criterion": "说明核心概念或定义",
+          "weight": 30,
+          "requiredConcepts": [
+            "地基",
+            "基础"
+          ]
+        },
+        {
+          "criterion": "解释作用机理或适用条件",
+          "weight": 30,
+          "requiredConcepts": [
+            "岩土体",
+            "承受荷载",
+            "变形",
+            "稳定性"
+          ]
+        },
+        {
+          "criterion": "指出工程意义、区别或设计要求",
+          "weight": 25,
+          "requiredConcepts": [
+            "地基",
+            "基础",
+            "工程意义",
+            "设计要求"
+          ]
+        },
+        {
+          "criterion": "表达准确、层次清楚",
+          "weight": 15,
+          "requiredConcepts": [
+            "首先",
+            "因此"
+          ]
+        }
+      ],
+      "misconceptions": [
+        "地基就是基础",
+        "地基属于混凝土结构",
+        "基础就是天然土层",
+        "基础不传递荷载"
+      ],
+      "expectedConcepts": [
+        "地基",
+        "基础",
+        "岩土体",
+        "承受荷载",
+        "变形",
+        "稳定性",
+        "结构构件",
+        "传递荷载"
+      ],
+      "requiresNumericAnswer": false,
+      "teacherReviewBelowConfidence": 0.55
+    },
+    "ch1-思考题-2": {
+      "questionId": "ch1-思考题-2",
+      "rubric": [
+        {
+          "criterion": "说明核心概念或定义",
+          "weight": 30,
+          "requiredConcepts": [
+            "浅基础",
+            "基础",
+            "埋置深度",
+            "施工方法"
+          ]
+        },
+        {
+          "criterion": "解释作用机理或适用条件",
+          "weight": 30,
+          "requiredConcepts": [
+            "埋置深度",
+            "持力层",
+            "基底压力",
+            "地基承载力"
+          ]
+        },
+        {
+          "criterion": "指出工程意义、区别或设计要求",
+          "weight": 25,
+          "requiredConcepts": [
+            "浅基础",
+            "基础",
+            "埋置深度",
+            "工程意义",
+            "设计要求"
+          ]
+        },
+        {
+          "criterion": "表达准确、层次清楚",
+          "weight": 15,
+          "requiredConcepts": [
+            "首先",
+            "因此"
+          ]
+        }
+      ],
+      "misconceptions": [
+        "浅基础一定不需要验算沉降",
+        "埋深小就一定安全",
+        "基础就是天然土层",
+        "基础不传递荷载"
+      ],
+      "expectedConcepts": [
+        "浅基础",
+        "基础",
+        "埋置深度",
+        "施工方法",
+        "持力层",
+        "基底压力",
+        "地基承载力",
+        "结构构件",
+        "传递荷载"
+      ],
+      "requiresNumericAnswer": false,
+      "teacherReviewBelowConfidence": 0.55
+    },
+    "ch1-思考题-3": {
+      "questionId": "ch1-思考题-3",
+      "rubric": [
+        {
+          "criterion": "说明核心概念或定义",
+          "weight": 30,
+          "requiredConcepts": [
+            "地基",
+            "基础",
+            "设计要求"
+          ]
+        },
+        {
+          "criterion": "解释作用机理或适用条件",
+          "weight": 30,
+          "requiredConcepts": [
+            "岩土体",
+            "承受荷载",
+            "变形",
+            "稳定性"
+          ]
+        },
+        {
+          "criterion": "指出工程意义、区别或设计要求",
+          "weight": 25,
+          "requiredConcepts": [
+            "地基",
+            "基础",
+            "设计要求",
+            "工程意义"
+          ]
+        },
+        {
+          "criterion": "表达准确、层次清楚",
+          "weight": 15,
+          "requiredConcepts": [
+            "首先",
+            "因此"
+          ]
+        }
+      ],
+      "misconceptions": [
+        "地基就是基础",
+        "地基属于混凝土结构",
+        "基础就是天然土层",
+        "基础不传递荷载"
+      ],
+      "expectedConcepts": [
+        "地基",
+        "基础",
+        "设计要求",
+        "岩土体",
+        "承受荷载",
+        "变形",
+        "稳定性",
+        "结构构件",
+        "传递荷载"
+      ],
+      "requiresNumericAnswer": false,
+      "teacherReviewBelowConfidence": 0.55
+    },
+    "ch1-思考题-4": {
+      "questionId": "ch1-思考题-4",
+      "rubric": [
+        {
+          "criterion": "说明核心概念或定义",
+          "weight": 30,
+          "requiredConcepts": [
+            "基础"
+          ]
+        },
+        {
+          "criterion": "解释作用机理或适用条件",
+          "weight": 30,
+          "requiredConcepts": [
+            "结构构件",
+            "传递荷载",
+            "埋置深度",
+            "施工方法"
+          ]
+        },
+        {
+          "criterion": "指出工程意义、区别或设计要求",
+          "weight": 25,
+          "requiredConcepts": [
+            "基础",
+            "工程意义",
+            "设计要求"
+          ]
+        },
+        {
+          "criterion": "表达准确、层次清楚",
+          "weight": 15,
+          "requiredConcepts": [
+            "首先",
+            "因此"
+          ]
+        }
+      ],
+      "misconceptions": [
+        "基础就是天然土层",
+        "基础不传递荷载"
+      ],
+      "expectedConcepts": [
+        "基础",
+        "结构构件",
+        "传递荷载",
+        "埋置深度",
+        "施工方法",
+        "形成原因",
+        "影响因素"
+      ],
+      "requiresNumericAnswer": false,
+      "teacherReviewBelowConfidence": 0.55
+    },
+    "ch1-思考题-5": {
+      "questionId": "ch1-思考题-5",
+      "rubric": [
+        {
+          "criterion": "说明核心概念或定义",
+          "weight": 30,
+          "requiredConcepts": [
+            "基础"
+          ]
+        },
+        {
+          "criterion": "解释作用机理或适用条件",
+          "weight": 30,
+          "requiredConcepts": [
+            "结构构件",
+            "传递荷载",
+            "埋置深度",
+            "施工方法"
+          ]
+        },
+        {
+          "criterion": "指出工程意义、区别或设计要求",
+          "weight": 25,
+          "requiredConcepts": [
+            "基础",
+            "工程意义",
+            "设计要求"
+          ]
+        },
+        {
+          "criterion": "表达准确、层次清楚",
+          "weight": 15,
+          "requiredConcepts": [
+            "首先",
+            "因此"
+          ]
+        }
+      ],
+      "misconceptions": [
+        "基础就是天然土层",
+        "基础不传递荷载"
+      ],
+      "expectedConcepts": [
+        "基础",
+        "结构构件",
+        "传递荷载",
+        "埋置深度",
+        "施工方法"
+      ],
+      "requiresNumericAnswer": false,
+      "teacherReviewBelowConfidence": 0.55
+    },
+    "ch2-思考题-1": {
+      "questionId": "ch2-思考题-1",
+      "rubric": [
+        {
+          "criterion": "说明核心概念或定义",
+          "weight": 30,
+          "requiredConcepts": [
+            "地基",
+            "浅基础",
+            "基础"
+          ]
+        },
+        {
+          "criterion": "解释作用机理或适用条件",
+          "weight": 30,
+          "requiredConcepts": [
+            "岩土体",
+            "承受荷载",
+            "变形",
+            "稳定性"
+          ]
+        },
+        {
+          "criterion": "指出工程意义、区别或设计要求",
+          "weight": 25,
+          "requiredConcepts": [
+            "地基",
+            "浅基础",
+            "基础",
+            "工程意义",
+            "设计要求"
+          ]
+        },
+        {
+          "criterion": "表达准确、层次清楚",
+          "weight": 15,
+          "requiredConcepts": [
+            "首先",
+            "因此"
+          ]
+        }
+      ],
+      "misconceptions": [
+        "地基就是基础",
+        "地基属于混凝土结构",
+        "浅基础一定不需要验算沉降",
+        "埋深小就一定安全",
+        "基础就是天然土层"
+      ],
+      "expectedConcepts": [
+        "地基",
+        "浅基础",
+        "基础",
+        "岩土体",
+        "承受荷载",
+        "变形",
+        "稳定性",
+        "埋置深度",
+        "持力层"
+      ],
+      "requiresNumericAnswer": false,
+      "teacherReviewBelowConfidence": 0.55
+    },
+    "ch2-思考题-2": {
+      "questionId": "ch2-思考题-2",
+      "rubric": [
+        {
+          "criterion": "说明核心概念或定义",
+          "weight": 30,
+          "requiredConcepts": [
+            "基础"
+          ]
+        },
+        {
+          "criterion": "解释作用机理或适用条件",
+          "weight": 30,
+          "requiredConcepts": [
+            "结构构件",
+            "传递荷载",
+            "埋置深度",
+            "施工方法"
+          ]
+        },
+        {
+          "criterion": "指出工程意义、区别或设计要求",
+          "weight": 25,
+          "requiredConcepts": [
+            "基础",
+            "工程意义",
+            "设计要求"
+          ]
+        },
+        {
+          "criterion": "表达准确、层次清楚",
+          "weight": 15,
+          "requiredConcepts": [
+            "首先",
+            "因此"
+          ]
+        }
+      ],
+      "misconceptions": [
+        "基础就是天然土层",
+        "基础不传递荷载"
+      ],
+      "expectedConcepts": [
+        "基础",
+        "结构构件",
+        "传递荷载",
+        "埋置深度",
+        "施工方法"
+      ],
+      "requiresNumericAnswer": false,
+      "teacherReviewBelowConfidence": 0.55
+    },
+    "ch2-思考题-3": {
+      "questionId": "ch2-思考题-3",
+      "rubric": [
+        {
+          "criterion": "说明核心概念或定义",
+          "weight": 30,
+          "requiredConcepts": [
+            "地基",
+            "承载力",
+            "地基承载力"
+          ]
+        },
+        {
+          "criterion": "解释作用机理或适用条件",
+          "weight": 30,
+          "requiredConcepts": [
+            "岩土体",
+            "承受荷载",
+            "变形",
+            "稳定性"
+          ]
+        },
+        {
+          "criterion": "指出工程意义、区别或设计要求",
+          "weight": 25,
+          "requiredConcepts": [
+            "地基",
+            "承载力",
+            "地基承载力",
+            "工程意义",
+            "设计要求"
+          ]
+        },
+        {
+          "criterion": "表达准确、层次清楚",
+          "weight": 15,
+          "requiredConcepts": [
+            "首先",
+            "因此"
+          ]
+        }
+      ],
+      "misconceptions": [
+        "地基就是基础",
+        "地基属于混凝土结构",
+        "承载力满足就不需要沉降验算",
+        "承载力越大沉降一定越小"
+      ],
+      "expectedConcepts": [
+        "地基",
+        "承载力",
+        "地基承载力",
+        "岩土体",
+        "承受荷载",
+        "变形",
+        "稳定性",
+        "荷载",
+        "强度"
+      ],
+      "requiresNumericAnswer": false,
+      "teacherReviewBelowConfidence": 0.55
+    },
+    "ch2-思考题-4": {
+      "questionId": "ch2-思考题-4",
+      "rubric": [
+        {
+          "criterion": "说明核心概念或定义",
+          "weight": 30,
+          "requiredConcepts": [
+            "地基",
+            "荷载",
+            "基础"
+          ]
+        },
+        {
+          "criterion": "解释作用机理或适用条件",
+          "weight": 30,
+          "requiredConcepts": [
+            "岩土体",
+            "承受荷载",
+            "变形",
+            "稳定性"
+          ]
+        },
+        {
+          "criterion": "指出工程意义、区别或设计要求",
+          "weight": 25,
+          "requiredConcepts": [
+            "地基",
+            "荷载",
+            "基础",
+            "工程意义",
+            "设计要求"
+          ]
+        },
+        {
+          "criterion": "表达准确、层次清楚",
+          "weight": 15,
+          "requiredConcepts": [
+            "首先",
+            "因此"
+          ]
+        }
+      ],
+      "misconceptions": [
+        "地基就是基础",
+        "地基属于混凝土结构",
+        "基础就是天然土层",
+        "基础不传递荷载"
+      ],
+      "expectedConcepts": [
+        "地基",
+        "荷载",
+        "基础",
+        "岩土体",
+        "承受荷载",
+        "变形",
+        "稳定性",
+        "结构构件",
+        "传递荷载"
+      ],
+      "requiresNumericAnswer": false,
+      "teacherReviewBelowConfidence": 0.55
+    },
+    "ch2-思考题-5": {
+      "questionId": "ch2-思考题-5",
+      "rubric": [
+        {
+          "criterion": "说明核心概念或定义",
+          "weight": 30,
+          "requiredConcepts": [
+            "地基",
+            "承载力",
+            "沉降",
+            "地基承载力"
+          ]
+        },
+        {
+          "criterion": "解释作用机理或适用条件",
+          "weight": 30,
+          "requiredConcepts": [
+            "岩土体",
+            "承受荷载",
+            "变形",
+            "稳定性"
+          ]
+        },
+        {
+          "criterion": "指出工程意义、区别或设计要求",
+          "weight": 25,
+          "requiredConcepts": [
+            "地基",
+            "承载力",
+            "沉降",
+            "工程意义",
+            "设计要求"
+          ]
+        },
+        {
+          "criterion": "表达准确、层次清楚",
+          "weight": 15,
+          "requiredConcepts": [
+            "首先",
+            "因此"
+          ]
+        }
+      ],
+      "misconceptions": [
+        "地基就是基础",
+        "地基属于混凝土结构",
+        "承载力满足就不需要沉降验算",
+        "承载力越大沉降一定越小",
+        "沉降越小基础一定越经济"
+      ],
+      "expectedConcepts": [
+        "地基",
+        "承载力",
+        "沉降",
+        "地基承载力",
+        "基础",
+        "验算",
+        "岩土体",
+        "承受荷载",
+        "变形",
+        "稳定性"
+      ],
+      "requiresNumericAnswer": false,
+      "teacherReviewBelowConfidence": 0.55
+    },
+    "ch2-思考题-6": {
+      "questionId": "ch2-思考题-6",
+      "rubric": [
+        {
+          "criterion": "说明核心概念或定义",
+          "weight": 30,
+          "requiredConcepts": [
+            "基础"
+          ]
+        },
+        {
+          "criterion": "解释作用机理或适用条件",
+          "weight": 30,
+          "requiredConcepts": [
+            "结构构件",
+            "传递荷载",
+            "埋置深度",
+            "施工方法"
+          ]
+        },
+        {
+          "criterion": "指出工程意义、区别或设计要求",
+          "weight": 25,
+          "requiredConcepts": [
+            "基础",
+            "工程意义",
+            "设计要求"
+          ]
+        },
+        {
+          "criterion": "表达准确、层次清楚",
+          "weight": 15,
+          "requiredConcepts": [
+            "首先",
+            "因此"
+          ]
+        }
+      ],
+      "misconceptions": [
+        "基础就是天然土层",
+        "基础不传递荷载"
+      ],
+      "expectedConcepts": [
+        "基础",
+        "结构构件",
+        "传递荷载",
+        "埋置深度",
+        "施工方法"
+      ],
+      "requiresNumericAnswer": false,
+      "teacherReviewBelowConfidence": 0.55
+    },
+    "ch2-思考题-7": {
+      "questionId": "ch2-思考题-7",
+      "rubric": [
+        {
+          "criterion": "说明核心概念或定义",
+          "weight": 30,
+          "requiredConcepts": [
+            "浅基础",
+            "基础"
+          ]
+        },
+        {
+          "criterion": "解释作用机理或适用条件",
+          "weight": 30,
+          "requiredConcepts": [
+            "埋置深度",
+            "持力层",
+            "基底压力",
+            "地基承载力"
+          ]
+        },
+        {
+          "criterion": "指出工程意义、区别或设计要求",
+          "weight": 25,
+          "requiredConcepts": [
+            "浅基础",
+            "基础",
+            "工程意义",
+            "设计要求"
+          ]
+        },
+        {
+          "criterion": "表达准确、层次清楚",
+          "weight": 15,
+          "requiredConcepts": [
+            "首先",
+            "因此"
+          ]
+        }
+      ],
+      "misconceptions": [
+        "浅基础一定不需要验算沉降",
+        "埋深小就一定安全",
+        "基础就是天然土层",
+        "基础不传递荷载"
+      ],
+      "expectedConcepts": [
+        "浅基础",
+        "基础",
+        "埋置深度",
+        "持力层",
+        "基底压力",
+        "地基承载力",
+        "结构构件",
+        "传递荷载"
+      ],
+      "requiresNumericAnswer": false,
+      "teacherReviewBelowConfidence": 0.55
+    },
+    "ch2-思考题-8": {
+      "questionId": "ch2-思考题-8",
+      "rubric": [
+        {
+          "criterion": "说明核心概念或定义",
+          "weight": 30,
+          "requiredConcepts": [
+            "剪力"
+          ]
+        },
+        {
+          "criterion": "解释作用机理或适用条件",
+          "weight": 30,
+          "requiredConcepts": [
+            "设计要求",
+            "验算",
+            "安全性"
+          ]
+        },
+        {
+          "criterion": "指出工程意义、区别或设计要求",
+          "weight": 25,
+          "requiredConcepts": [
+            "剪力",
+            "工程意义",
+            "设计要求"
+          ]
+        },
+        {
+          "criterion": "表达准确、层次清楚",
+          "weight": 15,
+          "requiredConcepts": [
+            "首先",
+            "因此"
+          ]
+        }
+      ],
+      "misconceptions": [],
+      "expectedConcepts": [
+        "剪力",
+        "设计要求",
+        "验算",
+        "安全性"
+      ],
+      "requiresNumericAnswer": false,
+      "teacherReviewBelowConfidence": 0.55
+    },
+    "ch2-思考题-9": {
+      "questionId": "ch2-思考题-9",
+      "rubric": [
+        {
+          "criterion": "说明核心概念或定义",
+          "weight": 30,
+          "requiredConcepts": [
+            "地基",
+            "沉降",
+            "不均匀沉降"
+          ]
+        },
+        {
+          "criterion": "解释作用机理或适用条件",
+          "weight": 30,
+          "requiredConcepts": [
+            "岩土体",
+            "承受荷载",
+            "变形",
+            "稳定性"
+          ]
+        },
+        {
+          "criterion": "指出工程意义、区别或设计要求",
+          "weight": 25,
+          "requiredConcepts": [
+            "地基",
+            "沉降",
+            "不均匀沉降",
+            "工程意义",
+            "设计要求"
+          ]
+        },
+        {
+          "criterion": "表达准确、层次清楚",
+          "weight": 15,
+          "requiredConcepts": [
+            "首先",
+            "因此"
+          ]
+        }
+      ],
+      "misconceptions": [
+        "地基就是基础",
+        "地基属于混凝土结构",
+        "沉降越小基础一定越经济",
+        "沉降计算不需要考虑土层压缩性"
+      ],
+      "expectedConcepts": [
+        "地基",
+        "沉降",
+        "不均匀沉降",
+        "岩土体",
+        "承受荷载",
+        "变形",
+        "稳定性",
+        "压缩变形",
+        "附加应力"
+      ],
+      "requiresNumericAnswer": false,
+      "teacherReviewBelowConfidence": 0.55
+    },
+    "ch2-习题-1": {
+      "questionId": "ch2-习题-1",
+      "rubric": [
+        {
+          "criterion": "选用正确公式或判别方法",
+          "weight": 25,
+          "requiredConcepts": [
+            "地基",
+            "承载力",
+            "地基承载力",
+            "基础",
+            "埋置深度",
+            "基础宽度"
+          ]
+        },
+        {
+          "criterion": "整理题给条件并完整代入",
+          "weight": 25,
+          "requiredConcepts": [
+            "题给数据",
+            "代入过程",
+            "计算步骤"
+          ]
+        },
+        {
+          "criterion": "给出数值结果、单位或等级判定",
+          "weight": 30,
+          "requiredConcepts": [
+            "m",
+            "mm"
+          ]
+        },
+        {
+          "criterion": "说明验算过程和工程结论",
+          "weight": 20,
+          "requiredConcepts": [
+            "验算",
+            "因此",
+            "结论"
+          ]
+        }
+      ],
+      "misconceptions": [
+        "地基就是基础",
+        "地基属于混凝土结构",
+        "承载力满足就不需要沉降验算",
+        "承载力越大沉降一定越小",
+        "基础就是天然土层"
+      ],
+      "expectedConcepts": [
+        "地基",
+        "承载力",
+        "地基承载力",
+        "基础",
+        "埋置深度",
+        "基础宽度",
+        "岩土体",
+        "承受荷载",
+        "变形",
+        "稳定性"
+      ],
+      "requiresNumericAnswer": true,
+      "teacherReviewBelowConfidence": 0.68
+    },
+    "ch2-习题-2": {
+      "questionId": "ch2-习题-2",
+      "rubric": [
+        {
+          "criterion": "选用正确公式或判别方法",
+          "weight": 25,
+          "requiredConcepts": [
+            "地基",
+            "承载力",
+            "地基承载力",
+            "基础",
+            "岩土体",
+            "承受荷载"
+          ]
+        },
+        {
+          "criterion": "整理题给条件并完整代入",
+          "weight": 25,
+          "requiredConcepts": [
+            "题给数据",
+            "代入过程",
+            "计算步骤"
+          ]
+        },
+        {
+          "criterion": "给出数值结果、单位或等级判定",
+          "weight": 30,
+          "requiredConcepts": [
+            "m",
+            "mm"
+          ]
+        },
+        {
+          "criterion": "说明验算过程和工程结论",
+          "weight": 20,
+          "requiredConcepts": [
+            "验算",
+            "因此",
+            "结论"
+          ]
+        }
+      ],
+      "misconceptions": [
+        "地基就是基础",
+        "地基属于混凝土结构",
+        "承载力满足就不需要沉降验算",
+        "承载力越大沉降一定越小",
+        "基础就是天然土层"
+      ],
+      "expectedConcepts": [
+        "地基",
+        "承载力",
+        "地基承载力",
+        "基础",
+        "岩土体",
+        "承受荷载",
+        "变形",
+        "稳定性",
+        "荷载",
+        "强度"
+      ],
+      "requiresNumericAnswer": true,
+      "teacherReviewBelowConfidence": 0.68
+    },
+    "ch2-习题-3": {
+      "questionId": "ch2-习题-3",
+      "rubric": [
+        {
+          "criterion": "选用正确公式或判别方法",
+          "weight": 25,
+          "requiredConcepts": [
+            "地基",
+            "承载力",
+            "地基承载力",
+            "荷载",
+            "基础",
+            "持力层"
+          ]
+        },
+        {
+          "criterion": "整理题给条件并完整代入",
+          "weight": 25,
+          "requiredConcepts": [
+            "题给数据",
+            "代入过程",
+            "计算步骤"
+          ]
+        },
+        {
+          "criterion": "给出数值结果、单位或等级判定",
+          "weight": 30,
+          "requiredConcepts": [
+            "kPa",
+            "m",
+            "mm"
+          ]
+        },
+        {
+          "criterion": "说明验算过程和工程结论",
+          "weight": 20,
+          "requiredConcepts": [
+            "验算",
+            "因此",
+            "结论"
+          ]
+        }
+      ],
+      "misconceptions": [
+        "地基就是基础",
+        "地基属于混凝土结构",
+        "承载力满足就不需要沉降验算",
+        "承载力越大沉降一定越小",
+        "基础就是天然土层"
+      ],
+      "expectedConcepts": [
+        "地基",
+        "承载力",
+        "地基承载力",
+        "荷载",
+        "基础",
+        "持力层",
+        "岩土体",
+        "承受荷载",
+        "变形",
+        "稳定性"
+      ],
+      "requiresNumericAnswer": true,
+      "teacherReviewBelowConfidence": 0.68
+    },
+    "ch2-习题-4": {
+      "questionId": "ch2-习题-4",
+      "rubric": [
+        {
+          "criterion": "选用正确公式或判别方法",
+          "weight": 25,
+          "requiredConcepts": [
+            "承载力",
+            "荷载",
+            "基础",
+            "埋置深度",
+            "验算",
+            "基础底面尺寸"
+          ]
+        },
+        {
+          "criterion": "整理题给条件并完整代入",
+          "weight": 25,
+          "requiredConcepts": [
+            "附表数据",
+            "题给数据",
+            "代入过程",
+            "计算步骤"
+          ]
+        },
+        {
+          "criterion": "给出数值结果、单位或等级判定",
+          "weight": 30,
+          "requiredConcepts": [
+            "m"
+          ]
+        },
+        {
+          "criterion": "说明验算过程和工程结论",
+          "weight": 20,
+          "requiredConcepts": [
+            "验算",
+            "因此",
+            "结论"
+          ]
+        }
+      ],
+      "misconceptions": [
+        "承载力满足就不需要沉降验算",
+        "承载力越大沉降一定越小",
+        "基础就是天然土层",
+        "基础不传递荷载"
+      ],
+      "expectedConcepts": [
+        "承载力",
+        "荷载",
+        "基础",
+        "埋置深度",
+        "验算",
+        "基础底面尺寸",
+        "强度",
+        "变形",
+        "安全系数",
+        "结构构件"
+      ],
+      "requiresNumericAnswer": true,
+      "teacherReviewBelowConfidence": 0.68
+    },
+    "ch2-习题-5": {
+      "questionId": "ch2-习题-5",
+      "rubric": [
+        {
+          "criterion": "选用正确公式或判别方法",
+          "weight": 25,
+          "requiredConcepts": [
+            "荷载",
+            "基础",
+            "结构构件",
+            "传递荷载"
+          ]
+        },
+        {
+          "criterion": "整理题给条件并完整代入",
+          "weight": 25,
+          "requiredConcepts": [
+            "题给数据",
+            "代入过程",
+            "计算步骤"
+          ]
+        },
+        {
+          "criterion": "给出数值结果、单位或等级判定",
+          "weight": 30,
+          "requiredConcepts": [
+            "kN",
+            "m",
+            "mm",
+            "%"
+          ]
+        },
+        {
+          "criterion": "说明验算过程和工程结论",
+          "weight": 20,
+          "requiredConcepts": [
+            "验算",
+            "因此",
+            "结论"
+          ]
+        }
+      ],
+      "misconceptions": [
+        "基础就是天然土层",
+        "基础不传递荷载"
+      ],
+      "expectedConcepts": [
+        "荷载",
+        "基础",
+        "结构构件",
+        "传递荷载",
+        "埋置深度",
+        "施工方法",
+        "设计要求",
+        "验算"
+      ],
+      "requiresNumericAnswer": true,
+      "teacherReviewBelowConfidence": 0.68
+    },
+    "ch2-习题-6": {
+      "questionId": "ch2-习题-6",
+      "rubric": [
+        {
+          "criterion": "选用正确公式或判别方法",
+          "weight": 25,
+          "requiredConcepts": [
+            "荷载",
+            "基础",
+            "结构构件",
+            "传递荷载"
+          ]
+        },
+        {
+          "criterion": "整理题给条件并完整代入",
+          "weight": 25,
+          "requiredConcepts": [
+            "题给数据",
+            "代入过程",
+            "计算步骤"
+          ]
+        },
+        {
+          "criterion": "给出数值结果、单位或等级判定",
+          "weight": 30,
+          "requiredConcepts": [
+            "m"
+          ]
+        },
+        {
+          "criterion": "说明验算过程和工程结论",
+          "weight": 20,
+          "requiredConcepts": [
+            "验算",
+            "因此",
+            "结论"
+          ]
+        }
+      ],
+      "misconceptions": [
+        "基础就是天然土层",
+        "基础不传递荷载"
+      ],
+      "expectedConcepts": [
+        "荷载",
+        "基础",
+        "结构构件",
+        "传递荷载",
+        "埋置深度",
+        "施工方法",
+        "设计要求",
+        "验算"
+      ],
+      "requiresNumericAnswer": true,
+      "teacherReviewBelowConfidence": 0.68
+    },
+    "ch2-习题-7": {
+      "questionId": "ch2-习题-7",
+      "rubric": [
+        {
+          "criterion": "选用正确公式或判别方法",
+          "weight": 25,
+          "requiredConcepts": [
+            "地基",
+            "承载力",
+            "荷载",
+            "基础",
+            "岩土体",
+            "承受荷载"
+          ]
+        },
+        {
+          "criterion": "整理题给条件并完整代入",
+          "weight": 25,
+          "requiredConcepts": [
+            "附表数据",
+            "题给数据",
+            "代入过程",
+            "计算步骤"
+          ]
+        },
+        {
+          "criterion": "给出数值结果、单位或等级判定",
+          "weight": 30,
+          "requiredConcepts": [
+            "kN",
+            "kPa",
+            "m",
+            "mm"
+          ]
+        },
+        {
+          "criterion": "说明验算过程和工程结论",
+          "weight": 20,
+          "requiredConcepts": [
+            "验算",
+            "因此",
+            "结论"
+          ]
+        }
+      ],
+      "misconceptions": [
+        "地基就是基础",
+        "地基属于混凝土结构",
+        "承载力满足就不需要沉降验算",
+        "承载力越大沉降一定越小",
+        "基础就是天然土层"
+      ],
+      "expectedConcepts": [
+        "地基",
+        "承载力",
+        "荷载",
+        "基础",
+        "岩土体",
+        "承受荷载",
+        "变形",
+        "稳定性",
+        "强度"
+      ],
+      "requiresNumericAnswer": true,
+      "teacherReviewBelowConfidence": 0.68
+    },
+    "ch3-思考题-1": {
+      "questionId": "ch3-思考题-1",
+      "rubric": [
+        {
+          "criterion": "说明核心概念或定义",
+          "weight": 30,
+          "requiredConcepts": [
+            "桩基础",
+            "基础"
+          ]
+        },
+        {
+          "criterion": "解释作用机理或适用条件",
+          "weight": 30,
+          "requiredConcepts": [
+            "桩侧阻力",
+            "桩端阻力",
+            "单桩承载力",
+            "群桩效应"
+          ]
+        },
+        {
+          "criterion": "指出工程意义、区别或设计要求",
+          "weight": 25,
+          "requiredConcepts": [
+            "桩基础",
+            "基础",
+            "工程意义",
+            "设计要求"
+          ]
+        },
+        {
+          "criterion": "表达准确、层次清楚",
+          "weight": 15,
+          "requiredConcepts": [
+            "首先",
+            "因此"
+          ]
+        }
+      ],
+      "misconceptions": [
+        "桩基础只靠桩端阻力",
+        "桩基础不需要验算沉降",
+        "基础就是天然土层",
+        "基础不传递荷载"
+      ],
+      "expectedConcepts": [
+        "桩基础",
+        "基础",
+        "桩侧阻力",
+        "桩端阻力",
+        "单桩承载力",
+        "群桩效应",
+        "结构构件",
+        "传递荷载"
+      ],
+      "requiresNumericAnswer": false,
+      "teacherReviewBelowConfidence": 0.55
+    },
+    "ch3-思考题-2": {
+      "questionId": "ch3-思考题-2",
+      "rubric": [
+        {
+          "criterion": "说明核心概念或定义",
+          "weight": 30,
+          "requiredConcepts": [
+            "施工方法"
+          ]
+        },
+        {
+          "criterion": "解释作用机理或适用条件",
+          "weight": 30,
+          "requiredConcepts": [
+            "适用条件",
+            "设计要求",
+            "工程意义"
+          ]
+        },
+        {
+          "criterion": "指出工程意义、区别或设计要求",
+          "weight": 25,
+          "requiredConcepts": [
+            "施工方法",
+            "工程意义",
+            "设计要求"
+          ]
+        },
+        {
+          "criterion": "表达准确、层次清楚",
+          "weight": 15,
+          "requiredConcepts": [
+            "首先",
+            "因此"
+          ]
+        }
+      ],
+      "misconceptions": [],
+      "expectedConcepts": [
+        "施工方法",
+        "适用条件",
+        "设计要求",
+        "工程意义"
+      ],
+      "requiresNumericAnswer": false,
+      "teacherReviewBelowConfidence": 0.55
+    },
+    "ch3-思考题-3": {
+      "questionId": "ch3-思考题-3",
+      "rubric": [
+        {
+          "criterion": "说明核心概念或定义",
+          "weight": 30,
+          "requiredConcepts": [
+            "荷载"
+          ]
+        },
+        {
+          "criterion": "解释作用机理或适用条件",
+          "weight": 30,
+          "requiredConcepts": [
+            "适用条件",
+            "设计要求",
+            "工程意义"
+          ]
+        },
+        {
+          "criterion": "指出工程意义、区别或设计要求",
+          "weight": 25,
+          "requiredConcepts": [
+            "荷载",
+            "工程意义",
+            "设计要求"
+          ]
+        },
+        {
+          "criterion": "表达准确、层次清楚",
+          "weight": 15,
+          "requiredConcepts": [
+            "首先",
+            "因此"
+          ]
+        }
+      ],
+      "misconceptions": [],
+      "expectedConcepts": [
+        "荷载",
+        "适用条件",
+        "设计要求",
+        "工程意义"
+      ],
+      "requiresNumericAnswer": false,
+      "teacherReviewBelowConfidence": 0.55
+    },
+    "ch3-思考题-4": {
+      "questionId": "ch3-思考题-4",
+      "rubric": [
+        {
+          "criterion": "说明核心概念或定义",
+          "weight": 30,
+          "requiredConcepts": [
+            "负摩阻力"
+          ]
+        },
+        {
+          "criterion": "解释作用机理或适用条件",
+          "weight": 30,
+          "requiredConcepts": [
+            "适用条件",
+            "设计要求",
+            "工程意义"
+          ]
+        },
+        {
+          "criterion": "指出工程意义、区别或设计要求",
+          "weight": 25,
+          "requiredConcepts": [
+            "负摩阻力",
+            "工程意义",
+            "设计要求"
+          ]
+        },
+        {
+          "criterion": "表达准确、层次清楚",
+          "weight": 15,
+          "requiredConcepts": [
+            "首先",
+            "因此"
+          ]
+        }
+      ],
+      "misconceptions": [],
+      "expectedConcepts": [
+        "负摩阻力",
+        "适用条件",
+        "设计要求",
+        "工程意义"
+      ],
+      "requiresNumericAnswer": false,
+      "teacherReviewBelowConfidence": 0.55
+    },
+    "ch3-思考题-5": {
+      "questionId": "ch3-思考题-5",
+      "rubric": [
+        {
+          "criterion": "说明核心概念或定义",
+          "weight": 30,
+          "requiredConcepts": [
+            "承载力"
+          ]
+        },
+        {
+          "criterion": "解释作用机理或适用条件",
+          "weight": 30,
+          "requiredConcepts": [
+            "荷载",
+            "强度",
+            "变形",
+            "安全系数"
+          ]
+        },
+        {
+          "criterion": "指出工程意义、区别或设计要求",
+          "weight": 25,
+          "requiredConcepts": [
+            "承载力",
+            "工程意义",
+            "设计要求"
+          ]
+        },
+        {
+          "criterion": "表达准确、层次清楚",
+          "weight": 15,
+          "requiredConcepts": [
+            "首先",
+            "因此"
+          ]
+        }
+      ],
+      "misconceptions": [
+        "承载力满足就不需要沉降验算",
+        "承载力越大沉降一定越小"
+      ],
+      "expectedConcepts": [
+        "承载力",
+        "荷载",
+        "强度",
+        "变形",
+        "安全系数",
+        "定义",
+        "受力特点"
+      ],
+      "requiresNumericAnswer": false,
+      "teacherReviewBelowConfidence": 0.55
+    },
+    "ch3-思考题-6": {
+      "questionId": "ch3-思考题-6",
+      "rubric": [
+        {
+          "criterion": "说明核心概念或定义",
+          "weight": 30,
+          "requiredConcepts": [
+            "承载力",
+            "群桩",
+            "群桩效应",
+            "验算"
+          ]
+        },
+        {
+          "criterion": "解释作用机理或适用条件",
+          "weight": 30,
+          "requiredConcepts": [
+            "荷载",
+            "强度",
+            "变形",
+            "安全系数"
+          ]
+        },
+        {
+          "criterion": "指出工程意义、区别或设计要求",
+          "weight": 25,
+          "requiredConcepts": [
+            "承载力",
+            "群桩",
+            "群桩效应",
+            "工程意义",
+            "设计要求"
+          ]
+        },
+        {
+          "criterion": "表达准确、层次清楚",
+          "weight": 15,
+          "requiredConcepts": [
+            "首先",
+            "因此"
+          ]
+        }
+      ],
+      "misconceptions": [
+        "承载力满足就不需要沉降验算",
+        "承载力越大沉降一定越小"
+      ],
+      "expectedConcepts": [
+        "承载力",
+        "群桩",
+        "群桩效应",
+        "验算",
+        "荷载",
+        "强度",
+        "变形",
+        "安全系数"
+      ],
+      "requiresNumericAnswer": false,
+      "teacherReviewBelowConfidence": 0.55
+    },
+    "ch3-思考题-7": {
+      "questionId": "ch3-思考题-7",
+      "rubric": [
+        {
+          "criterion": "说明核心概念或定义",
+          "weight": 30,
+          "requiredConcepts": [
+            "承载力"
+          ]
+        },
+        {
+          "criterion": "解释作用机理或适用条件",
+          "weight": 30,
+          "requiredConcepts": [
+            "荷载",
+            "强度",
+            "变形",
+            "安全系数"
+          ]
+        },
+        {
+          "criterion": "指出工程意义、区别或设计要求",
+          "weight": 25,
+          "requiredConcepts": [
+            "承载力",
+            "工程意义",
+            "设计要求"
+          ]
+        },
+        {
+          "criterion": "表达准确、层次清楚",
+          "weight": 15,
+          "requiredConcepts": [
+            "首先",
+            "因此"
+          ]
+        }
+      ],
+      "misconceptions": [
+        "承载力满足就不需要沉降验算",
+        "承载力越大沉降一定越小"
+      ],
+      "expectedConcepts": [
+        "承载力",
+        "荷载",
+        "强度",
+        "变形",
+        "安全系数",
+        "设计要求",
+        "验算"
+      ],
+      "requiresNumericAnswer": false,
+      "teacherReviewBelowConfidence": 0.55
+    },
+    "ch3-思考题-8": {
+      "questionId": "ch3-思考题-8",
+      "rubric": [
+        {
+          "criterion": "说明核心概念或定义",
+          "weight": 30,
+          "requiredConcepts": [
+            "桩基础",
+            "单桩承载力"
+          ]
+        },
+        {
+          "criterion": "解释作用机理或适用条件",
+          "weight": 30,
+          "requiredConcepts": [
+            "桩侧阻力",
+            "桩端阻力",
+            "单桩承载力",
+            "群桩效应"
+          ]
+        },
+        {
+          "criterion": "指出工程意义、区别或设计要求",
+          "weight": 25,
+          "requiredConcepts": [
+            "桩基础",
+            "单桩承载力",
+            "工程意义",
+            "设计要求"
+          ]
+        },
+        {
+          "criterion": "表达准确、层次清楚",
+          "weight": 15,
+          "requiredConcepts": [
+            "首先",
+            "因此"
+          ]
+        }
+      ],
+      "misconceptions": [
+        "桩基础只靠桩端阻力",
+        "桩基础不需要验算沉降"
+      ],
+      "expectedConcepts": [
+        "桩基础",
+        "单桩承载力",
+        "桩侧阻力",
+        "桩端阻力",
+        "群桩效应"
+      ],
+      "requiresNumericAnswer": false,
+      "teacherReviewBelowConfidence": 0.55
+    },
+    "ch3-思考题-9": {
+      "questionId": "ch3-思考题-9",
+      "rubric": [
+        {
+          "criterion": "说明核心概念或定义",
+          "weight": 30,
+          "requiredConcepts": [
+            "验算"
+          ]
+        },
+        {
+          "criterion": "解释作用机理或适用条件",
+          "weight": 30,
+          "requiredConcepts": [
+            "设计要求",
+            "验算",
+            "安全性"
+          ]
+        },
+        {
+          "criterion": "指出工程意义、区别或设计要求",
+          "weight": 25,
+          "requiredConcepts": [
+            "验算",
+            "工程意义",
+            "设计要求"
+          ]
+        },
+        {
+          "criterion": "表达准确、层次清楚",
+          "weight": 15,
+          "requiredConcepts": [
+            "首先",
+            "因此"
+          ]
+        }
+      ],
+      "misconceptions": [],
+      "expectedConcepts": [
+        "验算",
+        "设计要求",
+        "安全性"
+      ],
+      "requiresNumericAnswer": false,
+      "teacherReviewBelowConfidence": 0.55
+    },
+    "ch3-习题-1": {
+      "questionId": "ch3-习题-1",
+      "rubric": [
+        {
+          "criterion": "选用正确公式或判别方法",
+          "weight": 25,
+          "requiredConcepts": [
+            "承载力",
+            "荷载",
+            "强度"
+          ]
+        },
+        {
+          "criterion": "整理题给条件并完整代入",
+          "weight": 25,
+          "requiredConcepts": [
+            "题给数据",
+            "代入过程",
+            "计算步骤"
+          ]
+        },
+        {
+          "criterion": "给出数值结果、单位或等级判定",
+          "weight": 30,
+          "requiredConcepts": [
+            "m",
+            "等级"
+          ]
+        },
+        {
+          "criterion": "说明验算过程和工程结论",
+          "weight": 20,
+          "requiredConcepts": [
+            "验算",
+            "因此",
+            "结论"
+          ]
+        }
+      ],
+      "misconceptions": [
+        "承载力满足就不需要沉降验算",
+        "承载力越大沉降一定越小"
+      ],
+      "expectedConcepts": [
+        "承载力",
+        "荷载",
+        "强度",
+        "变形",
+        "安全系数",
+        "设计要求",
+        "验算"
+      ],
+      "requiresNumericAnswer": true,
+      "teacherReviewBelowConfidence": 0.68
+    },
+    "ch3-习题-2": {
+      "questionId": "ch3-习题-2",
+      "rubric": [
+        {
+          "criterion": "选用正确公式或判别方法",
+          "weight": 25,
+          "requiredConcepts": [
+            "桩基础",
+            "荷载",
+            "基础",
+            "桩侧阻力",
+            "桩端阻力"
+          ]
+        },
+        {
+          "criterion": "整理题给条件并完整代入",
+          "weight": 25,
+          "requiredConcepts": [
+            "附表数据",
+            "题给数据",
+            "代入过程",
+            "计算步骤"
+          ]
+        },
+        {
+          "criterion": "给出数值结果、单位或等级判定",
+          "weight": 30,
+          "requiredConcepts": [
+            "m"
+          ]
+        },
+        {
+          "criterion": "说明验算过程和工程结论",
+          "weight": 20,
+          "requiredConcepts": [
+            "验算",
+            "因此",
+            "结论"
+          ]
+        }
+      ],
+      "misconceptions": [
+        "桩基础只靠桩端阻力",
+        "桩基础不需要验算沉降",
+        "基础就是天然土层",
+        "基础不传递荷载"
+      ],
+      "expectedConcepts": [
+        "桩基础",
+        "荷载",
+        "基础",
+        "桩侧阻力",
+        "桩端阻力",
+        "单桩承载力",
+        "群桩效应",
+        "结构构件",
+        "传递荷载"
+      ],
+      "requiresNumericAnswer": true,
+      "teacherReviewBelowConfidence": 0.68
+    },
+    "ch3-习题-3": {
+      "questionId": "ch3-习题-3",
+      "rubric": [
+        {
+          "criterion": "选用正确公式或判别方法",
+          "weight": 25,
+          "requiredConcepts": [
+            "桩基础",
+            "群桩",
+            "荷载",
+            "基础",
+            "验算",
+            "设计要求"
+          ]
+        },
+        {
+          "criterion": "整理题给条件并完整代入",
+          "weight": 25,
+          "requiredConcepts": [
+            "附表数据",
+            "题给数据",
+            "代入过程",
+            "计算步骤"
+          ]
+        },
+        {
+          "criterion": "给出数值结果、单位或等级判定",
+          "weight": 30,
+          "requiredConcepts": [
+            "m",
+            "mm"
+          ]
+        },
+        {
+          "criterion": "说明验算过程和工程结论",
+          "weight": 20,
+          "requiredConcepts": [
+            "验算",
+            "因此",
+            "结论"
+          ]
+        }
+      ],
+      "misconceptions": [
+        "桩基础只靠桩端阻力",
+        "桩基础不需要验算沉降",
+        "基础就是天然土层",
+        "基础不传递荷载"
+      ],
+      "expectedConcepts": [
+        "桩基础",
+        "群桩",
+        "荷载",
+        "基础",
+        "验算",
+        "设计要求",
+        "桩侧阻力",
+        "桩端阻力",
+        "单桩承载力",
+        "群桩效应"
+      ],
+      "requiresNumericAnswer": true,
+      "teacherReviewBelowConfidence": 0.68
+    },
+    "ch3-习题-4": {
+      "questionId": "ch3-习题-4",
+      "rubric": [
+        {
+          "criterion": "选用正确公式或判别方法",
+          "weight": 25,
+          "requiredConcepts": [
+            "桩基础",
+            "群桩",
+            "荷载",
+            "基础",
+            "弯矩",
+            "桩侧阻力"
+          ]
+        },
+        {
+          "criterion": "整理题给条件并完整代入",
+          "weight": 25,
+          "requiredConcepts": [
+            "题给数据",
+            "代入过程",
+            "计算步骤"
+          ]
+        },
+        {
+          "criterion": "给出数值结果、单位或等级判定",
+          "weight": 30,
+          "requiredConcepts": [
+            "m"
+          ]
+        },
+        {
+          "criterion": "说明验算过程和工程结论",
+          "weight": 20,
+          "requiredConcepts": [
+            "验算",
+            "因此",
+            "结论"
+          ]
+        }
+      ],
+      "misconceptions": [
+        "桩基础只靠桩端阻力",
+        "桩基础不需要验算沉降",
+        "基础就是天然土层",
+        "基础不传递荷载"
+      ],
+      "expectedConcepts": [
+        "桩基础",
+        "群桩",
+        "荷载",
+        "基础",
+        "弯矩",
+        "桩侧阻力",
+        "桩端阻力",
+        "单桩承载力",
+        "群桩效应",
+        "结构构件"
+      ],
+      "requiresNumericAnswer": true,
+      "teacherReviewBelowConfidence": 0.68
+    },
+    "ch4-思考题-1": {
+      "questionId": "ch4-思考题-1",
+      "rubric": [
+        {
+          "criterion": "说明核心概念或定义",
+          "weight": 30,
+          "requiredConcepts": [
+            "沉井",
+            "沉井基础",
+            "基础"
+          ]
+        },
+        {
+          "criterion": "解释作用机理或适用条件",
+          "weight": 30,
+          "requiredConcepts": [
+            "下沉施工",
+            "井壁摩阻力",
+            "封底",
+            "稳定性"
+          ]
+        },
+        {
+          "criterion": "指出工程意义、区别或设计要求",
+          "weight": 25,
+          "requiredConcepts": [
+            "沉井",
+            "沉井基础",
+            "基础",
+            "工程意义",
+            "设计要求"
+          ]
+        },
+        {
+          "criterion": "表达准确、层次清楚",
+          "weight": 15,
+          "requiredConcepts": [
+            "首先",
+            "因此"
+          ]
+        }
+      ],
+      "misconceptions": [
+        "沉井只靠自重即可稳定下沉",
+        "封底混凝土不影响安全",
+        "基础就是天然土层",
+        "基础不传递荷载"
+      ],
+      "expectedConcepts": [
+        "沉井",
+        "沉井基础",
+        "基础",
+        "下沉施工",
+        "井壁摩阻力",
+        "封底",
+        "稳定性",
+        "结构构件",
+        "传递荷载"
+      ],
+      "requiresNumericAnswer": false,
+      "teacherReviewBelowConfidence": 0.55
+    },
+    "ch4-思考题-2": {
+      "questionId": "ch4-思考题-2",
+      "rubric": [
+        {
+          "criterion": "说明核心概念或定义",
+          "weight": 30,
+          "requiredConcepts": [
+            "沉井",
+            "沉井基础",
+            "基础"
+          ]
+        },
+        {
+          "criterion": "解释作用机理或适用条件",
+          "weight": 30,
+          "requiredConcepts": [
+            "下沉施工",
+            "井壁摩阻力",
+            "封底",
+            "稳定性"
+          ]
+        },
+        {
+          "criterion": "指出工程意义、区别或设计要求",
+          "weight": 25,
+          "requiredConcepts": [
+            "沉井",
+            "沉井基础",
+            "基础",
+            "工程意义",
+            "设计要求"
+          ]
+        },
+        {
+          "criterion": "表达准确、层次清楚",
+          "weight": 15,
+          "requiredConcepts": [
+            "首先",
+            "因此"
+          ]
+        }
+      ],
+      "misconceptions": [
+        "沉井只靠自重即可稳定下沉",
+        "封底混凝土不影响安全",
+        "基础就是天然土层",
+        "基础不传递荷载"
+      ],
+      "expectedConcepts": [
+        "沉井",
+        "沉井基础",
+        "基础",
+        "下沉施工",
+        "井壁摩阻力",
+        "封底",
+        "稳定性",
+        "结构构件",
+        "传递荷载"
+      ],
+      "requiresNumericAnswer": false,
+      "teacherReviewBelowConfidence": 0.55
+    },
+    "ch4-思考题-3": {
+      "questionId": "ch4-思考题-3",
+      "rubric": [
+        {
+          "criterion": "说明核心概念或定义",
+          "weight": 30,
+          "requiredConcepts": [
+            "沉井"
+          ]
+        },
+        {
+          "criterion": "解释作用机理或适用条件",
+          "weight": 30,
+          "requiredConcepts": [
+            "适用条件",
+            "设计要求",
+            "工程意义"
+          ]
+        },
+        {
+          "criterion": "指出工程意义、区别或设计要求",
+          "weight": 25,
+          "requiredConcepts": [
+            "沉井",
+            "工程意义",
+            "设计要求"
+          ]
+        },
+        {
+          "criterion": "表达准确、层次清楚",
+          "weight": 15,
+          "requiredConcepts": [
+            "首先",
+            "因此"
+          ]
+        }
+      ],
+      "misconceptions": [],
+      "expectedConcepts": [
+        "沉井",
+        "适用条件",
+        "设计要求",
+        "工程意义"
+      ],
+      "requiresNumericAnswer": false,
+      "teacherReviewBelowConfidence": 0.55
+    },
+    "ch4-思考题-4": {
+      "questionId": "ch4-思考题-4",
+      "rubric": [
+        {
+          "criterion": "说明核心概念或定义",
+          "weight": 30,
+          "requiredConcepts": [
+            "沉井",
+            "验算"
+          ]
+        },
+        {
+          "criterion": "解释作用机理或适用条件",
+          "weight": 30,
+          "requiredConcepts": [
+            "适用条件",
+            "设计要求",
+            "工程意义"
+          ]
+        },
+        {
+          "criterion": "指出工程意义、区别或设计要求",
+          "weight": 25,
+          "requiredConcepts": [
+            "沉井",
+            "验算",
+            "工程意义",
+            "设计要求"
+          ]
+        },
+        {
+          "criterion": "表达准确、层次清楚",
+          "weight": 15,
+          "requiredConcepts": [
+            "首先",
+            "因此"
+          ]
+        }
+      ],
+      "misconceptions": [],
+      "expectedConcepts": [
+        "沉井",
+        "验算",
+        "适用条件",
+        "设计要求",
+        "工程意义"
+      ],
+      "requiresNumericAnswer": false,
+      "teacherReviewBelowConfidence": 0.55
+    },
+    "ch4-思考题-5": {
+      "questionId": "ch4-思考题-5",
+      "rubric": [
+        {
+          "criterion": "说明核心概念或定义",
+          "weight": 30,
+          "requiredConcepts": [
+            "沉井",
+            "基础",
+            "验算"
+          ]
+        },
+        {
+          "criterion": "解释作用机理或适用条件",
+          "weight": 30,
+          "requiredConcepts": [
+            "结构构件",
+            "传递荷载",
+            "埋置深度",
+            "施工方法"
+          ]
+        },
+        {
+          "criterion": "指出工程意义、区别或设计要求",
+          "weight": 25,
+          "requiredConcepts": [
+            "沉井",
+            "基础",
+            "验算",
+            "工程意义",
+            "设计要求"
+          ]
+        },
+        {
+          "criterion": "表达准确、层次清楚",
+          "weight": 15,
+          "requiredConcepts": [
+            "首先",
+            "因此"
+          ]
+        }
+      ],
+      "misconceptions": [
+        "基础就是天然土层",
+        "基础不传递荷载"
+      ],
+      "expectedConcepts": [
+        "沉井",
+        "基础",
+        "验算",
+        "结构构件",
+        "传递荷载",
+        "埋置深度",
+        "施工方法"
+      ],
+      "requiresNumericAnswer": false,
+      "teacherReviewBelowConfidence": 0.55
+    },
+    "ch4-习题-1": {
+      "questionId": "ch4-习题-1",
+      "rubric": [
+        {
+          "criterion": "选用正确公式或判别方法",
+          "weight": 25,
+          "requiredConcepts": [
+            "地基",
+            "承载力",
+            "沉井",
+            "地基承载力",
+            "沉井基础",
+            "荷载"
+          ]
+        },
+        {
+          "criterion": "整理题给条件并完整代入",
+          "weight": 25,
+          "requiredConcepts": [
+            "题给数据",
+            "代入过程",
+            "计算步骤"
+          ]
+        },
+        {
+          "criterion": "给出数值结果、单位或等级判定",
+          "weight": 30,
+          "requiredConcepts": [
+            "kN",
+            "m"
+          ]
+        },
+        {
+          "criterion": "说明验算过程和工程结论",
+          "weight": 20,
+          "requiredConcepts": [
+            "验算",
+            "因此",
+            "结论"
+          ]
+        }
+      ],
+      "misconceptions": [
+        "地基就是基础",
+        "地基属于混凝土结构",
+        "承载力满足就不需要沉降验算",
+        "承载力越大沉降一定越小",
+        "沉井只靠自重即可稳定下沉"
+      ],
+      "expectedConcepts": [
+        "地基",
+        "承载力",
+        "沉井",
+        "地基承载力",
+        "沉井基础",
+        "荷载",
+        "岩土体",
+        "承受荷载",
+        "变形",
+        "稳定性"
+      ],
+      "requiresNumericAnswer": true,
+      "teacherReviewBelowConfidence": 0.68
+    },
+    "ch4-习题-2": {
+      "questionId": "ch4-习题-2",
+      "rubric": [
+        {
+          "criterion": "选用正确公式或判别方法",
+          "weight": 25,
+          "requiredConcepts": [
+            "地基",
+            "沉井",
+            "沉井基础",
+            "荷载",
+            "基础",
+            "验算"
+          ]
+        },
+        {
+          "criterion": "整理题给条件并完整代入",
+          "weight": 25,
+          "requiredConcepts": [
+            "附表数据",
+            "题给数据",
+            "代入过程",
+            "计算步骤"
+          ]
+        },
+        {
+          "criterion": "给出数值结果、单位或等级判定",
+          "weight": 30,
+          "requiredConcepts": [
+            "kN",
+            "m",
+            "等级"
+          ]
+        },
+        {
+          "criterion": "说明验算过程和工程结论",
+          "weight": 20,
+          "requiredConcepts": [
+            "验算",
+            "因此",
+            "结论"
+          ]
+        }
+      ],
+      "misconceptions": [
+        "地基就是基础",
+        "地基属于混凝土结构",
+        "沉井只靠自重即可稳定下沉",
+        "封底混凝土不影响安全",
+        "基础就是天然土层"
+      ],
+      "expectedConcepts": [
+        "地基",
+        "沉井",
+        "沉井基础",
+        "荷载",
+        "基础",
+        "验算",
+        "岩土体",
+        "承受荷载",
+        "变形",
+        "稳定性"
+      ],
+      "requiresNumericAnswer": true,
+      "teacherReviewBelowConfidence": 0.68
+    },
+    "ch5-思考题-1": {
+      "questionId": "ch5-思考题-1",
+      "rubric": [
+        {
+          "criterion": "说明核心概念或定义",
+          "weight": 30,
+          "requiredConcepts": [
+            "支护结构"
+          ]
+        },
+        {
+          "criterion": "解释作用机理或适用条件",
+          "weight": 30,
+          "requiredConcepts": [
+            "适用条件",
+            "设计要求",
+            "工程意义"
+          ]
+        },
+        {
+          "criterion": "指出工程意义、区别或设计要求",
+          "weight": 25,
+          "requiredConcepts": [
+            "支护结构",
+            "工程意义",
+            "设计要求"
+          ]
+        },
+        {
+          "criterion": "表达准确、层次清楚",
+          "weight": 15,
+          "requiredConcepts": [
+            "首先",
+            "因此"
+          ]
+        }
+      ],
+      "misconceptions": [],
+      "expectedConcepts": [
+        "支护结构",
+        "适用条件",
+        "设计要求",
+        "工程意义"
+      ],
+      "requiresNumericAnswer": false,
+      "teacherReviewBelowConfidence": 0.55
+    },
+    "ch5-思考题-2": {
+      "questionId": "ch5-思考题-2",
+      "rubric": [
+        {
+          "criterion": "说明核心概念或定义",
+          "weight": 30,
+          "requiredConcepts": [
+            "支护结构"
+          ]
+        },
+        {
+          "criterion": "解释作用机理或适用条件",
+          "weight": 30,
+          "requiredConcepts": [
+            "定义",
+            "受力特点",
+            "施工方法",
+            "适用条件"
+          ]
+        },
+        {
+          "criterion": "指出工程意义、区别或设计要求",
+          "weight": 25,
+          "requiredConcepts": [
+            "支护结构",
+            "工程意义",
+            "设计要求"
+          ]
+        },
+        {
+          "criterion": "表达准确、层次清楚",
+          "weight": 15,
+          "requiredConcepts": [
+            "首先",
+            "因此"
+          ]
+        }
+      ],
+      "misconceptions": [],
+      "expectedConcepts": [
+        "支护结构",
+        "定义",
+        "受力特点",
+        "施工方法",
+        "适用条件"
+      ],
+      "requiresNumericAnswer": false,
+      "teacherReviewBelowConfidence": 0.55
+    },
+    "ch5-思考题-3": {
+      "questionId": "ch5-思考题-3",
+      "rubric": [
+        {
+          "criterion": "说明核心概念或定义",
+          "weight": 30,
+          "requiredConcepts": [
+            "基坑",
+            "支护结构"
+          ]
+        },
+        {
+          "criterion": "解释作用机理或适用条件",
+          "weight": 30,
+          "requiredConcepts": [
+            "适用条件",
+            "设计要求",
+            "工程意义"
+          ]
+        },
+        {
+          "criterion": "指出工程意义、区别或设计要求",
+          "weight": 25,
+          "requiredConcepts": [
+            "基坑",
+            "支护结构",
+            "工程意义",
+            "设计要求"
+          ]
+        },
+        {
+          "criterion": "表达准确、层次清楚",
+          "weight": 15,
+          "requiredConcepts": [
+            "首先",
+            "因此"
+          ]
+        }
+      ],
+      "misconceptions": [],
+      "expectedConcepts": [
+        "基坑",
+        "支护结构",
+        "适用条件",
+        "设计要求",
+        "工程意义"
+      ],
+      "requiresNumericAnswer": false,
+      "teacherReviewBelowConfidence": 0.55
+    },
+    "ch5-思考题-4": {
+      "questionId": "ch5-思考题-4",
+      "rubric": [
+        {
+          "criterion": "说明核心概念或定义",
+          "weight": 30,
+          "requiredConcepts": [
+            "基坑",
+            "土压力",
+            "支护结构",
+            "适用条件"
+          ]
+        },
+        {
+          "criterion": "解释作用机理或适用条件",
+          "weight": 30,
+          "requiredConcepts": [
+            "主动土压力",
+            "被动土压力",
+            "静止土压力",
+            "墙背条件"
+          ]
+        },
+        {
+          "criterion": "指出工程意义、区别或设计要求",
+          "weight": 25,
+          "requiredConcepts": [
+            "基坑",
+            "土压力",
+            "支护结构",
+            "工程意义",
+            "设计要求"
+          ]
+        },
+        {
+          "criterion": "表达准确、层次清楚",
+          "weight": 15,
+          "requiredConcepts": [
+            "首先",
+            "因此"
+          ]
+        }
+      ],
+      "misconceptions": [
+        "主动土压力一定大于被动土压力",
+        "土压力与位移条件无关"
+      ],
+      "expectedConcepts": [
+        "基坑",
+        "土压力",
+        "支护结构",
+        "适用条件",
+        "主动土压力",
+        "被动土压力",
+        "静止土压力",
+        "墙背条件"
+      ],
+      "requiresNumericAnswer": false,
+      "teacherReviewBelowConfidence": 0.55
+    },
+    "ch5-思考题-5": {
+      "questionId": "ch5-思考题-5",
+      "rubric": [
+        {
+          "criterion": "说明核心概念或定义",
+          "weight": 30,
+          "requiredConcepts": [
+            "支护结构"
+          ]
+        },
+        {
+          "criterion": "解释作用机理或适用条件",
+          "weight": 30,
+          "requiredConcepts": [
+            "定义",
+            "受力特点",
+            "施工方法",
+            "适用条件"
+          ]
+        },
+        {
+          "criterion": "指出工程意义、区别或设计要求",
+          "weight": 25,
+          "requiredConcepts": [
+            "支护结构",
+            "工程意义",
+            "设计要求"
+          ]
+        },
+        {
+          "criterion": "表达准确、层次清楚",
+          "weight": 15,
+          "requiredConcepts": [
+            "首先",
+            "因此"
+          ]
+        }
+      ],
+      "misconceptions": [],
+      "expectedConcepts": [
+        "支护结构",
+        "定义",
+        "受力特点",
+        "施工方法",
+        "适用条件"
+      ],
+      "requiresNumericAnswer": false,
+      "teacherReviewBelowConfidence": 0.55
+    },
+    "ch5-思考题-6": {
+      "questionId": "ch5-思考题-6",
+      "rubric": [
+        {
+          "criterion": "说明核心概念或定义",
+          "weight": 30,
+          "requiredConcepts": [
+            "支护结构"
+          ]
+        },
+        {
+          "criterion": "解释作用机理或适用条件",
+          "weight": 30,
+          "requiredConcepts": [
+            "定义",
+            "受力特点",
+            "施工方法",
+            "适用条件"
+          ]
+        },
+        {
+          "criterion": "指出工程意义、区别或设计要求",
+          "weight": 25,
+          "requiredConcepts": [
+            "支护结构",
+            "工程意义",
+            "设计要求"
+          ]
+        },
+        {
+          "criterion": "表达准确、层次清楚",
+          "weight": 15,
+          "requiredConcepts": [
+            "首先",
+            "因此"
+          ]
+        }
+      ],
+      "misconceptions": [],
+      "expectedConcepts": [
+        "支护结构",
+        "定义",
+        "受力特点",
+        "施工方法",
+        "适用条件"
+      ],
+      "requiresNumericAnswer": false,
+      "teacherReviewBelowConfidence": 0.55
+    },
+    "ch5-思考题-7": {
+      "questionId": "ch5-思考题-7",
+      "rubric": [
+        {
+          "criterion": "说明核心概念或定义",
+          "weight": 30,
+          "requiredConcepts": [
+            "施工方法"
+          ]
+        },
+        {
+          "criterion": "解释作用机理或适用条件",
+          "weight": 30,
+          "requiredConcepts": [
+            "定义",
+            "受力特点",
+            "施工方法",
+            "适用条件"
+          ]
+        },
+        {
+          "criterion": "指出工程意义、区别或设计要求",
+          "weight": 25,
+          "requiredConcepts": [
+            "施工方法",
+            "工程意义",
+            "设计要求"
+          ]
+        },
+        {
+          "criterion": "表达准确、层次清楚",
+          "weight": 15,
+          "requiredConcepts": [
+            "首先",
+            "因此"
+          ]
+        }
+      ],
+      "misconceptions": [],
+      "expectedConcepts": [
+        "施工方法",
+        "定义",
+        "受力特点",
+        "适用条件",
+        "设计要求",
+        "验算"
+      ],
+      "requiresNumericAnswer": false,
+      "teacherReviewBelowConfidence": 0.55
+    },
+    "ch5-思考题-8": {
+      "questionId": "ch5-思考题-8",
+      "rubric": [
+        {
+          "criterion": "说明核心概念或定义",
+          "weight": 30,
+          "requiredConcepts": [
+            "验算"
+          ]
+        },
+        {
+          "criterion": "解释作用机理或适用条件",
+          "weight": 30,
+          "requiredConcepts": [
+            "适用条件",
+            "设计要求",
+            "工程意义"
+          ]
+        },
+        {
+          "criterion": "指出工程意义、区别或设计要求",
+          "weight": 25,
+          "requiredConcepts": [
+            "验算",
+            "工程意义",
+            "设计要求"
+          ]
+        },
+        {
+          "criterion": "表达准确、层次清楚",
+          "weight": 15,
+          "requiredConcepts": [
+            "首先",
+            "因此"
+          ]
+        }
+      ],
+      "misconceptions": [],
+      "expectedConcepts": [
+        "验算",
+        "适用条件",
+        "设计要求",
+        "工程意义"
+      ],
+      "requiresNumericAnswer": false,
+      "teacherReviewBelowConfidence": 0.55
+    },
+    "ch5-思考题-9": {
+      "questionId": "ch5-思考题-9",
+      "rubric": [
+        {
+          "criterion": "说明核心概念或定义",
+          "weight": 30,
+          "requiredConcepts": [
+            "基坑工程",
+            "支护结构"
+          ]
+        },
+        {
+          "criterion": "解释作用机理或适用条件",
+          "weight": 30,
+          "requiredConcepts": [
+            "支护结构",
+            "土压力",
+            "降水",
+            "稳定性"
+          ]
+        },
+        {
+          "criterion": "指出工程意义、区别或设计要求",
+          "weight": 25,
+          "requiredConcepts": [
+            "基坑工程",
+            "支护结构",
+            "工程意义",
+            "设计要求"
+          ]
+        },
+        {
+          "criterion": "表达准确、层次清楚",
+          "weight": 15,
+          "requiredConcepts": [
+            "首先",
+            "因此"
+          ]
+        }
+      ],
+      "misconceptions": [
+        "基坑支护只需满足强度",
+        "降水越多越安全"
+      ],
+      "expectedConcepts": [
+        "基坑工程",
+        "支护结构",
+        "土压力",
+        "降水",
+        "稳定性"
+      ],
+      "requiresNumericAnswer": false,
+      "teacherReviewBelowConfidence": 0.55
+    },
+    "ch5-思考题-10": {
+      "questionId": "ch5-思考题-10",
+      "rubric": [
+        {
+          "criterion": "说明核心概念或定义",
+          "weight": 30,
+          "requiredConcepts": [
+            "基坑",
+            "基坑工程"
+          ]
+        },
+        {
+          "criterion": "解释作用机理或适用条件",
+          "weight": 30,
+          "requiredConcepts": [
+            "支护结构",
+            "土压力",
+            "降水",
+            "稳定性"
+          ]
+        },
+        {
+          "criterion": "指出工程意义、区别或设计要求",
+          "weight": 25,
+          "requiredConcepts": [
+            "基坑",
+            "基坑工程",
+            "工程意义",
+            "设计要求"
+          ]
+        },
+        {
+          "criterion": "表达准确、层次清楚",
+          "weight": 15,
+          "requiredConcepts": [
+            "首先",
+            "因此"
+          ]
+        }
+      ],
+      "misconceptions": [
+        "基坑支护只需满足强度",
+        "降水越多越安全"
+      ],
+      "expectedConcepts": [
+        "基坑",
+        "基坑工程",
+        "支护结构",
+        "土压力",
+        "降水",
+        "稳定性",
+        "形成原因",
+        "影响因素"
+      ],
+      "requiresNumericAnswer": false,
+      "teacherReviewBelowConfidence": 0.55
+    },
+    "ch5-习题-1": {
+      "questionId": "ch5-习题-1",
+      "rubric": [
+        {
+          "criterion": "选用正确公式或判别方法",
+          "weight": 25,
+          "requiredConcepts": [
+            "基坑",
+            "荷载",
+            "弯矩",
+            "设计要求",
+            "验算"
+          ]
+        },
+        {
+          "criterion": "整理题给条件并完整代入",
+          "weight": 25,
+          "requiredConcepts": [
+            "题给数据",
+            "代入过程",
+            "计算步骤"
+          ]
+        },
+        {
+          "criterion": "给出数值结果、单位或等级判定",
+          "weight": 30,
+          "requiredConcepts": [
+            "m",
+            "mm"
+          ]
+        },
+        {
+          "criterion": "说明验算过程和工程结论",
+          "weight": 20,
+          "requiredConcepts": [
+            "验算",
+            "因此",
+            "结论"
+          ]
+        }
+      ],
+      "misconceptions": [],
+      "expectedConcepts": [
+        "基坑",
+        "荷载",
+        "弯矩",
+        "设计要求",
+        "验算",
+        "安全性"
+      ],
+      "requiresNumericAnswer": true,
+      "teacherReviewBelowConfidence": 0.68
+    },
+    "ch5-习题-2": {
+      "questionId": "ch5-习题-2",
+      "rubric": [
+        {
+          "criterion": "选用正确公式或判别方法",
+          "weight": 25,
+          "requiredConcepts": [
+            "基坑",
+            "稳定性",
+            "设计要求",
+            "验算"
+          ]
+        },
+        {
+          "criterion": "整理题给条件并完整代入",
+          "weight": 25,
+          "requiredConcepts": [
+            "题给数据",
+            "代入过程",
+            "计算步骤"
+          ]
+        },
+        {
+          "criterion": "给出数值结果、单位或等级判定",
+          "weight": 30,
+          "requiredConcepts": [
+            "m",
+            "mm"
+          ]
+        },
+        {
+          "criterion": "说明验算过程和工程结论",
+          "weight": 20,
+          "requiredConcepts": [
+            "验算",
+            "因此",
+            "结论"
+          ]
+        }
+      ],
+      "misconceptions": [],
+      "expectedConcepts": [
+        "基坑",
+        "稳定性",
+        "设计要求",
+        "验算",
+        "安全性"
+      ],
+      "requiresNumericAnswer": true,
+      "teacherReviewBelowConfidence": 0.68
+    },
+    "ch5-习题-3": {
+      "questionId": "ch5-习题-3",
+      "rubric": [
+        {
+          "criterion": "选用正确公式或判别方法",
+          "weight": 25,
+          "requiredConcepts": [
+            "基坑",
+            "支护结构",
+            "稳定性",
+            "荷载",
+            "验算",
+            "设计要求"
+          ]
+        },
+        {
+          "criterion": "整理题给条件并完整代入",
+          "weight": 25,
+          "requiredConcepts": [
+            "题给数据",
+            "代入过程",
+            "计算步骤"
+          ]
+        },
+        {
+          "criterion": "给出数值结果、单位或等级判定",
+          "weight": 30,
+          "requiredConcepts": [
+            "m",
+            "mm"
+          ]
+        },
+        {
+          "criterion": "说明验算过程和工程结论",
+          "weight": 20,
+          "requiredConcepts": [
+            "验算",
+            "因此",
+            "结论"
+          ]
+        }
+      ],
+      "misconceptions": [],
+      "expectedConcepts": [
+        "基坑",
+        "支护结构",
+        "稳定性",
+        "荷载",
+        "验算",
+        "设计要求",
+        "安全性"
+      ],
+      "requiresNumericAnswer": true,
+      "teacherReviewBelowConfidence": 0.68
+    },
+    "ch6-思考题-1": {
+      "questionId": "ch6-思考题-1",
+      "rubric": [
+        {
+          "criterion": "说明核心概念或定义",
+          "weight": 30,
+          "requiredConcepts": [
+            "地基处理",
+            "复合地基"
+          ]
+        },
+        {
+          "criterion": "解释作用机理或适用条件",
+          "weight": 30,
+          "requiredConcepts": [
+            "加固机理",
+            "承载力提高",
+            "沉降控制",
+            "适用土层"
+          ]
+        },
+        {
+          "criterion": "指出工程意义、区别或设计要求",
+          "weight": 25,
+          "requiredConcepts": [
+            "地基处理",
+            "复合地基",
+            "工程意义",
+            "设计要求"
+          ]
+        },
+        {
+          "criterion": "表达准确、层次清楚",
+          "weight": 15,
+          "requiredConcepts": [
+            "首先",
+            "因此"
+          ]
+        }
+      ],
+      "misconceptions": [
+        "地基处理只提高强度不影响变形",
+        "复合地基不用考虑桩间土",
+        "复合地基承载力只由增强体承担"
+      ],
+      "expectedConcepts": [
+        "地基处理",
+        "复合地基",
+        "加固机理",
+        "承载力提高",
+        "沉降控制",
+        "适用土层",
+        "定义",
+        "受力特点"
+      ],
+      "requiresNumericAnswer": false,
+      "teacherReviewBelowConfidence": 0.55
+    },
+    "ch6-思考题-2": {
+      "questionId": "ch6-思考题-2",
+      "rubric": [
+        {
+          "criterion": "说明核心概念或定义",
+          "weight": 30,
+          "requiredConcepts": [
+            "地基",
+            "地基处理",
+            "换填垫层"
+          ]
+        },
+        {
+          "criterion": "解释作用机理或适用条件",
+          "weight": 30,
+          "requiredConcepts": [
+            "岩土体",
+            "承受荷载",
+            "变形",
+            "稳定性"
+          ]
+        },
+        {
+          "criterion": "指出工程意义、区别或设计要求",
+          "weight": 25,
+          "requiredConcepts": [
+            "地基",
+            "地基处理",
+            "换填垫层",
+            "工程意义",
+            "设计要求"
+          ]
+        },
+        {
+          "criterion": "表达准确、层次清楚",
+          "weight": 15,
+          "requiredConcepts": [
+            "首先",
+            "因此"
+          ]
+        }
+      ],
+      "misconceptions": [
+        "地基就是基础",
+        "地基属于混凝土结构",
+        "地基处理只提高强度不影响变形",
+        "复合地基不用考虑桩间土"
+      ],
+      "expectedConcepts": [
+        "地基",
+        "地基处理",
+        "换填垫层",
+        "岩土体",
+        "承受荷载",
+        "变形",
+        "稳定性",
+        "加固机理",
+        "承载力提高"
+      ],
+      "requiresNumericAnswer": false,
+      "teacherReviewBelowConfidence": 0.55
+    },
+    "ch6-思考题-3": {
+      "questionId": "ch6-思考题-3",
+      "rubric": [
+        {
+          "criterion": "说明核心概念或定义",
+          "weight": 30,
+          "requiredConcepts": [
+            "强夯"
+          ]
+        },
+        {
+          "criterion": "解释作用机理或适用条件",
+          "weight": 30,
+          "requiredConcepts": [
+            "适用条件",
+            "设计要求",
+            "工程意义"
+          ]
+        },
+        {
+          "criterion": "指出工程意义、区别或设计要求",
+          "weight": 25,
+          "requiredConcepts": [
+            "强夯",
+            "工程意义",
+            "设计要求"
+          ]
+        },
+        {
+          "criterion": "表达准确、层次清楚",
+          "weight": 15,
+          "requiredConcepts": [
+            "首先",
+            "因此"
+          ]
+        }
+      ],
+      "misconceptions": [],
+      "expectedConcepts": [
+        "强夯",
+        "适用条件",
+        "设计要求",
+        "工程意义"
+      ],
+      "requiresNumericAnswer": false,
+      "teacherReviewBelowConfidence": 0.55
+    },
+    "ch6-思考题-4": {
+      "questionId": "ch6-思考题-4",
+      "rubric": [
+        {
+          "criterion": "说明核心概念或定义",
+          "weight": 30,
+          "requiredConcepts": [
+            "强夯"
+          ]
+        },
+        {
+          "criterion": "解释作用机理或适用条件",
+          "weight": 30,
+          "requiredConcepts": [
+            "定义",
+            "受力特点",
+            "施工方法",
+            "适用条件"
+          ]
+        },
+        {
+          "criterion": "指出工程意义、区别或设计要求",
+          "weight": 25,
+          "requiredConcepts": [
+            "强夯",
+            "工程意义",
+            "设计要求"
+          ]
+        },
+        {
+          "criterion": "表达准确、层次清楚",
+          "weight": 15,
+          "requiredConcepts": [
+            "首先",
+            "因此"
+          ]
+        }
+      ],
+      "misconceptions": [],
+      "expectedConcepts": [
+        "强夯",
+        "定义",
+        "受力特点",
+        "施工方法",
+        "适用条件"
+      ],
+      "requiresNumericAnswer": false,
+      "teacherReviewBelowConfidence": 0.55
+    },
+    "ch6-思考题-5": {
+      "questionId": "ch6-思考题-5",
+      "rubric": [
+        {
+          "criterion": "说明核心概念或定义",
+          "weight": 30,
+          "requiredConcepts": [
+            "地基处理",
+            "复合地基"
+          ]
+        },
+        {
+          "criterion": "解释作用机理或适用条件",
+          "weight": 30,
+          "requiredConcepts": [
+            "加固机理",
+            "承载力提高",
+            "沉降控制",
+            "适用土层"
+          ]
+        },
+        {
+          "criterion": "指出工程意义、区别或设计要求",
+          "weight": 25,
+          "requiredConcepts": [
+            "地基处理",
+            "复合地基",
+            "工程意义",
+            "设计要求"
+          ]
+        },
+        {
+          "criterion": "表达准确、层次清楚",
+          "weight": 15,
+          "requiredConcepts": [
+            "首先",
+            "因此"
+          ]
+        }
+      ],
+      "misconceptions": [
+        "地基处理只提高强度不影响变形",
+        "复合地基不用考虑桩间土",
+        "复合地基承载力只由增强体承担"
+      ],
+      "expectedConcepts": [
+        "地基处理",
+        "复合地基",
+        "加固机理",
+        "承载力提高",
+        "沉降控制",
+        "适用土层"
+      ],
+      "requiresNumericAnswer": false,
+      "teacherReviewBelowConfidence": 0.55
+    },
+    "ch6-思考题-6": {
+      "questionId": "ch6-思考题-6",
+      "rubric": [
+        {
+          "criterion": "说明核心概念或定义",
+          "weight": 30,
+          "requiredConcepts": [
+            "地基处理",
+            "复合地基"
+          ]
+        },
+        {
+          "criterion": "解释作用机理或适用条件",
+          "weight": 30,
+          "requiredConcepts": [
+            "加固机理",
+            "承载力提高",
+            "沉降控制",
+            "适用土层"
+          ]
+        },
+        {
+          "criterion": "指出工程意义、区别或设计要求",
+          "weight": 25,
+          "requiredConcepts": [
+            "地基处理",
+            "复合地基",
+            "工程意义",
+            "设计要求"
+          ]
+        },
+        {
+          "criterion": "表达准确、层次清楚",
+          "weight": 15,
+          "requiredConcepts": [
+            "首先",
+            "因此"
+          ]
+        }
+      ],
+      "misconceptions": [
+        "地基处理只提高强度不影响变形",
+        "复合地基不用考虑桩间土",
+        "复合地基承载力只由增强体承担"
+      ],
+      "expectedConcepts": [
+        "地基处理",
+        "复合地基",
+        "加固机理",
+        "承载力提高",
+        "沉降控制",
+        "适用土层"
+      ],
+      "requiresNumericAnswer": false,
+      "teacherReviewBelowConfidence": 0.55
+    },
+    "ch6-思考题-7": {
+      "questionId": "ch6-思考题-7",
+      "rubric": [
+        {
+          "criterion": "说明核心概念或定义",
+          "weight": 30,
+          "requiredConcepts": [
+            "地基",
+            "复合地基"
+          ]
+        },
+        {
+          "criterion": "解释作用机理或适用条件",
+          "weight": 30,
+          "requiredConcepts": [
+            "岩土体",
+            "承受荷载",
+            "变形",
+            "稳定性"
+          ]
+        },
+        {
+          "criterion": "指出工程意义、区别或设计要求",
+          "weight": 25,
+          "requiredConcepts": [
+            "地基",
+            "复合地基",
+            "工程意义",
+            "设计要求"
+          ]
+        },
+        {
+          "criterion": "表达准确、层次清楚",
+          "weight": 15,
+          "requiredConcepts": [
+            "首先",
+            "因此"
+          ]
+        }
+      ],
+      "misconceptions": [
+        "地基就是基础",
+        "地基属于混凝土结构",
+        "复合地基不用考虑桩间土",
+        "复合地基承载力只由增强体承担"
+      ],
+      "expectedConcepts": [
+        "地基",
+        "复合地基",
+        "岩土体",
+        "承受荷载",
+        "变形",
+        "稳定性"
+      ],
+      "requiresNumericAnswer": false,
+      "teacherReviewBelowConfidence": 0.55
+    },
+    "ch6-思考题-8": {
+      "questionId": "ch6-思考题-8",
+      "rubric": [
+        {
+          "criterion": "说明核心概念或定义",
+          "weight": 30,
+          "requiredConcepts": [
+            "地基",
+            "复合地基"
+          ]
+        },
+        {
+          "criterion": "解释作用机理或适用条件",
+          "weight": 30,
+          "requiredConcepts": [
+            "岩土体",
+            "承受荷载",
+            "变形",
+            "稳定性"
+          ]
+        },
+        {
+          "criterion": "指出工程意义、区别或设计要求",
+          "weight": 25,
+          "requiredConcepts": [
+            "地基",
+            "复合地基",
+            "工程意义",
+            "设计要求"
+          ]
+        },
+        {
+          "criterion": "表达准确、层次清楚",
+          "weight": 15,
+          "requiredConcepts": [
+            "首先",
+            "因此"
+          ]
+        }
+      ],
+      "misconceptions": [
+        "地基就是基础",
+        "地基属于混凝土结构",
+        "复合地基不用考虑桩间土",
+        "复合地基承载力只由增强体承担"
+      ],
+      "expectedConcepts": [
+        "地基",
+        "复合地基",
+        "岩土体",
+        "承受荷载",
+        "变形",
+        "稳定性",
+        "定义",
+        "受力特点"
+      ],
+      "requiresNumericAnswer": false,
+      "teacherReviewBelowConfidence": 0.55
+    },
+    "ch6-思考题-9": {
+      "questionId": "ch6-思考题-9",
+      "rubric": [
+        {
+          "criterion": "说明核心概念或定义",
+          "weight": 30,
+          "requiredConcepts": [
+            "地基处理",
+            "复合地基"
+          ]
+        },
+        {
+          "criterion": "解释作用机理或适用条件",
+          "weight": 30,
+          "requiredConcepts": [
+            "加固机理",
+            "承载力提高",
+            "沉降控制",
+            "适用土层"
+          ]
+        },
+        {
+          "criterion": "指出工程意义、区别或设计要求",
+          "weight": 25,
+          "requiredConcepts": [
+            "地基处理",
+            "复合地基",
+            "工程意义",
+            "设计要求"
+          ]
+        },
+        {
+          "criterion": "表达准确、层次清楚",
+          "weight": 15,
+          "requiredConcepts": [
+            "首先",
+            "因此"
+          ]
+        }
+      ],
+      "misconceptions": [
+        "地基处理只提高强度不影响变形",
+        "复合地基不用考虑桩间土",
+        "复合地基承载力只由增强体承担"
+      ],
+      "expectedConcepts": [
+        "地基处理",
+        "复合地基",
+        "加固机理",
+        "承载力提高",
+        "沉降控制",
+        "适用土层"
+      ],
+      "requiresNumericAnswer": false,
+      "teacherReviewBelowConfidence": 0.55
+    },
+    "ch6-思考题-10": {
+      "questionId": "ch6-思考题-10",
+      "rubric": [
+        {
+          "criterion": "说明核心概念或定义",
+          "weight": 30,
+          "requiredConcepts": [
+            "地基处理",
+            "复合地基"
+          ]
+        },
+        {
+          "criterion": "解释作用机理或适用条件",
+          "weight": 30,
+          "requiredConcepts": [
+            "加固机理",
+            "承载力提高",
+            "沉降控制",
+            "适用土层"
+          ]
+        },
+        {
+          "criterion": "指出工程意义、区别或设计要求",
+          "weight": 25,
+          "requiredConcepts": [
+            "地基处理",
+            "复合地基",
+            "工程意义",
+            "设计要求"
+          ]
+        },
+        {
+          "criterion": "表达准确、层次清楚",
+          "weight": 15,
+          "requiredConcepts": [
+            "首先",
+            "因此"
+          ]
+        }
+      ],
+      "misconceptions": [
+        "地基处理只提高强度不影响变形",
+        "复合地基不用考虑桩间土",
+        "复合地基承载力只由增强体承担"
+      ],
+      "expectedConcepts": [
+        "地基处理",
+        "复合地基",
+        "加固机理",
+        "承载力提高",
+        "沉降控制",
+        "适用土层"
+      ],
+      "requiresNumericAnswer": false,
+      "teacherReviewBelowConfidence": 0.55
+    },
+    "ch6-习题-1": {
+      "questionId": "ch6-习题-1",
+      "rubric": [
+        {
+          "criterion": "选用正确公式或判别方法",
+          "weight": 25,
+          "requiredConcepts": [
+            "换填垫层",
+            "荷载",
+            "基础",
+            "结构构件",
+            "传递荷载"
+          ]
+        },
+        {
+          "criterion": "整理题给条件并完整代入",
+          "weight": 25,
+          "requiredConcepts": [
+            "题给数据",
+            "代入过程",
+            "计算步骤"
+          ]
+        },
+        {
+          "criterion": "给出数值结果、单位或等级判定",
+          "weight": 30,
+          "requiredConcepts": [
+            "kPa",
+            "m",
+            "mm"
+          ]
+        },
+        {
+          "criterion": "说明验算过程和工程结论",
+          "weight": 20,
+          "requiredConcepts": [
+            "验算",
+            "因此",
+            "结论"
+          ]
+        }
+      ],
+      "misconceptions": [
+        "基础就是天然土层",
+        "基础不传递荷载"
+      ],
+      "expectedConcepts": [
+        "换填垫层",
+        "荷载",
+        "基础",
+        "结构构件",
+        "传递荷载",
+        "埋置深度",
+        "施工方法",
+        "设计要求",
+        "验算"
+      ],
+      "requiresNumericAnswer": true,
+      "teacherReviewBelowConfidence": 0.68
+    },
+    "ch6-习题-2": {
+      "questionId": "ch6-习题-2",
+      "rubric": [
+        {
+          "criterion": "选用正确公式或判别方法",
+          "weight": 25,
+          "requiredConcepts": [
+            "地基",
+            "岩土体",
+            "承受荷载"
+          ]
+        },
+        {
+          "criterion": "整理题给条件并完整代入",
+          "weight": 25,
+          "requiredConcepts": [
+            "题给数据",
+            "代入过程",
+            "计算步骤"
+          ]
+        },
+        {
+          "criterion": "给出数值结果、单位或等级判定",
+          "weight": 30,
+          "requiredConcepts": [
+            "m",
+            "%"
+          ]
+        },
+        {
+          "criterion": "说明验算过程和工程结论",
+          "weight": 20,
+          "requiredConcepts": [
+            "验算",
+            "因此",
+            "结论"
+          ]
+        }
+      ],
+      "misconceptions": [
+        "地基就是基础",
+        "地基属于混凝土结构"
+      ],
+      "expectedConcepts": [
+        "地基",
+        "岩土体",
+        "承受荷载",
+        "变形",
+        "稳定性",
+        "设计要求",
+        "验算"
+      ],
+      "requiresNumericAnswer": true,
+      "teacherReviewBelowConfidence": 0.68
+    },
+    "ch6-习题-3": {
+      "questionId": "ch6-习题-3",
+      "rubric": [
+        {
+          "criterion": "选用正确公式或判别方法",
+          "weight": 25,
+          "requiredConcepts": [
+            "地基",
+            "荷载",
+            "岩土体",
+            "承受荷载"
+          ]
+        },
+        {
+          "criterion": "整理题给条件并完整代入",
+          "weight": 25,
+          "requiredConcepts": [
+            "题给数据",
+            "代入过程",
+            "计算步骤"
+          ]
+        },
+        {
+          "criterion": "给出数值结果、单位或等级判定",
+          "weight": 30,
+          "requiredConcepts": [
+            "kPa",
+            "m"
+          ]
+        },
+        {
+          "criterion": "说明验算过程和工程结论",
+          "weight": 20,
+          "requiredConcepts": [
+            "验算",
+            "因此",
+            "结论"
+          ]
+        }
+      ],
+      "misconceptions": [
+        "地基就是基础",
+        "地基属于混凝土结构"
+      ],
+      "expectedConcepts": [
+        "地基",
+        "荷载",
+        "岩土体",
+        "承受荷载",
+        "变形",
+        "稳定性",
+        "设计要求",
+        "验算"
+      ],
+      "requiresNumericAnswer": true,
+      "teacherReviewBelowConfidence": 0.68
+    },
+    "ch6-习题-4": {
+      "questionId": "ch6-习题-4",
+      "rubric": [
+        {
+          "criterion": "选用正确公式或判别方法",
+          "weight": 25,
+          "requiredConcepts": [
+            "地基",
+            "沉降",
+            "预压法",
+            "荷载",
+            "岩土体",
+            "承受荷载"
+          ]
+        },
+        {
+          "criterion": "整理题给条件并完整代入",
+          "weight": 25,
+          "requiredConcepts": [
+            "题给数据",
+            "代入过程",
+            "计算步骤"
+          ]
+        },
+        {
+          "criterion": "给出数值结果、单位或等级判定",
+          "weight": 30,
+          "requiredConcepts": [
+            "kPa",
+            "m",
+            "mm"
+          ]
+        },
+        {
+          "criterion": "说明验算过程和工程结论",
+          "weight": 20,
+          "requiredConcepts": [
+            "验算",
+            "因此",
+            "结论"
+          ]
+        }
+      ],
+      "misconceptions": [
+        "地基就是基础",
+        "地基属于混凝土结构",
+        "沉降越小基础一定越经济",
+        "沉降计算不需要考虑土层压缩性"
+      ],
+      "expectedConcepts": [
+        "地基",
+        "沉降",
+        "预压法",
+        "荷载",
+        "岩土体",
+        "承受荷载",
+        "变形",
+        "稳定性",
+        "压缩变形",
+        "附加应力"
+      ],
+      "requiresNumericAnswer": true,
+      "teacherReviewBelowConfidence": 0.68
+    },
+    "ch6-习题-5": {
+      "questionId": "ch6-习题-5",
+      "rubric": [
+        {
+          "criterion": "选用正确公式或判别方法",
+          "weight": 25,
+          "requiredConcepts": [
+            "地基",
+            "岩土体",
+            "承受荷载"
+          ]
+        },
+        {
+          "criterion": "整理题给条件并完整代入",
+          "weight": 25,
+          "requiredConcepts": [
+            "题给数据",
+            "代入过程",
+            "计算步骤"
+          ]
+        },
+        {
+          "criterion": "给出数值结果、单位或等级判定",
+          "weight": 30,
+          "requiredConcepts": [
+            "m"
+          ]
+        },
+        {
+          "criterion": "说明验算过程和工程结论",
+          "weight": 20,
+          "requiredConcepts": [
+            "验算",
+            "因此",
+            "结论"
+          ]
+        }
+      ],
+      "misconceptions": [
+        "地基就是基础",
+        "地基属于混凝土结构"
+      ],
+      "expectedConcepts": [
+        "地基",
+        "岩土体",
+        "承受荷载",
+        "变形",
+        "稳定性",
+        "设计要求",
+        "验算"
+      ],
+      "requiresNumericAnswer": true,
+      "teacherReviewBelowConfidence": 0.68
+    },
+    "ch6-习题-6": {
+      "questionId": "ch6-习题-6",
+      "rubric": [
+        {
+          "criterion": "选用正确公式或判别方法",
+          "weight": 25,
+          "requiredConcepts": [
+            "地基",
+            "承载力",
+            "复合地基",
+            "地基承载力",
+            "岩土体",
+            "承受荷载"
+          ]
+        },
+        {
+          "criterion": "整理题给条件并完整代入",
+          "weight": 25,
+          "requiredConcepts": [
+            "题给数据",
+            "代入过程",
+            "计算步骤"
+          ]
+        },
+        {
+          "criterion": "给出数值结果、单位或等级判定",
+          "weight": 30,
+          "requiredConcepts": [
+            "kPa",
+            "m"
+          ]
+        },
+        {
+          "criterion": "说明验算过程和工程结论",
+          "weight": 20,
+          "requiredConcepts": [
+            "验算",
+            "因此",
+            "结论"
+          ]
+        }
+      ],
+      "misconceptions": [
+        "地基就是基础",
+        "地基属于混凝土结构",
+        "承载力满足就不需要沉降验算",
+        "承载力越大沉降一定越小",
+        "复合地基不用考虑桩间土"
+      ],
+      "expectedConcepts": [
+        "地基",
+        "承载力",
+        "复合地基",
+        "地基承载力",
+        "岩土体",
+        "承受荷载",
+        "变形",
+        "稳定性",
+        "荷载",
+        "强度"
+      ],
+      "requiresNumericAnswer": true,
+      "teacherReviewBelowConfidence": 0.68
+    },
+    "ch7-思考题-1": {
+      "questionId": "ch7-思考题-1",
+      "rubric": [
+        {
+          "criterion": "说明核心概念或定义",
+          "weight": 30,
+          "requiredConcepts": [
+            "地基",
+            "湿陷性黄土",
+            "湿陷等级"
+          ]
+        },
+        {
+          "criterion": "解释作用机理或适用条件",
+          "weight": 30,
+          "requiredConcepts": [
+            "岩土体",
+            "承受荷载",
+            "变形",
+            "稳定性"
+          ]
+        },
+        {
+          "criterion": "指出工程意义、区别或设计要求",
+          "weight": 25,
+          "requiredConcepts": [
+            "地基",
+            "湿陷性黄土",
+            "湿陷等级",
+            "工程意义",
+            "设计要求"
+          ]
+        },
+        {
+          "criterion": "表达准确、层次清楚",
+          "weight": 15,
+          "requiredConcepts": [
+            "首先",
+            "因此"
+          ]
+        }
+      ],
+      "misconceptions": [
+        "地基就是基础",
+        "地基属于混凝土结构",
+        "黄土都具有湿陷性",
+        "湿陷只与含水率无关荷载"
+      ],
+      "expectedConcepts": [
+        "地基",
+        "湿陷性黄土",
+        "湿陷等级",
+        "岩土体",
+        "承受荷载",
+        "变形",
+        "稳定性",
+        "自重湿陷"
+      ],
+      "requiresNumericAnswer": false,
+      "teacherReviewBelowConfidence": 0.55
+    },
+    "ch7-思考题-2": {
+      "questionId": "ch7-思考题-2",
+      "rubric": [
+        {
+          "criterion": "说明核心概念或定义",
+          "weight": 30,
+          "requiredConcepts": [
+            "地基",
+            "膨胀土",
+            "自由膨胀率"
+          ]
+        },
+        {
+          "criterion": "解释作用机理或适用条件",
+          "weight": 30,
+          "requiredConcepts": [
+            "岩土体",
+            "承受荷载",
+            "变形",
+            "稳定性"
+          ]
+        },
+        {
+          "criterion": "指出工程意义、区别或设计要求",
+          "weight": 25,
+          "requiredConcepts": [
+            "地基",
+            "膨胀土",
+            "自由膨胀率",
+            "工程意义",
+            "设计要求"
+          ]
+        },
+        {
+          "criterion": "表达准确、层次清楚",
+          "weight": 15,
+          "requiredConcepts": [
+            "首先",
+            "因此"
+          ]
+        }
+      ],
+      "misconceptions": [
+        "地基就是基础",
+        "地基属于混凝土结构",
+        "膨胀土只会膨胀不会收缩",
+        "自由膨胀率越小膨胀潜势越强"
+      ],
+      "expectedConcepts": [
+        "地基",
+        "膨胀土",
+        "自由膨胀率",
+        "岩土体",
+        "承受荷载",
+        "变形",
+        "稳定性",
+        "胀缩变形"
+      ],
+      "requiresNumericAnswer": false,
+      "teacherReviewBelowConfidence": 0.55
+    },
+    "ch7-思考题-3": {
+      "questionId": "ch7-思考题-3",
+      "rubric": [
+        {
+          "criterion": "说明核心概念或定义",
+          "weight": 30,
+          "requiredConcepts": [
+            "湿陷性黄土",
+            "膨胀土"
+          ]
+        },
+        {
+          "criterion": "解释作用机理或适用条件",
+          "weight": 30,
+          "requiredConcepts": [
+            "自重湿陷",
+            "湿陷等级",
+            "浸水",
+            "处理措施"
+          ]
+        },
+        {
+          "criterion": "指出工程意义、区别或设计要求",
+          "weight": 25,
+          "requiredConcepts": [
+            "湿陷性黄土",
+            "膨胀土",
+            "工程意义",
+            "设计要求"
+          ]
+        },
+        {
+          "criterion": "表达准确、层次清楚",
+          "weight": 15,
+          "requiredConcepts": [
+            "首先",
+            "因此"
+          ]
+        }
+      ],
+      "misconceptions": [
+        "黄土都具有湿陷性",
+        "湿陷只与含水率无关荷载",
+        "膨胀土只会膨胀不会收缩",
+        "自由膨胀率越小膨胀潜势越强"
+      ],
+      "expectedConcepts": [
+        "湿陷性黄土",
+        "膨胀土",
+        "自重湿陷",
+        "湿陷等级",
+        "浸水",
+        "处理措施",
+        "自由膨胀率",
+        "胀缩变形"
+      ],
+      "requiresNumericAnswer": false,
+      "teacherReviewBelowConfidence": 0.55
+    },
+    "ch7-思考题-4": {
+      "questionId": "ch7-思考题-4",
+      "rubric": [
+        {
+          "criterion": "说明核心概念或定义",
+          "weight": 30,
+          "requiredConcepts": [
+            "冻土"
+          ]
+        },
+        {
+          "criterion": "解释作用机理或适用条件",
+          "weight": 30,
+          "requiredConcepts": [
+            "冻胀",
+            "融沉",
+            "温度",
+            "防治措施"
+          ]
+        },
+        {
+          "criterion": "指出工程意义、区别或设计要求",
+          "weight": 25,
+          "requiredConcepts": [
+            "冻土",
+            "工程意义",
+            "设计要求"
+          ]
+        },
+        {
+          "criterion": "表达准确、层次清楚",
+          "weight": 15,
+          "requiredConcepts": [
+            "首先",
+            "因此"
+          ]
+        }
+      ],
+      "misconceptions": [
+        "冻土问题只发生在施工期",
+        "冻胀与含水率无关"
+      ],
+      "expectedConcepts": [
+        "冻土",
+        "冻胀",
+        "融沉",
+        "温度",
+        "防治措施"
+      ],
+      "requiresNumericAnswer": false,
+      "teacherReviewBelowConfidence": 0.55
+    },
+    "ch7-思考题-5": {
+      "questionId": "ch7-思考题-5",
+      "rubric": [
+        {
+          "criterion": "说明核心概念或定义",
+          "weight": 30,
+          "requiredConcepts": [
+            "冻土"
+          ]
+        },
+        {
+          "criterion": "解释作用机理或适用条件",
+          "weight": 30,
+          "requiredConcepts": [
+            "冻胀",
+            "融沉",
+            "温度",
+            "防治措施"
+          ]
+        },
+        {
+          "criterion": "指出工程意义、区别或设计要求",
+          "weight": 25,
+          "requiredConcepts": [
+            "冻土",
+            "工程意义",
+            "设计要求"
+          ]
+        },
+        {
+          "criterion": "表达准确、层次清楚",
+          "weight": 15,
+          "requiredConcepts": [
+            "首先",
+            "因此"
+          ]
+        }
+      ],
+      "misconceptions": [
+        "冻土问题只发生在施工期",
+        "冻胀与含水率无关"
+      ],
+      "expectedConcepts": [
+        "冻土",
+        "冻胀",
+        "融沉",
+        "温度",
+        "防治措施"
+      ],
+      "requiresNumericAnswer": false,
+      "teacherReviewBelowConfidence": 0.55
+    },
+    "ch7-思考题-6": {
+      "questionId": "ch7-思考题-6",
+      "rubric": [
+        {
+          "criterion": "说明核心概念或定义",
+          "weight": 30,
+          "requiredConcepts": [
+            "地基"
+          ]
+        },
+        {
+          "criterion": "解释作用机理或适用条件",
+          "weight": 30,
+          "requiredConcepts": [
+            "岩土体",
+            "承受荷载",
+            "变形",
+            "稳定性"
+          ]
+        },
+        {
+          "criterion": "指出工程意义、区别或设计要求",
+          "weight": 25,
+          "requiredConcepts": [
+            "地基",
+            "工程意义",
+            "设计要求"
+          ]
+        },
+        {
+          "criterion": "表达准确、层次清楚",
+          "weight": 15,
+          "requiredConcepts": [
+            "首先",
+            "因此"
+          ]
+        }
+      ],
+      "misconceptions": [
+        "地基就是基础",
+        "地基属于混凝土结构"
+      ],
+      "expectedConcepts": [
+        "地基",
+        "岩土体",
+        "承受荷载",
+        "变形",
+        "稳定性"
+      ],
+      "requiresNumericAnswer": false,
+      "teacherReviewBelowConfidence": 0.55
+    },
+    "ch7-思考题-7": {
+      "questionId": "ch7-思考题-7",
+      "rubric": [
+        {
+          "criterion": "说明核心概念或定义",
+          "weight": 30,
+          "requiredConcepts": [
+            "地震烈度",
+            "设防烈度"
+          ]
+        },
+        {
+          "criterion": "解释作用机理或适用条件",
+          "weight": 30,
+          "requiredConcepts": [
+            "适用条件",
+            "设计要求",
+            "工程意义"
+          ]
+        },
+        {
+          "criterion": "指出工程意义、区别或设计要求",
+          "weight": 25,
+          "requiredConcepts": [
+            "地震烈度",
+            "设防烈度",
+            "工程意义",
+            "设计要求"
+          ]
+        },
+        {
+          "criterion": "表达准确、层次清楚",
+          "weight": 15,
+          "requiredConcepts": [
+            "首先",
+            "因此"
+          ]
+        }
+      ],
+      "misconceptions": [],
+      "expectedConcepts": [
+        "地震烈度",
+        "设防烈度",
+        "适用条件",
+        "设计要求",
+        "工程意义"
+      ],
+      "requiresNumericAnswer": false,
+      "teacherReviewBelowConfidence": 0.55
+    },
+    "ch7-习题-1": {
+      "questionId": "ch7-习题-1",
+      "rubric": [
+        {
+          "criterion": "选用正确公式或判别方法",
+          "weight": 25,
+          "requiredConcepts": [
+            "地基",
+            "湿陷等级",
+            "岩土体",
+            "承受荷载"
+          ]
+        },
+        {
+          "criterion": "整理题给条件并完整代入",
+          "weight": 25,
+          "requiredConcepts": [
+            "附表数据",
+            "题给数据",
+            "代入过程",
+            "计算步骤"
+          ]
+        },
+        {
+          "criterion": "给出数值结果、单位或等级判定",
+          "weight": 30,
+          "requiredConcepts": [
+            "m",
+            "等级",
+            "类型",
+            "类"
+          ]
+        },
+        {
+          "criterion": "说明验算过程和工程结论",
+          "weight": 20,
+          "requiredConcepts": [
+            "验算",
+            "因此",
+            "结论"
+          ]
+        }
+      ],
+      "misconceptions": [
+        "地基就是基础",
+        "地基属于混凝土结构"
+      ],
+      "expectedConcepts": [
+        "地基",
+        "湿陷等级",
+        "岩土体",
+        "承受荷载",
+        "变形",
+        "稳定性",
+        "设计要求",
+        "验算"
+      ],
+      "requiresNumericAnswer": true,
+      "teacherReviewBelowConfidence": 0.68
+    },
+    "ch7-习题-2": {
+      "questionId": "ch7-习题-2",
+      "rubric": [
+        {
+          "criterion": "选用正确公式或判别方法",
+          "weight": 25,
+          "requiredConcepts": [
+            "膨胀土",
+            "自由膨胀率",
+            "胀缩变形"
+          ]
+        },
+        {
+          "criterion": "整理题给条件并完整代入",
+          "weight": 25,
+          "requiredConcepts": [
+            "题给数据",
+            "代入过程",
+            "计算步骤"
+          ]
+        },
+        {
+          "criterion": "给出数值结果、单位或等级判定",
+          "weight": 30,
+          "requiredConcepts": [
+            "m",
+            "mL",
+            "类"
+          ]
+        },
+        {
+          "criterion": "说明验算过程和工程结论",
+          "weight": 20,
+          "requiredConcepts": [
+            "验算",
+            "因此",
+            "结论"
+          ]
+        }
+      ],
+      "misconceptions": [
+        "膨胀土只会膨胀不会收缩",
+        "自由膨胀率越小膨胀潜势越强"
+      ],
+      "expectedConcepts": [
+        "膨胀土",
+        "自由膨胀率",
+        "胀缩变形",
+        "含水率",
+        "膨胀潜势",
+        "设计要求",
+        "验算"
+      ],
+      "requiresNumericAnswer": true,
+      "teacherReviewBelowConfidence": 0.68
+    }
+  }
+}
