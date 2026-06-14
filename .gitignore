@@ -4,3 +4,6 @@ dist/
 .npm-cache/
 *.log
 AGENTS.md
+data/
+design-shots/
+scripts/

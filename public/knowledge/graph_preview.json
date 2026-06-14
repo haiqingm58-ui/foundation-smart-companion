@@ -1,0 +1,198 @@
+{
+  "nodes": [
+    {
+      "id": "chapter:1",
+      "label": "Chapter",
+      "name": "第1章 绪论"
+    },
+    {
+      "id": "chapter:2",
+      "label": "Chapter",
+      "name": "第2章 浅基础"
+    },
+    {
+      "id": "chapter:3",
+      "label": "Chapter",
+      "name": "第3章 桩基础"
+    },
+    {
+      "id": "chapter:4",
+      "label": "Chapter",
+      "name": "第4章 沉井基础"
+    },
+    {
+      "id": "chapter:5",
+      "label": "Chapter",
+      "name": "第5章 基坑工程"
+    },
+    {
+      "id": "chapter:6",
+      "label": "Chapter",
+      "name": "第6章 地基处理"
+    },
+    {
+      "id": "chapter:7",
+      "label": "Chapter",
+      "name": "第7章 区域性地基"
+    },
+    {
+      "id": "concept:foundation-soil",
+      "label": "Concept",
+      "name": "地基",
+      "definition": "直接承受建筑物、构筑物荷载影响的地层。"
+    },
+    {
+      "id": "concept:foundation",
+      "label": "Concept",
+      "name": "基础",
+      "definition": "将上部结构承受的各种荷载传递到地基上的结构。"
+    },
+    {
+      "id": "concept:shallow",
+      "label": "Concept",
+      "name": "浅基础",
+      "definition": "设计计算时不考虑利用基础侧面土体抗力抵抗荷载作用的基础。"
+    },
+    {
+      "id": "concept:deep",
+      "label": "Concept",
+      "name": "深基础",
+      "definition": "常通过桩、沉井、地下连续墙等把荷载传递到深部土层。"
+    },
+    {
+      "id": "concept:pile",
+      "label": "Concept",
+      "name": "桩基础",
+      "definition": "由桩和承台组成，将荷载传递至较深持力层或通过桩侧土共同承担。"
+    },
+    {
+      "id": "concept:shaft-resistance",
+      "label": "Concept",
+      "name": "桩侧阻力",
+      "definition": "桩身与周围土体相对位移时，桩侧土对桩身产生的摩擦阻力。"
+    },
+    {
+      "id": "concept:end-resistance",
+      "label": "Concept",
+      "name": "桩端阻力",
+      "definition": "桩端持力层受压变形时对桩端产生的竖向抗力。"
+    },
+    {
+      "id": "concept:bearing",
+      "label": "Concept",
+      "name": "承载力",
+      "definition": "地基或基础抵抗荷载并保持稳定的能力。"
+    },
+    {
+      "id": "concept:settlement",
+      "label": "Concept",
+      "name": "沉降计算",
+      "definition": "分析荷载作用下地基压缩变形及建筑物沉降的计算过程。"
+    },
+    {
+      "id": "concept:pit",
+      "label": "Concept",
+      "name": "基坑工程",
+      "definition": "围绕基坑开挖、支护、降水和环境影响控制的工程活动。"
+    },
+    {
+      "id": "concept:treatment",
+      "label": "Concept",
+      "name": "地基处理",
+      "definition": "通过换填、加固、排水固结等方法改善地基工程性质。"
+    },
+    {
+      "id": "concept:regional",
+      "label": "Concept",
+      "name": "区域性地基",
+      "definition": "湿陷性黄土、膨胀土、盐渍土、冻土等具有地区特征的地基。"
+    }
+  ],
+  "edges": [
+    {
+      "source": "chapter:1",
+      "target": "concept:foundation-soil",
+      "relation": "introduces"
+    },
+    {
+      "source": "chapter:1",
+      "target": "concept:foundation",
+      "relation": "introduces"
+    },
+    {
+      "source": "concept:foundation",
+      "target": "concept:foundation-soil",
+      "relation": "transfers_load_to"
+    },
+    {
+      "source": "concept:shallow",
+      "target": "concept:foundation",
+      "relation": "is_a"
+    },
+    {
+      "source": "concept:deep",
+      "target": "concept:foundation",
+      "relation": "is_a"
+    },
+    {
+      "source": "chapter:2",
+      "target": "concept:shallow",
+      "relation": "contains"
+    },
+    {
+      "source": "chapter:3",
+      "target": "concept:pile",
+      "relation": "contains"
+    },
+    {
+      "source": "concept:pile",
+      "target": "concept:deep",
+      "relation": "is_a"
+    },
+    {
+      "source": "concept:pile",
+      "target": "concept:shaft-resistance",
+      "relation": "has_mechanism"
+    },
+    {
+      "source": "concept:pile",
+      "target": "concept:end-resistance",
+      "relation": "has_mechanism"
+    },
+    {
+      "source": "concept:pile",
+      "target": "concept:bearing",
+      "relation": "checks"
+    },
+    {
+      "source": "concept:pile",
+      "target": "concept:settlement",
+      "relation": "checks"
+    },
+    {
+      "source": "chapter:5",
+      "target": "concept:pit",
+      "relation": "contains"
+    },
+    {
+      "source": "chapter:6",
+      "target": "concept:treatment",
+      "relation": "contains"
+    },
+    {
+      "source": "chapter:7",
+      "target": "concept:regional",
+      "relation": "contains"
+    },
+    {
+      "source": "concept:treatment",
+      "target": "concept:foundation-soil",
+      "relation": "improves"
+    },
+    {
+      "source": "concept:regional",
+      "target": "concept:foundation-soil",
+      "relation": "special_case"
+    }
+  ]
+}

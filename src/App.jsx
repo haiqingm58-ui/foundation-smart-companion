@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   BarChart3,
   Bell,
@@ -10,20 +10,28 @@ import {
   Clock3,
   Database,
   FileText,
+  Focus,
   GraduationCap,
   LayoutDashboard,
   LibraryBig,
   Link2,
+  ListFilter,
+  LocateFixed,
   MessageSquareText,
+  MousePointer2,
   Network,
   NotebookTabs,
   PenLine,
   Play,
+  RefreshCcw,
+  RotateCcw,
   Search,
   Settings,
   Target,
   Trophy,
   UserRound,
+  ZoomIn,
+  ZoomOut,
 } from "lucide-react";
 import foundationSection from "./assets/foundation-section-compact.png";
 
@@ -143,8 +151,430 @@ const caseItems = [
   { title: "软弱地基 CFG 桩处理方案", tag: "地基处理", status: "案例题" },
 ];
 
+const relationLabels = {
+  introduces: "导入",
+  transfers_load_to: "传荷",
+  is_a: "属于",
+  contains: "包含",
+  has_mechanism: "作用机理",
+  checks: "验算",
+  improves: "改良",
+  special_case: "特殊地基",
+  展开: "展开",
+};
+
+const graphTypeOptions = ["全部", "章节", "知识点", "展开"];
+
+const graphFocusNames = ["桩基础", "桩侧阻力", "承载力", "沉降计算", "基坑工程", "地基处理"];
+
+const graphWeakNames = new Set(weakPoints.map((item) => item.name));
+
+const graphExpansionMap = {
+  "第3章 桩基础": ["单桩竖向荷载传递", "摩擦型桩", "端承型桩", "负摩阻力", "群桩效应", "桩基沉降"],
+  桩基础: ["单桩竖向荷载传递", "摩擦型桩", "端承型桩", "负摩阻力", "群桩效应", "桩基沉降"],
+  桩侧阻力: ["桩土相对位移", "桩侧摩阻力", "荷载传递", "应变软化"],
+  桩端阻力: ["桩端持力层", "端承型桩", "桩端沉降", "极限阻力"],
+  浅基础: ["无筋扩展基础", "扩展基础", "条形基础", "筏形基础", "箱形基础", "基础埋深"],
+  深基础: ["桩基础", "沉井基础", "地下连续墙", "墩基"],
+  地基: ["天然地基", "人工地基", "持力层", "下卧层", "软弱下卧层"],
+  基础: ["浅基础", "深基础", "承台", "筏板", "箱形基础"],
+  承载力: ["地基承载力特征值", "极限承载力", "承载力验算", "原位测试"],
+  沉降计算: ["分层总和法", "压缩模量", "沉降差", "局部倾斜"],
+  基坑工程: ["支护结构", "土压力", "降水", "基坑稳定性", "环境影响"],
+  地基处理: ["换填垫层法", "强夯法", "复合地基", "排水固结", "深层搅拌"],
+  区域性地基: ["湿陷性黄土", "膨胀土", "盐渍土", "冻土", "山区地基"],
+};
+
 function cx(...classes) {
   return classes.filter(Boolean).join(" ");
+}
+
+function useJsonAsset(path, fallback) {
+  const [data, setData] = useState(fallback);
+
+  useEffect(() => {
+    let alive = true;
+    const cleanPath = path.replace(/^\/+/, "");
+    const assetUrl = `${import.meta.env.BASE_URL || "/"}${cleanPath}`;
+    fetch(assetUrl)
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error(`Failed to load ${path}`);
+        }
+        return response.json();
+      })
+      .then((nextData) => {
+        if (alive) {
+          setData(nextData);
+        }
+      })
+      .catch(() => {
+        if (alive) {
+          setData(fallback);
+        }
+      });
+    return () => {
+      alive = false;
+    };
+  }, [path]);
+
+  return data;
+}
+
+function keywordTerms(text) {
+  const compact = text.replace(/\s+/g, "");
+  const terms = new Set();
+  for (let index = 0; index < compact.length; index += 1) {
+    for (let size = 2; size <= 6; size += 1) {
+      const term = compact.slice(index, index + size);
+      if (term.length === size && !/^[的是了和与及或在有为对中下上其要能可]+$/.test(term)) {
+        terms.add(term);
+      }
+    }
+  }
+  return Array.from(terms).sort((a, b) => b.length - a.length);
+}
+
+function searchChunks(chunks, query, limit = 4) {
+  const terms = keywordTerms(query);
+  if (!terms.length) {
+    return [];
+  }
+  const anchorTerms = ["桩侧阻力", "桩端阻力", "摩阻力", "浅基础", "深基础", "地基", "基础", "沉降", "承载力", "基坑", "土压力"].filter((term) =>
+    query.includes(term),
+  );
+  return chunks
+    .map((chunk) => {
+      const haystack = `${chunk.heading_path}\n${chunk.text}`;
+      const score = terms.reduce((total, term) => total + (haystack.includes(term) ? term.length : 0), 0);
+      const anchorHits = anchorTerms.filter((term) => haystack.includes(term)).length;
+      const anchor = anchorTerms.length ? (anchorHits ? anchorHits * 26 : -50) : 0;
+      const lengthBonus = chunk.text.length > 80 ? 4 : 0;
+      return { ...chunk, score: score + anchor + lengthBonus };
+    })
+    .filter((chunk) => chunk.score > 0)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, limit);
+}
+
+function graphNodeType(node) {
+  if (node?.expandedFrom) {
+    return "展开";
+  }
+  return node?.label === "Chapter" ? "章节" : "知识点";
+}
+
+function relationText(relation) {
+  return relationLabels[relation] ?? relation;
+}
+
+function splitNodeName(name) {
+  if (!name) {
+    return [];
+  }
+  if (name.length <= 5) {
+    return [name];
+  }
+  return [name.slice(0, 5), name.slice(5, 10)];
+}
+
+function edgePath(source, target, index) {
+  const dx = target.x - source.x;
+  const dy = target.y - source.y;
+  const length = Math.hypot(dx, dy) || 1;
+  const bend = ((index % 3) - 1) * 16 + 20;
+  const labelX = (source.x + target.x) / 2 - (dy / length) * bend;
+  const labelY = (source.y + target.y) / 2 + (dx / length) * bend;
+
+  return {
+    d: `M ${source.x} ${source.y} Q ${labelX} ${labelY} ${target.x} ${target.y}`,
+    labelX,
+    labelY,
+  };
+}
+
+function createLayout(nodes, width = 920, height = 560) {
+  const centerX = width / 2;
+  const centerY = height / 2 + 6;
+  const layout = {};
+  const chapters = nodes.filter((node) => graphNodeType(node) === "章节");
+  const expanded = nodes.filter((node) => graphNodeType(node) === "展开");
+  const concepts = nodes.filter((node) => graphNodeType(node) === "知识点");
+  const anchor = concepts.find((node) => node.name === "桩基础") ?? concepts.find((node) => node.name === "基础") ?? concepts[0] ?? nodes[0];
+
+  if (anchor) {
+    layout[anchor.id] = { x: centerX, y: centerY };
+  }
+
+  chapters.forEach((node, index) => {
+    const angle = -Math.PI / 2 + (index / Math.max(1, chapters.length - 1)) * Math.PI;
+    layout[node.id] = {
+      x: centerX - 305 + Math.cos(angle) * 76,
+      y: centerY + Math.sin(angle) * 212,
+    };
+  });
+
+  concepts
+    .filter((node) => node.id !== anchor?.id)
+    .forEach((node, index, list) => {
+      const angle = -Math.PI / 2 + (index / Math.max(1, list.length)) * Math.PI * 2;
+      const weakOffset = graphWeakNames.has(node.name) ? 34 : 0;
+      layout[node.id] = {
+        x: centerX + Math.cos(angle) * (205 + weakOffset),
+        y: centerY + Math.sin(angle) * 146,
+      };
+    });
+
+  const byId = new Map(nodes.map((node) => [node.id, node]));
+  expanded.forEach((node, index) => {
+    const parentPosition = layout[node.expandedFrom] ?? { x: centerX, y: centerY };
+    const siblingCount = expanded.filter((item) => item.expandedFrom === node.expandedFrom).length;
+    const siblingIndex = expanded.filter((item) => item.expandedFrom === node.expandedFrom).findIndex((item) => item.id === node.id);
+    const angle = -Math.PI / 2 + (siblingIndex / Math.max(1, siblingCount - 1)) * Math.PI;
+    const parent = byId.get(node.expandedFrom);
+    const side = parent?.label === "Chapter" ? 1 : parentPosition.x < centerX ? 1 : -1;
+    layout[node.id] = {
+      x: parentPosition.x + Math.cos(angle) * 86 + side * 96,
+      y: parentPosition.y + Math.sin(angle) * 96,
+    };
+    if (index % 2 === 1) {
+      layout[node.id].y += 16;
+    }
+  });
+
+  return layout;
+}
+
+function expansionNodeId(parentId, name) {
+  return `expanded:${parentId}:${name}`;
+}
+
+function DynamicKnowledgeGraph({ nodes, edges, selectedId, onSelect, onExpand }) {
+  const svgWidth = 920;
+  const svgHeight = 560;
+  const [positions, setPositions] = useState({});
+  const [view, setView] = useState({ x: 0, y: 0, zoom: 1 });
+  const [drag, setDrag] = useState(null);
+  const nodeKey = useMemo(() => nodes.map((node) => node.id).join("|"), [nodes]);
+  const selectedNode = nodes.find((node) => node.id === selectedId);
+
+  useEffect(() => {
+    setPositions(createLayout(nodes, svgWidth, svgHeight));
+  }, [nodeKey]);
+
+  const visibleEdges = edges.filter((edge) => positions[edge.source] && positions[edge.target]);
+  const relatedIds = useMemo(() => {
+    const ids = new Set();
+    visibleEdges.forEach((edge) => {
+      if (edge.source === selectedId) {
+        ids.add(edge.target);
+      }
+      if (edge.target === selectedId) {
+        ids.add(edge.source);
+      }
+    });
+    return ids;
+  }, [visibleEdges, selectedId]);
+
+  function pointFromEvent(event) {
+    const rect = event.currentTarget.closest("svg").getBoundingClientRect();
+    return {
+      x: (event.clientX - rect.left - view.x) / view.zoom,
+      y: (event.clientY - rect.top - view.y) / view.zoom,
+    };
+  }
+
+  function runLayout() {
+    const baseLayout = createLayout(nodes, svgWidth, svgHeight);
+    const degree = edges.reduce((map, edge) => {
+      map[edge.source] = (map[edge.source] ?? 0) + 1;
+      map[edge.target] = (map[edge.target] ?? 0) + 1;
+      return map;
+    }, {});
+    setPositions((current) => {
+      const next = { ...current };
+      nodes.forEach((node, index) => {
+        const base = baseLayout[node.id];
+        const pulse = Math.min(34, 10 + (degree[node.id] ?? 1) * 5);
+        next[node.id] = {
+          x: base.x + Math.cos(index * 1.7) * pulse,
+          y: base.y + Math.sin(index * 1.3) * pulse,
+        };
+      });
+      return next;
+    });
+  }
+
+  function zoomBy(delta) {
+    setView((current) => ({
+      ...current,
+      zoom: Math.min(1.7, Math.max(0.62, current.zoom + delta)),
+    }));
+  }
+
+  function resetGraph() {
+    setPositions(createLayout(nodes, svgWidth, svgHeight));
+    setView({ x: 0, y: 0, zoom: 1 });
+  }
+
+  function focusSelected() {
+    if (!selectedId || !positions[selectedId]) {
+      return;
+    }
+    const nodePosition = positions[selectedId];
+    setView({
+      x: svgWidth / 2 - nodePosition.x * 1.16,
+      y: svgHeight / 2 - nodePosition.y * 1.16,
+      zoom: 1.16,
+    });
+  }
+
+  return (
+    <div className="dynamicGraph">
+      <div className="graphToolbar">
+        <div className="graphCanvasTitle">
+          <span className="titleIcon green">
+            <Network size={18} />
+          </span>
+          <div>
+            <strong>关系画布</strong>
+            <p>{nodes.length} 个节点 / {visibleEdges.length} 条关系</p>
+          </div>
+        </div>
+        <div className="graphToolbarActions">
+          <button type="button" title="自动布局" onClick={runLayout}>
+            <RefreshCcw size={16} />
+            自动布局
+          </button>
+          <button type="button" title="聚焦当前节点" disabled={!selectedNode} onClick={focusSelected}>
+            <LocateFixed size={16} />
+            聚焦
+          </button>
+          <button type="button" title="放大" onClick={() => zoomBy(0.12)}>
+            <ZoomIn size={16} />
+          </button>
+          <button type="button" title="缩小" onClick={() => zoomBy(-0.12)}>
+            <ZoomOut size={16} />
+          </button>
+          <button type="button" title="复位" onClick={resetGraph}>
+            <RotateCcw size={16} />
+          </button>
+        </div>
+      </div>
+      <div className="graphGuideBar">
+        <span>
+          <MousePointer2 size={15} />
+          {selectedNode?.name ?? "未选中"}
+        </span>
+        <span>
+          <Focus size={15} />
+          邻接 {relatedIds.size}
+        </span>
+        <span>
+          <ListFilter size={15} />
+          {Math.round(view.zoom * 100)}%
+        </span>
+      </div>
+      <svg
+        className="graphSvg"
+        viewBox={`0 0 ${svgWidth} ${svgHeight}`}
+        role="img"
+        aria-label="基础工程知识图谱"
+        onWheel={(event) => {
+          event.preventDefault();
+          zoomBy(event.deltaY > 0 ? -0.08 : 0.08);
+        }}
+        onPointerDown={(event) => {
+          if (event.target === event.currentTarget) {
+            setDrag({ type: "pan", startX: event.clientX, startY: event.clientY, origin: view });
+          }
+        }}
+        onPointerMove={(event) => {
+          if (!drag) {
+            return;
+          }
+          if (drag.type === "node") {
+            const point = pointFromEvent(event);
+            setPositions((current) => ({ ...current, [drag.id]: point }));
+          } else {
+            setView({
+              ...drag.origin,
+              x: drag.origin.x + event.clientX - drag.startX,
+              y: drag.origin.y + event.clientY - drag.startY,
+            });
+          }
+        }}
+        onPointerUp={() => setDrag(null)}
+        onPointerLeave={() => setDrag(null)}
+      >
+        <defs>
+          <marker id="graphArrow" markerHeight="8" markerWidth="8" orient="auto" refX="7" refY="4">
+            <path d="M 0 0 L 8 4 L 0 8 z" />
+          </marker>
+        </defs>
+        <g transform={`translate(${view.x} ${view.y}) scale(${view.zoom})`}>
+          {visibleEdges.map((edge, index) => {
+            const source = positions[edge.source];
+            const target = positions[edge.target];
+            const active = selectedId === edge.source || selectedId === edge.target;
+            const dimmed = selectedId && !active;
+            const path = edgePath(source, target, index);
+            return (
+              <g className={cx("graphLink", active && "active", dimmed && "dimmed")} key={`${edge.source}-${edge.target}-${edge.relation}`}>
+                <path d={path.d} markerEnd="url(#graphArrow)" />
+                <text x={path.labelX} y={path.labelY}>
+                  {relationText(edge.relation)}
+                </text>
+              </g>
+            );
+          })}
+          {nodes.map((node) => {
+            const position = positions[node.id] ?? { x: svgWidth / 2, y: svgHeight / 2 };
+            const active = selectedId === node.id;
+            const related = relatedIds.has(node.id);
+            const nodeType = graphNodeType(node);
+            const dimmed = selectedId && !active && !related;
+            const radius = nodeType === "章节" ? 31 : nodeType === "展开" ? 27 : graphWeakNames.has(node.name) ? 40 : 36;
+            return (
+              <g
+                className={cx(
+                  "graphSvgNode",
+                  nodeType === "章节" && "chapter",
+                  nodeType === "展开" && "expanded",
+                  graphWeakNames.has(node.name) && "weak",
+                  active && "active",
+                  related && "related",
+                  dimmed && "dimmed",
+                )}
+                key={node.id}
+                transform={`translate(${position.x} ${position.y})`}
+                onPointerDown={(event) => {
+                  event.stopPropagation();
+                  onSelect(node.id);
+                  event.currentTarget.setPointerCapture?.(event.pointerId);
+                  setDrag({ type: "node", id: node.id });
+                }}
+                onDoubleClick={(event) => {
+                  event.stopPropagation();
+                  onExpand(node.id);
+                }}
+              >
+                <title>{node.name}</title>
+                <circle r={radius} />
+                <text>
+                  {splitNodeName(node.name).map((line, lineIndex, lines) => (
+                    <tspan x="0" y={(lineIndex - (lines.length - 1) / 2) * 15} key={`${node.id}-${line}`}>
+                      {line}
+                    </tspan>
+                  ))}
+                </text>
+              </g>
+            );
+          })}
+        </g>
+      </svg>
+    </div>
+  );
 }
 
 function Sidebar({ active, onNavigate }) {
@@ -464,36 +894,304 @@ function TextbookPage({ onNavigate }) {
 }
 
 function GraphPage() {
-  const nodes = ["桩基础", "桩侧阻力", "桩端阻力", "单桩承载力", "群桩效应", "沉降计算", "JGJ 94", "章节练习"];
+  const summary = useJsonAsset("/knowledge/build_summary.json", null);
+  const graph = useJsonAsset("/knowledge/graph_preview.json", { nodes: [], edges: [] });
+  const chunks = useJsonAsset("/knowledge/chunks.json", []);
+  const centerNode = graph.nodes.find((node) => node.name === "第3章 桩基础") ?? graph.nodes.find((node) => node.label === "Chapter");
+  const [expandedIds, setExpandedIds] = useState([]);
+  const [selectedId, setSelectedId] = useState("");
+  const [nodeQuery, setNodeQuery] = useState("");
+  const [typeFilter, setTypeFilter] = useState("全部");
+  const [relationFilter, setRelationFilter] = useState("全部");
+
+  const graphNodes = useMemo(() => {
+    const chapterNodes = graph.nodes.filter((node) => node.label === "Chapter").slice(0, 7);
+    const conceptNodes = graph.nodes.filter((node) => node.label === "Concept").slice(0, 12);
+    const baseNodes = [...chapterNodes, ...conceptNodes];
+    const existingIds = new Set(baseNodes.map((node) => node.id));
+    const byId = new Map(baseNodes.map((node) => [node.id, node]));
+    const expandedNodes = [];
+
+    expandedIds.forEach((id) => {
+      const parent = byId.get(id);
+      const children = graphExpansionMap[parent?.name] ?? [];
+      children.forEach((name) => {
+        const childId = expansionNodeId(id, name);
+        if (!existingIds.has(childId)) {
+          existingIds.add(childId);
+          expandedNodes.push({
+            id: childId,
+            label: "Concept",
+            name,
+            definition: `“${name}”是从“${parent.name}”展开出的关联知识点，可继续作为教材检索和图谱浏览入口。`,
+            expandedFrom: id,
+          });
+        }
+      });
+    });
+
+    return [...baseNodes, ...expandedNodes];
+  }, [graph, expandedIds]);
+  const graphNodeIds = useMemo(() => new Set(graphNodes.map((node) => node.id)), [graphNodes]);
+  const graphEdges = useMemo(() => {
+    const baseEdges = graph.edges.filter((edge) => graphNodeIds.has(edge.source) && graphNodeIds.has(edge.target));
+    const expandedEdges = [];
+    const byId = new Map(graphNodes.map((node) => [node.id, node]));
+
+    expandedIds.forEach((id) => {
+      const parent = byId.get(id);
+      const children = graphExpansionMap[parent?.name] ?? [];
+      children.forEach((name) => {
+        const childId = expansionNodeId(id, name);
+        if (graphNodeIds.has(childId)) {
+          expandedEdges.push({ source: id, target: childId, relation: "展开" });
+        }
+      });
+    });
+
+    return [...baseEdges, ...expandedEdges];
+  }, [graph.edges, graphNodeIds, graphNodes, expandedIds]);
+
+  const relationOptions = useMemo(() => ["全部", ...Array.from(new Set(graphEdges.map((edge) => edge.relation)))], [graphEdges]);
+  const degreeById = useMemo(
+    () =>
+      graphEdges.reduce((map, edge) => {
+        map[edge.source] = (map[edge.source] ?? 0) + 1;
+        map[edge.target] = (map[edge.target] ?? 0) + 1;
+        return map;
+      }, {}),
+    [graphEdges],
+  );
+  const filteredGraph = useMemo(() => {
+    const query = nodeQuery.trim().toLowerCase();
+    const typeMatches = (node) => typeFilter === "全部" || graphNodeType(node) === typeFilter;
+    const relationMatches = (edge) => relationFilter === "全部" || edge.relation === relationFilter;
+    const matchedIds = new Set();
+
+    graphNodes.forEach((node) => {
+      const haystack = `${node.name}${node.definition ?? ""}${graphNodeType(node)}`.toLowerCase();
+      if (!query || haystack.includes(query)) {
+        matchedIds.add(node.id);
+      }
+    });
+
+    const contextIds = new Set(matchedIds);
+    if (query) {
+      graphEdges.forEach((edge) => {
+        if (matchedIds.has(edge.source) || matchedIds.has(edge.target)) {
+          contextIds.add(edge.source);
+          contextIds.add(edge.target);
+        }
+      });
+    }
+
+    let visibleIds = new Set(
+      graphNodes.filter((node) => typeMatches(node) && (!query || contextIds.has(node.id))).map((node) => node.id),
+    );
+
+    if (relationFilter !== "全部") {
+      const relationIds = new Set();
+      graphEdges.filter(relationMatches).forEach((edge) => {
+        relationIds.add(edge.source);
+        relationIds.add(edge.target);
+      });
+      visibleIds = new Set(Array.from(visibleIds).filter((id) => relationIds.has(id)));
+    }
+
+    return {
+      nodes: graphNodes.filter((node) => visibleIds.has(node.id)),
+      edges: graphEdges.filter((edge) => visibleIds.has(edge.source) && visibleIds.has(edge.target) && relationMatches(edge)),
+      matchedIds,
+    };
+  }, [graphEdges, graphNodes, nodeQuery, relationFilter, typeFilter]);
+  const previewNodes = filteredGraph.nodes.filter((node) => node.label === "Concept");
+  const selected =
+    filteredGraph.nodes.find((node) => node.id === selectedId) ??
+    previewNodes.find((node) => node.name === "桩侧阻力") ??
+    filteredGraph.nodes[0] ??
+    centerNode ??
+    graphNodes[0];
+  const selectedChildren = graphExpansionMap[selected?.name] ?? [];
+  const isExpanded = selected ? expandedIds.includes(selected.id) : false;
+  const canExpand = selectedChildren.length > 0;
+  const selectedRelations = useMemo(() => {
+    if (!selected) {
+      return [];
+    }
+    const byId = new Map(graphNodes.map((node) => [node.id, node]));
+    return graphEdges
+      .filter((edge) => edge.source === selected.id || edge.target === selected.id)
+      .map((edge) => {
+        const neighborId = edge.source === selected.id ? edge.target : edge.source;
+        return {
+          ...edge,
+          neighbor: byId.get(neighborId)?.name ?? "未知节点",
+          direction: edge.source === selected.id ? "→" : "←",
+        };
+      });
+  }, [graphEdges, graphNodes, selected]);
+  const sourceSnippets = useMemo(() => searchChunks(chunks, selected?.name ?? "", 3), [chunks, selected?.name]);
+
+  function expandSelected(id = selected?.id) {
+    if (!id || expandedIds.includes(id)) {
+      return;
+    }
+    const node = graphNodes.find((item) => item.id === id);
+    if (!graphExpansionMap[node?.name]?.length) {
+      return;
+    }
+    setExpandedIds((items) => [...items, id]);
+  }
+
+  function focusNodeByName(name) {
+    const node = graphNodes.find((item) => item.name === name);
+    if (!node) {
+      return;
+    }
+    setNodeQuery("");
+    setTypeFilter("全部");
+    setRelationFilter("全部");
+    setSelectedId(node.id);
+  }
+
+  function resetFilters() {
+    setNodeQuery("");
+    setTypeFilter("全部");
+    setRelationFilter("全部");
+  }
+
   return (
     <section className="pagePanel">
-      <PageHeader label="知识图谱" title="章节知识关系" desc="以章节为入口，查看知识点、资料、案例和练习之间的关联。" />
-      <div className="graphLayout">
-        <div className="graphCanvas">
-          <div className="graphCenter">桩基础</div>
-          {nodes.slice(1).map((node, index) => (
-            <button className={`graphNode node${index + 1}`} type="button" key={node}>
-              {node}
-            </button>
-          ))}
+      <PageHeader label="知识图谱" title="教材知识图谱工作台" desc="从 Markdown 教材自动抽取章节、概念、公式、表格、图片和原文切块关系。" />
+      {summary && (
+        <div className="knowledgeStats" aria-label="知识库统计">
+          <Metric label="图谱节点" value={summary.graph_nodes} />
+          <Metric label="图谱关系" value={summary.graph_edges} />
+          <Metric label="教材切块" value={summary.chunks} />
+          <Metric label="公式/表格" value={`${summary.formulas}/${summary.tables}`} />
         </div>
-        <aside className="inspector">
-          <h3>桩侧阻力</h3>
-          <p>桩身与周围土体之间相互作用产生的摩阻力，是单桩承载力的重要组成。</p>
+      )}
+      <div className="graphWorkbench">
+        <aside className="graphControlRail" aria-label="知识图谱控制">
+          <section className="graphRailBlock">
+            <div className="railHeading">
+              <h3>图谱导航</h3>
+              <button type="button" title="清空筛选" onClick={resetFilters}>
+                <RotateCcw size={15} />
+              </button>
+            </div>
+            <label className="graphSearchBox">
+              <Search size={17} />
+              <input value={nodeQuery} onChange={(event) => setNodeQuery(event.target.value)} placeholder="搜索节点" />
+            </label>
+            <div className="graphRailStats">
+              <div>
+                <strong>{filteredGraph.nodes.length}</strong>
+                <span>当前节点</span>
+              </div>
+              <div>
+                <strong>{filteredGraph.edges.length}</strong>
+                <span>当前关系</span>
+              </div>
+            </div>
+          </section>
+
+          <section className="graphRailBlock">
+            <h3>节点类型</h3>
+            <div className="chipGrid">
+              {graphTypeOptions.map((type) => (
+                <button className={cx(typeFilter === type && "active")} type="button" key={type} onClick={() => setTypeFilter(type)}>
+                  {type}
+                </button>
+              ))}
+            </div>
+          </section>
+
+          <section className="graphRailBlock">
+            <h3>关系类型</h3>
+            <div className="relationChips">
+              {relationOptions.map((relation) => (
+                <button
+                  className={cx(relationFilter === relation && "active")}
+                  type="button"
+                  key={relation}
+                  onClick={() => setRelationFilter(relation)}
+                >
+                  {relation === "全部" ? relation : relationText(relation)}
+                </button>
+              ))}
+            </div>
+          </section>
+
+          <section className="graphRailBlock">
+            <h3>快速聚焦</h3>
+            <div className="quickNodeList">
+              {graphFocusNames.map((name) => {
+                const node = graphNodes.find((item) => item.name === name);
+                return (
+                  <button className={cx(selected?.name === name && "active")} type="button" key={name} disabled={!node} onClick={() => focusNodeByName(name)}>
+                    <span>{name}</span>
+                    <small>{node ? `${degreeById[node.id] ?? 0} 关系` : "未接入"}</small>
+                  </button>
+                );
+              })}
+            </div>
+          </section>
+        </aside>
+
+        <DynamicKnowledgeGraph
+          nodes={filteredGraph.nodes}
+          edges={filteredGraph.edges}
+          selectedId={selected?.id}
+          onSelect={setSelectedId}
+          onExpand={expandSelected}
+        />
+        <aside className="inspector graphInspector">
+          <div className="inspectorKicker">
+            <span>{selected ? graphNodeType(selected) : "节点"}</span>
+            <small>{selectedRelations.length} 条关系</small>
+          </div>
+          <h3>{selected?.name ?? "教材实体"}</h3>
+          <p>{selected?.definition ?? "该实体来自教材章节、定义句或原文切块，可与章节、公式、图片和表格建立来源关系。"}</p>
+          <div className="inspectorActions">
+            <button type="button" disabled={!canExpand || isExpanded} onClick={() => expandSelected()}>
+              {isExpanded ? "已展开" : canExpand ? "展开节点" : "暂无下级"}
+            </button>
+          </div>
           <dl>
             <div>
-              <dt>来源</dt>
-              <dd>第八章 桩基础</dd>
+              <dt>来源节点</dt>
+              <dd>{centerNode?.name ?? "《基础工程》"}</dd>
             </div>
             <div>
-              <dt>关联资料</dt>
-              <dd>JGJ 94、GB 50007</dd>
+              <dt>连接关系</dt>
+              <dd>{selectedRelations.length ? selectedRelations.slice(0, 3).map((item) => `${relationText(item.relation)} ${item.neighbor}`).join("、") : "暂无直接关系"}</dd>
             </div>
             <div>
-              <dt>易错点</dt>
-              <dd>与桩端阻力混淆</dd>
+              <dt>可展开关系</dt>
+              <dd>{selectedChildren.length ? selectedChildren.join("、") : "当前节点无预置下级关系"}</dd>
+            </div>
+            <div>
+              <dt>教材索引</dt>
+              <dd>{summary ? `${summary.sections} 个标题，${summary.images} 个图片引用` : "正在读取"}</dd>
             </div>
           </dl>
+          <div className="sourceSnippetList">
+            <h4>教材依据</h4>
+            {sourceSnippets.length ? (
+              sourceSnippets.map((snippet) => {
+                const text = snippet.text.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+                return (
+                  <article key={snippet.id}>
+                    <strong>{snippet.heading_path || "教材正文"}</strong>
+                    <p>{text.length > 112 ? `${text.slice(0, 112)}...` : text}</p>
+                  </article>
+                );
+              })
+            ) : (
+              <p className="emptySnippet">正在匹配教材原文</p>
+            )}
+          </div>
         </aside>
       </div>
     </section>
@@ -502,13 +1200,18 @@ function GraphPage() {
 
 function QAPage() {
   const [mode, setMode] = useState("教材问答");
+  const [question, setQuestion] = useState("桩侧阻力是如何产生的？影响它的主要因素有哪些？");
+  const chunks = useJsonAsset("/knowledge/chunks.json", []);
   const modes = ["教材问答", "规范问答", "学习辅导"];
+  const results = useMemo(() => searchChunks(chunks, question, 4), [chunks, question]);
+  const answer = results[0]?.text ?? "教材索引加载后，会在这里显示最相关的原文依据。";
+
   return (
     <section className="pagePanel">
-      <PageHeader label="智能问答" title="教材 AI 助教" desc="围绕教材、关联资料和学习辅导提供带来源的回答。" />
+      <PageHeader label="智能问答" title="教材检索问答" desc="已接入《基础工程》Markdown 切块索引，先给出教材原文依据，后续可替换为大模型生成答案。" />
       <div className="teacherNotice">
         <Link2 size={17} />
-        当前答疑资料由绑定辅导老师维护，学院与课程资料需由辅导老师添加后开放。
+        当前检索库来自本书 Markdown：{chunks.length ? `${chunks.length} 个教材块已加载` : "正在加载教材索引"}。
       </div>
       <div className="qaShell">
         <div className="segmented">
@@ -519,20 +1222,29 @@ function QAPage() {
           ))}
         </div>
         <div className="chatArea">
-          <div className="bubble user">桩侧阻力是如何产生的？影响它的主要因素有哪些？</div>
+          <div className="bubble user">{question}</div>
           <div className="bubble assistant">
             <Bot size={20} />
             <div>
-              <p>
-                桩侧阻力主要来自桩身与周围土体之间的摩擦和黏结作用，受土层性质、桩径、施工工艺、地下水位等因素影响。
-              </p>
-              <span>引用：《基础工程》第八章 桩基础；JGJ 94</span>
+              <p>{answer}</p>
+              <span>
+                引用：{results[0]?.heading_path ?? "教材索引"} {results[0] ? `L${results[0].source_line}` : ""}
+              </span>
             </div>
+          </div>
+          <div className="sourceList">
+            {results.map((item) => (
+              <article className="sourceItem" key={item.id}>
+                <strong>{item.heading_path}</strong>
+                <p>{item.text.replace(/\s+/g, " ").slice(0, 150)}</p>
+                <span>来源行 {item.source_line} · {item.kind}</span>
+              </article>
+            ))}
           </div>
         </div>
         <label className="askBox">
-          <input placeholder={`继续使用${mode}提问…`} />
-          <button type="button">发送</button>
+          <input value={question} onChange={(event) => setQuestion(event.target.value)} placeholder={`继续使用${mode}提问…`} />
+          <button type="button">检索</button>
         </label>
       </div>
     </section>

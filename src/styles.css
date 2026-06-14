@@ -1028,10 +1028,407 @@ button {
   color: var(--blue);
 }
 
-.graphLayout {
+.knowledgeStats {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 320px;
-  gap: 18px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin: -6px 0 18px;
+}
+
+.knowledgeStats .metric {
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: white;
+  padding: 14px 16px;
+}
+
+.knowledgeStats .metric strong {
+  font-size: 24px;
+}
+
+.graphWorkbench {
+  display: grid;
+  grid-template-columns: 216px minmax(580px, 1fr) 312px;
+  gap: 16px;
+  align-items: stretch;
+}
+
+.graphControlRail,
+.dynamicGraph {
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.graphControlRail {
+  display: flex;
+  flex-direction: column;
+}
+
+.graphRailBlock {
+  border-bottom: 1px solid var(--soft-line);
+  padding: 15px;
+}
+
+.graphRailBlock:last-child {
+  border-bottom: 0;
+}
+
+.graphRailBlock h3,
+.railHeading h3 {
+  margin: 0 0 12px;
+  color: #17243a;
+  font-size: 15px;
+}
+
+.railHeading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.railHeading button {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  place-items: center;
+  border: 1px solid #d7e4f3;
+  border-radius: 8px;
+  background: #fbfdff;
+  color: #526174;
+  cursor: pointer;
+}
+
+.railHeading button:hover {
+  border-color: var(--blue);
+  color: var(--blue);
+}
+
+.graphSearchBox {
+  display: flex;
+  height: 39px;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid #d7e4f3;
+  border-radius: 8px;
+  background: #fbfdff;
+  color: #667085;
+  padding: 0 11px;
+}
+
+.graphSearchBox input {
+  min-width: 0;
+  width: 100%;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--ink);
+}
+
+.graphRailStats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.graphRailStats div {
+  border: 1px solid #e3ebf5;
+  border-radius: 8px;
+  background: #f8fbff;
+  padding: 9px;
+}
+
+.graphRailStats strong,
+.graphRailStats span {
+  display: block;
+}
+
+.graphRailStats strong {
+  color: var(--blue);
+  font-size: 20px;
+}
+
+.graphRailStats span {
+  color: #667085;
+  font-size: 12px;
+}
+
+.chipGrid,
+.relationChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.chipGrid button,
+.relationChips button {
+  min-height: 31px;
+  border: 1px solid #d9e5f2;
+  border-radius: 8px;
+  background: #fff;
+  color: #41516a;
+  cursor: pointer;
+  padding: 0 10px;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.chipGrid button:hover,
+.relationChips button:hover,
+.chipGrid button.active,
+.relationChips button.active {
+  border-color: var(--blue);
+  background: var(--blue-50);
+  color: var(--blue);
+}
+
+.quickNodeList {
+  display: grid;
+  gap: 8px;
+}
+
+.quickNodeList button {
+  display: flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  border: 1px solid #dfe8f2;
+  border-radius: 8px;
+  background: #fff;
+  color: #27364a;
+  cursor: pointer;
+  padding: 0 10px;
+  text-align: left;
+}
+
+.quickNodeList button:disabled {
+  color: #a5afbd;
+  cursor: not-allowed;
+}
+
+.quickNodeList button.active,
+.quickNodeList button:hover:not(:disabled) {
+  border-color: #9bd5bc;
+  background: var(--green-50);
+  color: var(--green);
+}
+
+.quickNodeList span {
+  font-weight: 900;
+}
+
+.quickNodeList small {
+  color: #667085;
+  white-space: nowrap;
+}
+
+.dynamicGraph {
+  background:
+    linear-gradient(#eef3f8 1px, transparent 1px),
+    linear-gradient(90deg, #eef3f8 1px, transparent 1px),
+    radial-gradient(circle at 50% 42%, rgba(9, 94, 217, 0.08), transparent 26%),
+    #fff;
+  background-size:
+    26px 26px,
+    26px 26px,
+    auto,
+    auto;
+}
+
+.graphToolbar {
+  display: flex;
+  min-height: 66px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-bottom: 1px solid var(--line);
+  background: rgba(251, 253, 255, 0.94);
+  padding: 12px 14px;
+}
+
+.graphCanvasTitle {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 10px;
+}
+
+.graphCanvasTitle strong,
+.graphCanvasTitle p {
+  display: block;
+}
+
+.graphCanvasTitle strong {
+  color: #17243a;
+  font-size: 16px;
+}
+
+.graphCanvasTitle p {
+  margin: 3px 0 0;
+  color: #667085;
+  font-size: 12px;
+}
+
+.graphToolbarActions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 7px;
+}
+
+.graphToolbar button {
+  display: inline-flex;
+  min-height: 34px;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: 1px solid #d7e4f3;
+  border-radius: 8px;
+  background: white;
+  color: #27415f;
+  cursor: pointer;
+  padding: 0 10px;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.graphToolbar button:disabled {
+  color: #a5afbd;
+  cursor: not-allowed;
+}
+
+.graphToolbar button:hover:not(:disabled) {
+  border-color: var(--blue);
+  color: var(--blue);
+}
+
+.graphGuideBar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  border-bottom: 1px solid #edf1f6;
+  background: rgba(248, 251, 255, 0.76);
+  padding: 8px 14px;
+}
+
+.graphGuideBar span {
+  display: inline-flex;
+  min-height: 28px;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid #e1eaf4;
+  border-radius: 8px;
+  background: white;
+  color: #53657b;
+  padding: 0 9px;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.graphSvg {
+  display: block;
+  width: 100%;
+  height: 560px;
+  cursor: grab;
+  touch-action: none;
+}
+
+.graphSvg:active {
+  cursor: grabbing;
+}
+
+#graphArrow path {
+  fill: #9bb0c6;
+}
+
+.graphLink path {
+  fill: none;
+  stroke: #aebfd2;
+  stroke-width: 1.45;
+  transition:
+    opacity 160ms ease,
+    stroke 160ms ease,
+    stroke-width 160ms ease;
+}
+
+.graphLink.active path {
+  stroke: var(--green);
+  stroke-width: 2.35;
+}
+
+.graphLink.dimmed {
+  opacity: 0.34;
+}
+
+.graphLink text {
+  fill: #5e7188;
+  font-size: 11px;
+  font-weight: 800;
+  paint-order: stroke;
+  pointer-events: none;
+  stroke: white;
+  stroke-width: 4px;
+  text-anchor: middle;
+}
+
+.graphSvgNode {
+  cursor: pointer;
+  transition: opacity 160ms ease;
+}
+
+.graphSvgNode circle {
+  fill: #f4f9ff;
+  stroke: #90bce9;
+  stroke-width: 2;
+  filter: drop-shadow(0 10px 18px rgba(18, 32, 51, 0.12));
+  transition:
+    fill 160ms ease,
+    stroke 160ms ease,
+    stroke-width 160ms ease;
+}
+
+.graphSvgNode.chapter circle {
+  fill: #fff8e8;
+  stroke: #d9b64f;
+}
+
+.graphSvgNode.expanded circle {
+  fill: #f4f1ff;
+  stroke: #a797ee;
+}
+
+.graphSvgNode.weak circle {
+  fill: #fff1e9;
+  stroke: #df8a5c;
+}
+
+.graphSvgNode.related circle {
+  stroke: var(--green);
+}
+
+.graphSvgNode.active circle,
+.graphSvgNode:hover circle {
+  fill: var(--green-50);
+  stroke: var(--green);
+  stroke-width: 3;
+}
+
+.graphSvgNode.dimmed {
+  opacity: 0.42;
+}
+
+.graphSvgNode text {
+  fill: #102033;
+  font-size: 13px;
+  font-weight: 900;
+  pointer-events: none;
+  text-anchor: middle;
+  dominant-baseline: middle;
 }
 
 .graphCanvas {
@@ -1076,6 +1473,14 @@ button {
   font-weight: 800;
 }
 
+.graphNode:hover,
+.graphNode.active {
+  border-color: var(--green);
+  background: var(--green-50);
+  color: var(--green);
+  transform: translateY(-1px);
+}
+
 .node1 {
   top: 100px;
   left: 24%;
@@ -1115,6 +1520,40 @@ button {
   padding: 22px;
 }
 
+.graphInspector {
+  overflow: auto;
+  max-height: 690px;
+}
+
+.inspectorKicker {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.inspectorKicker span,
+.inspectorKicker small {
+  display: inline-flex;
+  min-height: 28px;
+  align-items: center;
+  border-radius: 8px;
+  font-weight: 900;
+}
+
+.inspectorKicker span {
+  background: var(--blue-50);
+  color: var(--blue);
+  padding: 0 9px;
+  font-size: 12px;
+}
+
+.inspectorKicker small {
+  color: #667085;
+  font-size: 12px;
+}
+
 .inspector h3 {
   margin: 0 0 10px;
   font-size: 23px;
@@ -1125,13 +1564,35 @@ button {
   line-height: 1.7;
 }
 
+.inspectorActions {
+  margin: 16px 0 18px;
+}
+
+.inspectorActions button {
+  width: 100%;
+  min-height: 40px;
+  border: 1px solid #bdd5ef;
+  border-radius: 8px;
+  background: var(--blue);
+  color: white;
+  cursor: pointer;
+  font-weight: 800;
+}
+
+.inspectorActions button:disabled {
+  border-color: #d8e0ea;
+  background: #edf2f7;
+  color: #7a8798;
+  cursor: not-allowed;
+}
+
 .inspector dl {
   display: grid;
   gap: 12px;
   margin: 24px 0 0;
 }
 
-.inspector div {
+.inspector dl > div {
   border-top: 1px solid var(--soft-line);
   padding-top: 12px;
 }
@@ -1145,6 +1606,43 @@ button {
   margin: 5px 0 0;
   color: #101828;
   font-weight: 800;
+  line-height: 1.55;
+}
+
+.sourceSnippetList {
+  display: grid;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.sourceSnippetList h4 {
+  margin: 0;
+  color: #17243a;
+  font-size: 15px;
+}
+
+.sourceSnippetList article {
+  border: 1px solid #e2eaf4;
+  border-radius: 8px;
+  background: #fbfdff;
+  padding: 11px;
+}
+
+.sourceSnippetList article strong {
+  display: block;
+  overflow: hidden;
+  color: var(--blue);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sourceSnippetList article p,
+.emptySnippet {
+  margin: 6px 0 0;
+  color: #526174;
+  font-size: 13px;
+  line-height: 1.6;
 }
 
 .qaShell {
@@ -1211,6 +1709,38 @@ button {
   margin-top: 10px;
   color: #667085;
   font-size: 13px;
+}
+
+.sourceList {
+  display: grid;
+  gap: 10px;
+}
+
+.sourceItem {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: white;
+  padding: 14px 16px;
+}
+
+.sourceItem strong {
+  display: block;
+  color: #101828;
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.sourceItem p {
+  margin: 7px 0;
+  color: #526174;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.sourceItem span {
+  color: var(--blue);
+  font-size: 12px;
+  font-weight: 800;
 }
 
 .askBox {
@@ -1466,8 +1996,12 @@ button {
   }
 
   .studyLayout,
-  .graphLayout {
+  .graphWorkbench {
     grid-template-columns: 1fr;
+  }
+
+  .graphSvg {
+    height: 460px;
   }
 }
 
@@ -1529,6 +2063,7 @@ button {
   .moduleGrid,
   .caseGrid,
   .adminGrid,
+  .knowledgeStats,
   .sideStack,
   .practiceLayout {
     grid-template-columns: 1fr;
@@ -1538,6 +2073,19 @@ button {
     grid-template-columns: 1fr;
     gap: 8px;
     padding: 18px;
+  }
+
+  .graphToolbar {
+    flex-wrap: wrap;
+  }
+
+  .graphControlRail {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .graphRailBlock {
+    border-right: 1px solid var(--soft-line);
   }
 }
 
@@ -1579,5 +2127,21 @@ button {
 
   .tabBar button {
     white-space: nowrap;
+  }
+
+  .graphControlRail {
+    display: block;
+  }
+
+  .graphRailBlock {
+    border-right: 0;
+  }
+
+  .graphToolbarActions {
+    justify-content: flex-start;
+  }
+
+  .graphSvg {
+    height: 380px;
   }
 }
