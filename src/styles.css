@@ -2659,15 +2659,48 @@ button {
   font-size: 14px;
 }
 
+.reportSummaryGrid {
+  display: grid;
+  max-width: 780px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.reportSummaryGrid article {
+  display: grid;
+  gap: 4px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: white;
+  padding: 14px 16px;
+}
+
+.reportSummaryGrid strong {
+  color: var(--blue);
+  font-size: 24px;
+}
+
+.reportSummaryGrid span {
+  color: #667085;
+  font-size: 12px;
+  font-weight: 800;
+}
+
 .abilityRow {
   display: grid;
-  grid-template-columns: 100px minmax(0, 1fr) 48px;
+  grid-template-columns: 100px minmax(0, 1fr) 48px 48px;
   align-items: center;
   gap: 14px;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: white;
   padding: 14px 16px;
+}
+
+.abilityRow.actual {
+  border-color: #b7ddc8;
+  background: #f8fffb;
 }
 
 .abilityRow div {
@@ -2682,6 +2715,66 @@ button {
   height: 100%;
   border-radius: inherit;
   background: linear-gradient(90deg, var(--blue), var(--teal));
+}
+
+.abilityRow em {
+  color: #7a8aa0;
+  font-size: 12px;
+  font-style: normal;
+  text-align: right;
+}
+
+.recentAttempts {
+  max-width: 780px;
+  margin-top: 18px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: white;
+  padding: 18px;
+}
+
+.attemptList {
+  display: grid;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.attemptItem {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 62px;
+  gap: 12px;
+  align-items: center;
+  border: 1px solid #e2eaf4;
+  border-radius: 8px;
+  background: #fbfdff;
+  padding: 12px;
+}
+
+.attemptItem div {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+
+.attemptItem strong {
+  color: #27364a;
+  font-size: 13px;
+}
+
+.attemptItem span {
+  overflow: hidden;
+  color: #667085;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.attemptItem em {
+  color: var(--amber);
+  font-size: 15px;
+  font-style: normal;
+  font-weight: 900;
+  text-align: right;
 }
 
 .adminTile {

@@ -49,6 +49,26 @@ final result: passed
 
 ---
 
+learning progress qa path: local browser at http://localhost:5173/foundation-smart-companion/
+state: 学习进度、段位、薄弱点和学习报告已从硬编码改为本地作答记录驱动，记录保存在 `localStorage`。
+
+**Coverage**
+- Practice submit writes question id, chapter, answer preview, score, confidence, missing concepts, criterion scores, issues, and timestamp.
+- Overview reads recorded attempts for progress, average score, rank, and weak points.
+- Report page reads the same record for chapter mastery, recent attempts, and progress summary.
+
+**Verification**
+- Browser QA: 清空 `foundation-smart-companion:learning-attempts` 后，首页回到基线数据：已完成 3/7 章、平均分 82、黄金段位。
+- Browser QA: 提交 1-1 高质量答案后，localStorage 写入 1 条记录，得分 94。
+- Browser QA: 首页自动更新为“已练习 1/7 章”“平均分 94”“白金 94”。
+- Browser QA: 薄弱环节改为评分点缺口驱动，工程意义和设计要求显示 76% 掌握度，并补足默认薄弱点。
+- Browser QA: 学习报告显示 1 道已练习题、1 个覆盖章节、1% 题库进度和最近作答记录。
+- Build: `npm run build` passed.
+
+final result: passed
+
+---
+
 global search qa path: local browser at http://127.0.0.1:5173/
 state: 顶部全局搜索从提示文案改为真实分组搜索结果，覆盖教材章节、教材原文、知识图谱、工程案例、关联资料和练习题。
 

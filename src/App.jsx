@@ -374,6 +374,134 @@ function progressPercent(courseManifest) {
   return Math.round((completed / total) * 100);
 }
 
+const learningAttemptsKey = "foundation-smart-companion:learning-attempts";
+
+function readLearningAttempts() {
+  if (typeof window === "undefined") {
+    return [];
+  }
+  try {
+    const parsed = JSON.parse(window.localStorage.getItem(learningAttemptsKey) ?? "[]");
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function latestAttempts(attempts) {
+  const latest = new Map();
+  attempts.forEach((attempt) => {
+    if (!attempt?.questionId || latest.has(attempt.questionId)) {
+      return;
+    }
+    latest.set(attempt.questionId, attempt);
+  });
+  return Array.from(latest.values());
+}
+
+function average(values, fallback = 0) {
+  const numeric = values.filter((value) => Number.isFinite(value));
+  if (!numeric.length) {
+    return fallback;
+  }
+  return Math.round(numeric.reduce((sum, value) => sum + value, 0) / numeric.length);
+}
+
+function rankFromScore(score) {
+  if (score >= 95) {
+    return { level: "王者", score, next: "满级", tip: "已经是高掌握度状态，适合挑战综合设计题。" };
+  }
+  if (score >= 85) {
+    return { level: "白金", score, next: "王者", tip: "表现很稳，继续补齐低分评分点就能冲王者。" };
+  }
+  if (score >= 75) {
+    return { level: "黄金", score, next: "白金", tip: "学习状态很稳，补齐薄弱点就能冲白金。" };
+  }
+  if (score >= 60) {
+    return { level: "白银", score, next: "黄金", tip: "基础已经起步，优先把低分章节刷到 75 分。" };
+  }
+  return { level: "青铜", score, next: "白银", tip: "先完成一轮基础题，把核心概念搭起来。" };
+}
+
+function attemptChapterTitle(attempt) {
+  return normalizeChapterName(attempt?.chapter ?? "");
+}
+
+function buildWeakPointsFromAttempts(attempts) {
+  const conceptMap = new Map();
+  attempts.forEach((attempt) => {
+    (attempt.missingConcepts ?? []).slice(0, 4).forEach((concept) => {
+      const current = conceptMap.get(concept) ?? { name: concept, scores: [], count: 0 };
+      current.scores.push(attempt.score);
+      current.count += 1;
+      conceptMap.set(concept, current);
+    });
+    (attempt.criteria ?? []).forEach((criterion) => {
+      const mastery = criterion.weight ? Math.round((criterion.score / criterion.weight) * 100) : attempt.score;
+      (criterion.missing ?? []).slice(0, 3).forEach((concept) => {
+        const current = conceptMap.get(concept) ?? { name: concept, scores: [], count: 0 };
+        current.scores.push(Math.min(attempt.score, mastery));
+        current.count += 1;
+        conceptMap.set(concept, current);
+      });
+    });
+  });
+
+  return Array.from(conceptMap.values())
+    .map((item) => ({
+      name: item.name,
+      score: Math.max(25, Math.min(92, average(item.scores, 65))),
+      note: `${item.count} 次作答暴露该知识点，可回到相关章节复习`,
+    }))
+    .sort((a, b) => a.score - b.score || b.note.localeCompare(a.note, "zh-Hans-CN"))
+    .slice(0, 3);
+}
+
+function buildLearningStats({ courseManifest, exerciseBank, attempts }) {
+  const chapters = courseChapters(courseManifest);
+  const totalQuestions = exerciseBank?.summary?.total ?? exerciseBank?.exercises?.length ?? 0;
+  const latest = latestAttempts(attempts);
+  const hasAttempts = latest.length > 0;
+  const fallbackAverage = courseManifest?.progress?.averageScore ?? rankInfo.score;
+  const averageScore = hasAttempts ? average(latest.map((attempt) => attempt.score), fallbackAverage) : fallbackAverage;
+  const chapterFallbacks = [88, 80, 65, 72, 70, 76, 68];
+  const chapterStats = chapters.map((chapter, index) => {
+    const chapterAttempts = latest.filter((attempt) => attemptChapterTitle(attempt) === chapter.title);
+    const chapterScore = chapterAttempts.length ? average(chapterAttempts.map((attempt) => attempt.score), 0) : chapterFallbacks[index] ?? 70;
+    return {
+      id: chapter.id,
+      title: chapter.title,
+      score: chapterScore,
+      attempts: chapterAttempts.length,
+      isActual: chapterAttempts.length > 0,
+    };
+  });
+  const completedChapters = hasAttempts
+    ? chapterStats.filter((chapter) => chapter.attempts > 0).length
+    : (courseManifest?.progress?.completedChapters ?? 0);
+  const percent = hasAttempts && totalQuestions ? Math.round((latest.length / totalQuestions) * 100) : progressPercent(courseManifest);
+  const weakPointsFromAttempts = hasAttempts ? buildWeakPointsFromAttempts(latest) : [];
+  const mergedWeakPoints = [
+    ...weakPointsFromAttempts,
+    ...weakPoints.filter((item) => !weakPointsFromAttempts.some((candidate) => candidate.name === item.name)),
+  ].slice(0, 3);
+
+  return {
+    hasAttempts,
+    attempts,
+    latestAttempts: latest,
+    totalQuestions,
+    attemptedQuestions: latest.length,
+    completedChapters,
+    progressPercent: Math.min(100, percent),
+    averageScore,
+    rank: rankFromScore(averageScore),
+    chapterStats,
+    weakPoints: hasAttempts ? mergedWeakPoints : weakPoints,
+    recentAttempts: attempts.slice(0, 5),
+  };
+}
+
 function moduleMeta(cardId, { courseManifest, graphSummary, exerciseBank }) {
   const totalChapters = courseManifest?.totalChapters ?? courseChapters(courseManifest).length;
   const currentChapter = currentCourseChapter(courseManifest);
@@ -1125,7 +1253,7 @@ function DynamicKnowledgeGraph({ nodes, edges, selectedId, onSelect, onExpand })
   );
 }
 
-function Sidebar({ active, onNavigate }) {
+function Sidebar({ active, onNavigate, learningStats }) {
   return (
     <aside className="sidebar">
       <div className="brand">
@@ -1154,7 +1282,7 @@ function Sidebar({ active, onNavigate }) {
         })}
       </nav>
 
-      <RankPanel compact />
+      <RankPanel compact rank={learningStats.rank} />
 
       <section className="studentCard" aria-label="学生信息">
         <div className="studentAvatar">
@@ -1177,7 +1305,7 @@ function Sidebar({ active, onNavigate }) {
   );
 }
 
-function RankPanel({ compact = false }) {
+function RankPanel({ compact = false, rank = rankInfo }) {
   return (
     <section className={cx("rankPanel", compact && "compact")}>
       <div className="panelTitle slim">
@@ -1190,18 +1318,18 @@ function RankPanel({ compact = false }) {
         </div>
       </div>
       <div className="rankBadge">
-        <span>{rankInfo.level}</span>
-        <strong>{rankInfo.score}</strong>
+        <span>{rank.level}</span>
+        <strong>{rank.score}</strong>
       </div>
       {!compact && (
         <p className="rankTip">
-          当前段位：{rankInfo.level}，距离{rankInfo.next}还差一点点。
+          当前段位：{rank.level}，距离{rank.next}还差一点点。
         </p>
       )}
       <div className="rankLadder" aria-label="学习段位阶梯">
-        {["青铜", "白银", "黄金", "白金", "王者"].map((rank) => (
-          <span className={cx(rank === rankInfo.level && "active")} key={rank}>
-            {rank}
+        {["青铜", "白银", "黄金", "白金", "王者"].map((level) => (
+          <span className={cx(level === rank.level && "active")} key={level}>
+            {level}
           </span>
         ))}
       </div>
@@ -1299,12 +1427,12 @@ function Metric({ label, value, suffix }) {
   );
 }
 
-function Hero({ onNavigate, courseManifest }) {
+function Hero({ onNavigate, courseManifest, learningStats }) {
   const currentChapter = currentCourseChapter(courseManifest);
-  const completedChapters = courseManifest?.progress?.completedChapters ?? 0;
+  const completedChapters = learningStats.completedChapters;
   const totalChapters = courseManifest?.totalChapters ?? courseChapters(courseManifest).length;
-  const percent = progressPercent(courseManifest);
-  const averageScore = courseManifest?.progress?.averageScore ?? rankInfo.score;
+  const percent = learningStats.progressPercent;
+  const averageScore = learningStats.averageScore;
 
   return (
     <section className="heroPanel">
@@ -1316,7 +1444,7 @@ function Hero({ onNavigate, courseManifest }) {
           <div className="progressRing" style={{ "--progress": `${percent}%` }} aria-label={`学习进度 ${percent}%`}>
             <span>{percent}%</span>
           </div>
-          <Metric label="已完成" value={completedChapters} suffix={` / ${totalChapters} 章`} />
+          <Metric label={learningStats.hasAttempts ? "已练习" : "已完成"} value={completedChapters} suffix={` / ${totalChapters} 章`} />
           <Metric label="平均分" value={averageScore} suffix=" 分" />
         </div>
         <div className="heroActions">
@@ -1355,9 +1483,10 @@ function ModuleCard({ card, onNavigate }) {
   );
 }
 
-function WeakPanel({ onNavigate, courseManifest }) {
+function WeakPanel({ onNavigate, courseManifest, learningStats }) {
   const currentChapter = currentCourseChapter(courseManifest);
   const quickChapters = courseChapters(courseManifest);
+  const panelWeakPoints = learningStats.weakPoints ?? weakPoints;
 
   return (
     <aside className="sideStack" aria-label="薄弱环节">
@@ -1372,7 +1501,7 @@ function WeakPanel({ onNavigate, courseManifest }) {
           </div>
         </div>
         <div className="weakList">
-          {weakPoints.map((item) => (
+          {panelWeakPoints.map((item) => (
             <article className="weakItem" key={item.name}>
               <div className="weakTop">
                 <strong>{item.name}</strong>
@@ -1419,7 +1548,7 @@ function WeakPanel({ onNavigate, courseManifest }) {
   );
 }
 
-function Overview({ onNavigate, courseManifest }) {
+function Overview({ onNavigate, courseManifest, learningStats }) {
   const graphSummary = useJsonAsset("/knowledge/build_summary.json", null);
   const exerciseBank = useJsonAsset("/knowledge/exercises.json", { summary: null, exercises: [] });
   const cards = moduleCards.map((card) => ({
@@ -1430,14 +1559,14 @@ function Overview({ onNavigate, courseManifest }) {
   return (
     <div className="overviewLayout">
       <div className="mainStack">
-        <Hero onNavigate={onNavigate} courseManifest={courseManifest} />
+        <Hero onNavigate={onNavigate} courseManifest={courseManifest} learningStats={learningStats} />
         <section className="moduleGrid" aria-label="平台模块入口">
           {cards.map((card) => (
             <ModuleCard card={card} key={card.id} onNavigate={onNavigate} />
           ))}
         </section>
       </div>
-      <WeakPanel onNavigate={onNavigate} courseManifest={courseManifest} />
+      <WeakPanel onNavigate={onNavigate} courseManifest={courseManifest} learningStats={learningStats} />
     </div>
   );
 }
@@ -2048,7 +2177,7 @@ function ResourcesPage({ initialResourceTitle }) {
   );
 }
 
-function PracticePage({ initialChapter, initialExerciseId }) {
+function PracticePage({ initialChapter, initialExerciseId, onRecordAttempt }) {
   const exerciseBank = useJsonAsset("/knowledge/exercises.json", { summary: { total: 0, thinking: 0, exercise: 0, chapters: [] }, exercises: [] });
   const rubricBank = useJsonAsset("/knowledge/exercise_rubrics.json", { items: {} });
   const exercises = exerciseBank.exercises ?? [];
@@ -2143,6 +2272,43 @@ function PracticePage({ initialChapter, initialExerciseId }) {
     const currentIndex = Math.max(0, selectedIndex);
     const nextIndex = (currentIndex + offset + filteredExercises.length) % filteredExercises.length;
     selectExercise(filteredExercises[nextIndex]);
+  }
+
+  function submitCurrentAnswer() {
+    if (!selectedExerciseWithRubric) {
+      return;
+    }
+    const result = scoreExerciseAnswer(answer, selectedExerciseWithRubric);
+    setSubmitted(true);
+    if (!answer.trim()) {
+      return;
+    }
+    onRecordAttempt?.({
+      questionId: selectedExercise.id,
+      number: selectedExercise.number,
+      chapter: selectedExercise.chapter,
+      chapterNo: selectedExercise.chapterNo,
+      type: selectedExercise.type,
+      kind: selectedExercise.kind,
+      difficulty: selectedExercise.difficulty,
+      text: selectedExercise.text,
+      sourceLine: selectedExercise.sourceLine,
+      answerPreview: answer.trim().slice(0, 160),
+      score: result.score,
+      confidence: result.confidence,
+      needsTeacherReview: result.needsTeacherReview,
+      missingConcepts: result.missing,
+      matchedConcepts: result.hits,
+      issues: result.issues,
+      criteria: result.criteria.map((criterion) => ({
+        criterion: criterion.criterion,
+        score: criterion.score,
+        weight: criterion.weight,
+        matched: criterion.matched,
+        missing: criterion.missing,
+      })),
+      submittedAt: new Date().toISOString(),
+    });
   }
 
   return (
@@ -2288,7 +2454,7 @@ function PracticePage({ initialChapter, initialExerciseId }) {
                 <button className="secondaryAction" type="button" onClick={() => moveExercise(1)}>
                   下一题
                 </button>
-                <button type="button" onClick={() => setSubmitted(true)}>
+                <button type="button" onClick={submitCurrentAnswer}>
                   {submitted ? "重新评分" : "提交评分"}
                 </button>
               </div>
@@ -2368,11 +2534,8 @@ function PracticePage({ initialChapter, initialExerciseId }) {
   );
 }
 
-function ReportPage({ courseManifest }) {
-  const reportValues = courseChapters(courseManifest).map((chapter, index) => {
-    const demoValues = [88, 80, 65, 72, 70, 76, 68];
-    return [chapter.title, demoValues[index] ?? 70];
-  });
+function ReportPage({ learningStats }) {
+  const reportValues = learningStats.chapterStats;
 
   return (
     <section className="pagePanel">
@@ -2381,21 +2544,66 @@ function ReportPage({ courseManifest }) {
         <Trophy size={24} />
         <div>
           <span>当前学习段位</span>
-          <strong>{rankInfo.level}</strong>
-          <p>{rankInfo.tip}</p>
+          <strong>
+            {learningStats.rank.level} · {learningStats.averageScore} 分
+          </strong>
+          <p>{learningStats.rank.tip}</p>
         </div>
       </div>
+      <div className="reportSummaryGrid">
+        <article>
+          <strong>{learningStats.attemptedQuestions}</strong>
+          <span>已练习题目</span>
+        </article>
+        <article>
+          <strong>{learningStats.completedChapters}</strong>
+          <span>覆盖章节</span>
+        </article>
+        <article>
+          <strong>{learningStats.progressPercent}%</strong>
+          <span>题库进度</span>
+        </article>
+      </div>
       <div className="reportGrid">
-        {reportValues.map(([name, value]) => (
-          <div className="abilityRow" key={name}>
-            <span>{name}</span>
+        {reportValues.map((chapter) => (
+          <div className={cx("abilityRow", chapter.isActual && "actual")} key={chapter.title}>
+            <span>{chapter.title}</span>
             <div>
-              <i style={{ width: `${value}%` }} />
+              <i style={{ width: `${chapter.score}%` }} />
             </div>
-            <strong>{value}</strong>
+            <strong>{chapter.score}</strong>
+            <em>{chapter.isActual ? `${chapter.attempts} 题` : "基线"}</em>
           </div>
         ))}
       </div>
+      <section className="recentAttempts">
+        <div className="panelTitle slim">
+          <span className="titleIcon">
+            <Clock3 size={18} />
+          </span>
+          <div>
+            <h2>最近作答</h2>
+            <p>{learningStats.hasAttempts ? "刷新页面后仍会保留在本机" : "还没有本地作答记录"}</p>
+          </div>
+        </div>
+        {learningStats.recentAttempts.length ? (
+          <div className="attemptList">
+            {learningStats.recentAttempts.map((attempt) => (
+              <article className="attemptItem" key={`${attempt.questionId}-${attempt.submittedAt}`}>
+                <div>
+                  <strong>
+                    {attempt.number} · {displayChapter(attempt.chapter)}
+                  </strong>
+                  <span>{attempt.text}</span>
+                </div>
+                <em>{attempt.score} 分</em>
+              </article>
+            ))}
+          </div>
+        ) : (
+          <p className="emptyExercise">去练习中心提交一次评分后，这里会自动生成学习记录。</p>
+        )}
+      </section>
     </section>
   );
 }
@@ -2482,7 +2690,18 @@ function GlobalSearchPanel({ query, courseManifest, onNavigate, onClear }) {
   );
 }
 
-function Page({ active, onNavigate, activeChapter, activeGraphNode, activeCaseTitle, activeResourceTitle, activeExerciseId, courseManifest }) {
+function Page({
+  active,
+  onNavigate,
+  activeChapter,
+  activeGraphNode,
+  activeCaseTitle,
+  activeResourceTitle,
+  activeExerciseId,
+  courseManifest,
+  learningStats,
+  onRecordAttempt,
+}) {
   switch (active) {
     case "textbook":
       return <TextbookPage onNavigate={onNavigate} initialChapter={activeChapter} courseManifest={courseManifest} />;
@@ -2495,18 +2714,20 @@ function Page({ active, onNavigate, activeChapter, activeGraphNode, activeCaseTi
     case "resources":
       return <ResourcesPage initialResourceTitle={activeResourceTitle} />;
     case "practice":
-      return <PracticePage initialChapter={activeChapter} initialExerciseId={activeExerciseId} />;
+      return <PracticePage initialChapter={activeChapter} initialExerciseId={activeExerciseId} onRecordAttempt={onRecordAttempt} />;
     case "report":
-      return <ReportPage courseManifest={courseManifest} />;
+      return <ReportPage learningStats={learningStats} />;
     case "admin":
       return <AdminPage />;
     default:
-      return <Overview onNavigate={onNavigate} courseManifest={courseManifest} />;
+      return <Overview onNavigate={onNavigate} courseManifest={courseManifest} learningStats={learningStats} />;
   }
 }
 
 export function App() {
   const courseManifest = useJsonAsset("/course-manifest.json", defaultCourseManifest);
+  const exerciseBank = useJsonAsset("/knowledge/exercises.json", { summary: null, exercises: [] });
+  const [learningAttempts, setLearningAttempts] = useState(readLearningAttempts);
   const [active, setActive] = useState("overview");
   const [query, setQuery] = useState("");
   const [activeChapter, setActiveChapter] = useState(currentCourseChapter(defaultCourseManifest).title);
@@ -2515,6 +2736,14 @@ export function App() {
   const [activeResourceTitle, setActiveResourceTitle] = useState("");
   const [activeExerciseId, setActiveExerciseId] = useState("");
   const activeLabel = useMemo(() => navItems.find((item) => item.id === active)?.label ?? "课程总览", [active]);
+  const learningStats = useMemo(
+    () => buildLearningStats({ courseManifest, exerciseBank, attempts: learningAttempts }),
+    [courseManifest, exerciseBank, learningAttempts],
+  );
+
+  useEffect(() => {
+    window.localStorage.setItem(learningAttemptsKey, JSON.stringify(learningAttempts));
+  }, [learningAttempts]);
 
   function handleNavigate(page, options = {}) {
     if (options.chapter) {
@@ -2527,9 +2756,16 @@ export function App() {
     setActive(page);
   }
 
+  function handleRecordAttempt(attempt) {
+    setLearningAttempts((current) => {
+      const attemptNumber = current.filter((item) => item.questionId === attempt.questionId).length + 1;
+      return [{ ...attempt, attemptNumber }, ...current].slice(0, 300);
+    });
+  }
+
   return (
     <div className="appShell">
-      <Sidebar active={active} onNavigate={handleNavigate} />
+      <Sidebar active={active} onNavigate={handleNavigate} learningStats={learningStats} />
       <div className="workspace">
         <Header query={query} setQuery={setQuery} onNavigate={handleNavigate} />
         <main className="content">
@@ -2546,6 +2782,8 @@ export function App() {
             activeResourceTitle={activeResourceTitle}
             activeExerciseId={activeExerciseId}
             courseManifest={courseManifest}
+            learningStats={learningStats}
+            onRecordAttempt={handleRecordAttempt}
           />
         </main>
       </div>
