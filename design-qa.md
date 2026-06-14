@@ -31,6 +31,20 @@ final result: passed
 
 ---
 
+global search qa path: local browser at http://127.0.0.1:5173/
+state: 顶部全局搜索从提示文案改为真实分组搜索结果，覆盖教材章节、教材原文、知识图谱、工程案例、关联资料和练习题。
+
+**Verification**
+- Browser QA: 搜索“桩侧阻力”显示教材原文和知识图谱分组，点击知识图谱结果后进入图谱并定位“桩侧阻力”。
+- Browser QA: 搜索“JGJ 94”显示关联资料结果，点击后进入资料中心并选中“建筑桩基技术规范”。
+- Browser QA: 搜索“7-1”显示练习题结果，点击后进入练习中心并定位第7章区域性地基 7-1 题。
+- Browser QA: 搜索“沉井基础”显示教材章节、教材原文、知识图谱和练习题分组，点击教材章节后进入第4章沉井基础。
+- Build: `npm run build` passed.
+
+final result: passed
+
+---
+
 course manifest qa path: local browser at http://127.0.0.1:5173/
 state: 修复教材章节体系不统一问题，新增 `public/course-manifest.json` 作为课程章节唯一数据源。
 

@@ -363,17 +363,118 @@ button {
   display: none;
 }
 
-.searchNotice {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 14px;
+.globalSearchPanel {
+  display: grid;
+  gap: 16px;
+  margin-bottom: 18px;
   border: 1px solid #d7e8ff;
   border-radius: 8px;
-  background: #f3f9ff;
-  color: #175cd3;
-  padding: 10px 12px;
+  background: #f8fbff;
+  padding: 16px;
+}
+
+.globalSearchHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.globalSearchHeader span {
+  display: block;
+  color: var(--blue);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.globalSearchHeader strong {
+  display: block;
+  margin-top: 3px;
+  color: var(--ink);
+  font-size: 18px;
+}
+
+.globalSearchHeader button {
+  min-height: 34px;
+  border-radius: 8px;
+  background: #eef6ff;
+  color: var(--blue);
+  cursor: pointer;
+  padding: 0 12px;
+  font-weight: 800;
+}
+
+.globalSearchGroups {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.globalSearchGroup {
+  min-width: 0;
+}
+
+.globalSearchGroup h3 {
+  margin: 0 0 8px;
+  color: #27364a;
   font-size: 14px;
+}
+
+.globalSearchItems {
+  display: grid;
+  gap: 8px;
+}
+
+.globalSearchItems button {
+  display: grid;
+  gap: 5px;
+  border: 1px solid #e2eaf4;
+  border-radius: 8px;
+  background: white;
+  cursor: pointer;
+  padding: 12px;
+  text-align: left;
+}
+
+.globalSearchItems button:hover {
+  border-color: #9bc4f5;
+  background: #f6fbff;
+  box-shadow: inset 3px 0 0 var(--blue);
+}
+
+.globalSearchItems span {
+  display: -webkit-box;
+  overflow: hidden;
+  color: #17243a;
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 1.45;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.globalSearchItems p {
+  display: -webkit-box;
+  overflow: hidden;
+  margin: 0;
+  color: #667085;
+  font-size: 12px;
+  line-height: 1.5;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.globalSearchItems em {
+  color: var(--blue);
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 800;
+}
+
+.emptySearchResult {
+  margin: 0;
+  color: #667085;
+  line-height: 1.7;
 }
 
 .overviewLayout {
@@ -2586,6 +2687,7 @@ button {
   .caseGrid,
   .adminGrid,
   .knowledgeStats,
+  .globalSearchGroups,
   .sideStack,
   .practiceLayout {
     grid-template-columns: 1fr;

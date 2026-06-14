@@ -554,6 +554,105 @@ function scoreExerciseAnswer(answer, exercise) {
   };
 }
 
+function resultMatches(query, ...values) {
+  const cleanQuery = query.trim().toLowerCase();
+  if (!cleanQuery) {
+    return false;
+  }
+  return values
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase()
+    .includes(cleanQuery);
+}
+
+function chapterTitleFromText(text, courseManifest) {
+  const cleanText = text ?? "";
+  return courseChapters(courseManifest).find((chapter) => cleanText.includes(chapter.title))?.title ?? currentCourseChapter(courseManifest).title;
+}
+
+function buildGlobalSearchResults({ query, courseManifest, chunks, graph, exerciseBank }) {
+  const cleanQuery = query.trim();
+  if (!cleanQuery) {
+    return [];
+  }
+
+  const chapterResults = courseChapters(courseManifest)
+    .filter((chapter) => resultMatches(cleanQuery, chapter.title, chapter.slug, `第${chapter.number}章`))
+    .slice(0, 4)
+    .map((chapter) => ({
+      id: `chapter:${chapter.id}`,
+      group: "教材章节",
+      title: `第${chapter.number}章 ${chapter.title}`,
+      desc: chapterStudyContent[chapter.title]?.intro ?? "进入章节学习工作台。",
+      action: { page: "textbook", chapter: chapter.title },
+    }));
+
+  const textbookResults = searchChunks(chunks, cleanQuery, 4).map((chunk) => ({
+    id: `chunk:${chunk.id}`,
+    group: "教材原文",
+    title: chunk.heading_path || "教材正文",
+    desc: compactText(chunk.text, 112),
+    meta: `来源行 ${chunk.source_line}`,
+    action: { page: "textbook", chapter: chapterTitleFromText(chunk.heading_path, courseManifest) },
+  }));
+
+  const graphResults = (graph.nodes ?? [])
+    .filter((node) => resultMatches(cleanQuery, node.name, node.definition, graphNodeType(node)))
+    .slice(0, 5)
+    .map((node) => ({
+      id: `graph:${node.id}`,
+      group: "知识图谱",
+      title: node.name,
+      desc: node.definition ?? `${graphNodeType(node)}节点`,
+      meta: graphNodeType(node),
+      action: { page: "graph", node: node.name },
+    }));
+
+  const caseResults = caseItems
+    .filter((item) => resultMatches(cleanQuery, item.title, item.tag, item.status))
+    .map((item) => ({
+      id: `case:${item.title}`,
+      group: "工程案例",
+      title: item.title,
+      desc: `案例类型：${item.tag}`,
+      meta: item.status,
+      action: { page: "cases", caseTitle: item.title },
+    }));
+
+  const resourceResults = resources
+    .filter((item) => resultMatches(cleanQuery, item.title, item.code, item.type, item.link))
+    .map((item) => ({
+      id: `resource:${item.title}`,
+      group: "关联资料",
+      title: item.title,
+      desc: item.link,
+      meta: `${item.type} · ${item.code}`,
+      action: { page: "resources", resourceTitle: item.title },
+    }));
+
+  const exerciseResults = (exerciseBank.exercises ?? [])
+    .filter((exercise) => resultMatches(cleanQuery, exercise.number, exercise.chapter, exercise.type, exercise.kind, exercise.text, ...(exercise.tags ?? [])))
+    .slice(0, 6)
+    .map((exercise) => ({
+      id: `exercise:${exercise.id}`,
+      group: "练习题",
+      title: `${exercise.number} ${exercise.text}`,
+      desc: `${displayChapter(exercise.chapter)} · ${exercise.type} · ${exercise.difficulty}`,
+      meta: exercise.tags?.slice(0, 3).join("、"),
+      action: { page: "practice", chapter: normalizeChapterName(exercise.chapter), exerciseId: exercise.id },
+    }));
+
+  return [
+    { group: "教材章节", items: chapterResults },
+    { group: "教材原文", items: textbookResults },
+    { group: "知识图谱", items: graphResults },
+    { group: "工程案例", items: caseResults },
+    { group: "关联资料", items: resourceResults },
+    { group: "练习题", items: exerciseResults },
+  ].filter((section) => section.items.length);
+}
+
 function graphNodeType(node) {
   if (node?.expandedFrom) {
     return "展开";
@@ -1293,7 +1392,7 @@ function TextbookPage({ onNavigate, initialChapter, courseManifest }) {
   );
 }
 
-function GraphPage() {
+function GraphPage({ initialNode }) {
   const summary = useJsonAsset("/knowledge/build_summary.json", null);
   const graph = useJsonAsset("/knowledge/graph_preview.json", { nodes: [], edges: [] });
   const chunks = useJsonAsset("/knowledge/chunks.json", []);
@@ -1431,6 +1530,19 @@ function GraphPage() {
       });
   }, [graphEdges, graphNodes, selected]);
   const sourceSnippets = useMemo(() => searchChunks(chunks, selected?.name ?? "", 3), [chunks, selected?.name]);
+
+  useEffect(() => {
+    if (!initialNode) {
+      return;
+    }
+    const target = graphNodes.find((node) => node.name === initialNode);
+    if (target) {
+      setNodeQuery("");
+      setTypeFilter("全部");
+      setRelationFilter("全部");
+      setSelectedId(target.id);
+    }
+  }, [graphNodes, initialNode]);
 
   function expandSelected(id = selected?.id) {
     if (!id || expandedIds.includes(id)) {
@@ -1706,8 +1818,15 @@ function QAPage() {
   );
 }
 
-function CasesPage() {
+function CasesPage({ initialCaseTitle }) {
   const [selectedCase, setSelectedCase] = useState(caseItems[0]);
+
+  useEffect(() => {
+    const nextCase = caseItems.find((item) => item.title === initialCaseTitle);
+    if (nextCase) {
+      setSelectedCase(nextCase);
+    }
+  }, [initialCaseTitle]);
 
   return (
     <section className="pagePanel">
@@ -1739,8 +1858,15 @@ function CasesPage() {
   );
 }
 
-function ResourcesPage() {
+function ResourcesPage({ initialResourceTitle }) {
   const [selectedResource, setSelectedResource] = useState(resources[0]);
+
+  useEffect(() => {
+    const nextResource = resources.find((item) => item.title === initialResourceTitle);
+    if (nextResource) {
+      setSelectedResource(nextResource);
+    }
+  }, [initialResourceTitle]);
 
   return (
     <section className="pagePanel">
@@ -1770,7 +1896,7 @@ function ResourcesPage() {
   );
 }
 
-function PracticePage({ initialChapter }) {
+function PracticePage({ initialChapter, initialExerciseId }) {
   const exerciseBank = useJsonAsset("/knowledge/exercises.json", { summary: { total: 0, thinking: 0, exercise: 0, chapters: [] }, exercises: [] });
   const exercises = exerciseBank.exercises ?? [];
   const summary = exerciseBank.summary ?? {};
@@ -1795,6 +1921,23 @@ function PracticePage({ initialChapter }) {
       setChapterFilter(matchedChapter);
     }
   }, [chapterKey, initialChapter]);
+
+  useEffect(() => {
+    if (!initialExerciseId || !exercises.length) {
+      return;
+    }
+    const targetExercise = exercises.find((exercise) => exercise.id === initialExerciseId);
+    if (!targetExercise) {
+      return;
+    }
+    setChapterFilter(targetExercise.chapter);
+    setTypeFilter("全部");
+    setDifficultyFilter("全部");
+    setKeyword("");
+    setSelectedExerciseId(targetExercise.id);
+    setAnswer("");
+    setSubmitted(false);
+  }, [exercises, initialExerciseId]);
 
   const filteredExercises = useMemo(() => {
     const cleanKeyword = keyword.trim().toLowerCase();
@@ -2092,20 +2235,70 @@ function PageHeader({ label, title, desc }) {
   );
 }
 
-function Page({ active, onNavigate, activeChapter, courseManifest }) {
+function GlobalSearchPanel({ query, courseManifest, onNavigate, onClear }) {
+  const chunks = useJsonAsset("/knowledge/chunks.json", []);
+  const graph = useJsonAsset("/knowledge/graph_preview.json", { nodes: [], edges: [] });
+  const exerciseBank = useJsonAsset("/knowledge/exercises.json", { summary: null, exercises: [] });
+  const resultGroups = useMemo(
+    () => buildGlobalSearchResults({ query, courseManifest, chunks, graph, exerciseBank }),
+    [chunks, courseManifest, exerciseBank, graph, query],
+  );
+  const totalResults = resultGroups.reduce((total, group) => total + group.items.length, 0);
+
+  function openResult(action) {
+    onNavigate(action.page, action);
+    onClear();
+  }
+
+  return (
+    <section className="globalSearchPanel" aria-live="polite">
+      <div className="globalSearchHeader">
+        <div>
+          <span>全局搜索</span>
+          <strong>“{query.trim()}”</strong>
+        </div>
+        <button type="button" onClick={onClear}>
+          清空
+        </button>
+      </div>
+      {totalResults ? (
+        <div className="globalSearchGroups">
+          {resultGroups.map((group) => (
+            <section className="globalSearchGroup" key={group.group}>
+              <h3>{group.group}</h3>
+              <div className="globalSearchItems">
+                {group.items.map((item) => (
+                  <button type="button" key={item.id} onClick={() => openResult(item.action)}>
+                    <span>{item.title}</span>
+                    <p>{item.desc}</p>
+                    {item.meta && <em>{item.meta}</em>}
+                  </button>
+                ))}
+              </div>
+            </section>
+          ))}
+        </div>
+      ) : (
+        <p className="emptySearchResult">暂时没有匹配内容，可以换一个章节名、知识点或题号试试。</p>
+      )}
+    </section>
+  );
+}
+
+function Page({ active, onNavigate, activeChapter, activeGraphNode, activeCaseTitle, activeResourceTitle, activeExerciseId, courseManifest }) {
   switch (active) {
     case "textbook":
       return <TextbookPage onNavigate={onNavigate} initialChapter={activeChapter} courseManifest={courseManifest} />;
     case "graph":
-      return <GraphPage />;
+      return <GraphPage initialNode={activeGraphNode} />;
     case "qa":
       return <QAPage />;
     case "cases":
-      return <CasesPage />;
+      return <CasesPage initialCaseTitle={activeCaseTitle} />;
     case "resources":
-      return <ResourcesPage />;
+      return <ResourcesPage initialResourceTitle={activeResourceTitle} />;
     case "practice":
-      return <PracticePage initialChapter={activeChapter} />;
+      return <PracticePage initialChapter={activeChapter} initialExerciseId={activeExerciseId} />;
     case "report":
       return <ReportPage courseManifest={courseManifest} />;
     case "admin":
@@ -2120,12 +2313,20 @@ export function App() {
   const [active, setActive] = useState("overview");
   const [query, setQuery] = useState("");
   const [activeChapter, setActiveChapter] = useState(currentCourseChapter(defaultCourseManifest).title);
+  const [activeGraphNode, setActiveGraphNode] = useState("");
+  const [activeCaseTitle, setActiveCaseTitle] = useState("");
+  const [activeResourceTitle, setActiveResourceTitle] = useState("");
+  const [activeExerciseId, setActiveExerciseId] = useState("");
   const activeLabel = useMemo(() => navItems.find((item) => item.id === active)?.label ?? "课程总览", [active]);
 
   function handleNavigate(page, options = {}) {
     if (options.chapter) {
       setActiveChapter(options.chapter);
     }
+    setActiveGraphNode(options.node ?? "");
+    setActiveCaseTitle(options.caseTitle ?? "");
+    setActiveResourceTitle(options.resourceTitle ?? "");
+    setActiveExerciseId(options.exerciseId ?? "");
     setActive(page);
   }
 
@@ -2137,12 +2338,18 @@ export function App() {
         <main className="content">
           <div className="mobilePageLabel">{activeLabel}</div>
           {query.trim() && (
-            <div className="searchNotice">
-              <Search size={16} />
-              正在展示与“{query.trim()}”相关的课程内容入口。
-            </div>
+            <GlobalSearchPanel query={query} courseManifest={courseManifest} onNavigate={handleNavigate} onClear={() => setQuery("")} />
           )}
-          <Page active={active} onNavigate={handleNavigate} activeChapter={activeChapter} courseManifest={courseManifest} />
+          <Page
+            active={active}
+            onNavigate={handleNavigate}
+            activeChapter={activeChapter}
+            activeGraphNode={activeGraphNode}
+            activeCaseTitle={activeCaseTitle}
+            activeResourceTitle={activeResourceTitle}
+            activeExerciseId={activeExerciseId}
+            courseManifest={courseManifest}
+          />
         </main>
       </div>
     </div>
