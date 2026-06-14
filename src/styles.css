@@ -1261,6 +1261,51 @@ button {
   color: var(--blue);
 }
 
+.railList {
+  display: grid;
+  gap: 10px;
+  margin: 0 0 20px;
+}
+
+.resourceRail .railMiniCard {
+  display: grid;
+  gap: 5px;
+  margin: 0;
+  border: 1px solid #e2eaf4;
+  border-radius: 8px;
+  background: #fbfdff;
+  color: #27364a;
+  padding: 12px;
+  text-align: left;
+}
+
+.resourceRail .railMiniCard:hover {
+  border-color: #9bc4f5;
+  background: #f6fbff;
+}
+
+.railMiniCard span {
+  color: var(--blue);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.railMiniCard strong {
+  color: var(--ink);
+  font-size: 14px;
+}
+
+.railMiniCard em {
+  color: #667085;
+  font-size: 12px;
+  font-style: normal;
+  line-height: 1.45;
+}
+
+.railMiniCard.case span {
+  color: #a75d00;
+}
+
 .knowledgeStats {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));

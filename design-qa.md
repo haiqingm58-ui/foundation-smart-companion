@@ -69,6 +69,26 @@ final result: passed
 
 ---
 
+chapter relation qa path: local browser at http://localhost:5173/foundation-smart-companion/
+state: 教材章节、工程案例和关联资料已建立结构化关联，教材页右侧栏按当前章节动态显示资料和案例。
+
+**Coverage**
+- Resources expanded to 8 entries with related chapters, type, code, link scope, and teacher-maintained status.
+- Cases expanded to 7 entries with related chapters, engineering problem, learning takeaway, tag, and status.
+- Textbook page resource rail now filters by active chapter and clicks directly into resource/case detail.
+- Global search includes case problems, takeaways, resource status, and related chapters.
+
+**Verification**
+- Browser QA: 切换到“基坑工程”后，右侧资料显示 JGJ 120 和土力学，案例显示“深基坑支护变形监测与险情处置”。
+- Browser QA: 点击 JGJ 120 资料卡跳转到资料详情，并显示关联章节“基坑工程”。
+- Browser QA: 切换到“沉井基础”后，点击案例卡跳转到“跨江桥梁沉井下沉偏斜处理”详情。
+- Browser QA: 全局搜索“湿陷性黄土”同时返回教材原文、知识图谱、工程案例、关联资料和练习题。
+- Build: `npm run build` passed.
+
+final result: passed
+
+---
+
 global search qa path: local browser at http://127.0.0.1:5173/
 state: 顶部全局搜索从提示文案改为真实分组搜索结果，覆盖教材章节、教材原文、知识图谱、工程案例、关联资料和练习题。
 

@@ -265,16 +265,129 @@ const chapterStudyContent = {
 };
 
 const resources = [
-  { title: "建筑地基基础设计规范", code: "GB 50007", type: "规范", link: "浅基础、承载力、沉降" },
-  { title: "建筑桩基技术规范", code: "JGJ 94", type: "规范", link: "桩基础、单桩承载力" },
-  { title: "土力学", code: "参考教材", type: "教材", link: "抗剪强度、应力计算" },
-  { title: "岩土工程勘察", code: "课程资料", type: "教材", link: "地质勘察、土层识别" },
+  {
+    title: "建筑地基基础设计规范",
+    code: "GB 50007",
+    type: "规范",
+    link: "浅基础、承载力、沉降、软弱下卧层",
+    relatedChapters: ["绪论", "浅基础", "地基处理"],
+    status: "指导老师可补充条文摘录",
+  },
+  {
+    title: "建筑桩基技术规范",
+    code: "JGJ 94",
+    type: "规范",
+    link: "桩基础、单桩承载力、群桩效应",
+    relatedChapters: ["桩基础"],
+    status: "指导老师可绑定课堂重点条款",
+  },
+  {
+    title: "建筑基坑支护技术规程",
+    code: "JGJ 120",
+    type: "规范",
+    link: "基坑支护、土压力、降水与监测",
+    relatedChapters: ["基坑工程"],
+    status: "用于基坑工程章节",
+  },
+  {
+    title: "建筑地基处理技术规范",
+    code: "JGJ 79",
+    type: "规范",
+    link: "换填、强夯、复合地基、预压法",
+    relatedChapters: ["地基处理"],
+    status: "用于处理方案比选",
+  },
+  {
+    title: "湿陷性黄土地区建筑标准",
+    code: "GB 50025",
+    type: "规范",
+    link: "湿陷类型、湿陷等级、区域性地基",
+    relatedChapters: ["区域性地基"],
+    status: "用于特殊土地基判别",
+  },
+  {
+    title: "公路桥涵地基与基础设计规范",
+    code: "JTG 3363",
+    type: "规范",
+    link: "桥梁沉井、深基础、承载与稳定",
+    relatedChapters: ["沉井基础"],
+    status: "用于桥梁沉井拓展",
+  },
+  {
+    title: "土力学",
+    code: "参考教材",
+    type: "教材",
+    link: "抗剪强度、应力计算、变形计算",
+    relatedChapters: ["绪论", "浅基础", "基坑工程"],
+    status: "前置知识复习",
+  },
+  {
+    title: "岩土工程勘察",
+    code: "课程资料",
+    type: "教材",
+    link: "地质勘察、土层识别、持力层选择",
+    relatedChapters: ["绪论", "桩基础", "区域性地基"],
+    status: "指导老师可上传附件",
+  },
 ];
 
 const caseItems = [
-  { title: "某高层建筑钻孔灌注桩基础设计案例", tag: "桩基础", status: "推荐" },
-  { title: "某住宅楼不均匀沉降分析", tag: "沉降", status: "重点" },
-  { title: "软弱地基 CFG 桩处理方案", tag: "地基处理", status: "案例题" },
+  {
+    title: "某住宅楼不均匀沉降分析",
+    tag: "沉降",
+    status: "重点",
+    relatedChapters: ["绪论", "浅基础"],
+    problem: "建筑使用期出现沉降差，需追溯地基、基础和上部结构共同作用。",
+    lesson: "把承载力验算和变形控制一起看，不能只看基础强度。",
+  },
+  {
+    title: "独立基础尺寸初选与软弱下卧层验算",
+    tag: "浅基础",
+    status: "案例题",
+    relatedChapters: ["浅基础"],
+    problem: "柱下独立基础基底压力满足要求，但下卧软弱土层仍需复核。",
+    lesson: "浅基础设计要同步检查基底压力、偏心、沉降和软弱下卧层。",
+  },
+  {
+    title: "某高层建筑钻孔灌注桩基础设计案例",
+    tag: "桩基础",
+    status: "推荐",
+    relatedChapters: ["桩基础"],
+    problem: "高层建筑荷载大，需比较桩侧阻力、桩端阻力和群桩效应。",
+    lesson: "桩基础不是单看单桩承载力，还要关注沉降、负摩阻力和承台作用。",
+  },
+  {
+    title: "跨江桥梁沉井下沉偏斜处理",
+    tag: "沉井基础",
+    status: "施工案例",
+    relatedChapters: ["沉井基础"],
+    problem: "沉井下沉过程中发生偏斜，需要调整取土、加载和纠偏工艺。",
+    lesson: "沉井施工要把下沉力、侧摩阻、刃脚阻力和封底安全联系起来。",
+  },
+  {
+    title: "深基坑支护变形监测与险情处置",
+    tag: "基坑工程",
+    status: "监测案例",
+    relatedChapters: ["基坑工程"],
+    problem: "开挖后围护结构水平位移和周边沉降增大，需要动态调整支护。",
+    lesson: "基坑工程必须把土压力、支护刚度、降水和监测预警一起管理。",
+  },
+  {
+    title: "软弱地基 CFG 桩处理方案",
+    tag: "地基处理",
+    status: "案例题",
+    relatedChapters: ["地基处理"],
+    problem: "软弱地基承载力和沉降均不满足要求，需要复合地基处理。",
+    lesson: "复合地基设计要同时看增强体、桩间土和褥垫层的协同作用。",
+  },
+  {
+    title: "湿陷性黄土地基处理与等级判别",
+    tag: "区域性地基",
+    status: "专题案例",
+    relatedChapters: ["区域性地基"],
+    problem: "场地黄土遇水湿陷，需确定湿陷类型、湿陷等级和处理措施。",
+    lesson: "区域性地基先识别特殊土性，再选择基础形式和地基处理方法。",
+  },
 ];
 
 const relationLabels = {
@@ -525,6 +638,20 @@ function moduleMeta(cardId, { courseManifest, graphSummary, exerciseBank }) {
     default:
       return "";
   }
+}
+
+function relatedResourcesForChapter(chapterTitle) {
+  return resources.filter((item) => {
+    const related = item.relatedChapters ?? [];
+    return related.includes(chapterTitle) || item.link.includes(chapterTitle);
+  });
+}
+
+function relatedCasesForChapter(chapterTitle) {
+  return caseItems.filter((item) => {
+    const related = item.relatedChapters ?? [];
+    return related.includes(chapterTitle) || item.tag === chapterTitle;
+  });
 }
 
 function keywordTerms(text) {
@@ -890,18 +1017,18 @@ function buildGlobalSearchResults({ query, courseManifest, chunks, graph, exerci
     }));
 
   const caseResults = caseItems
-    .filter((item) => resultMatches(cleanQuery, item.title, item.tag, item.status))
+    .filter((item) => resultMatches(cleanQuery, item.title, item.tag, item.status, item.problem, item.lesson, ...(item.relatedChapters ?? [])))
     .map((item) => ({
       id: `case:${item.title}`,
       group: "工程案例",
       title: item.title,
-      desc: `案例类型：${item.tag}`,
+      desc: item.problem,
       meta: item.status,
       action: { page: "cases", caseTitle: item.title },
     }));
 
   const resourceResults = resources
-    .filter((item) => resultMatches(cleanQuery, item.title, item.code, item.type, item.link))
+    .filter((item) => resultMatches(cleanQuery, item.title, item.code, item.type, item.link, item.status, ...(item.relatedChapters ?? [])))
     .map((item) => ({
       id: `resource:${item.title}`,
       group: "关联资料",
@@ -1580,6 +1707,8 @@ function TextbookPage({ onNavigate, initialChapter, courseManifest }) {
   const [activeTab, setActiveTab] = useState("重点公式");
   const [showDerivation, setShowDerivation] = useState(false);
   const activeContent = chapterStudyContent[activeChapter] ?? chapterStudyContent.桩基础;
+  const chapterResources = relatedResourcesForChapter(activeChapter);
+  const chapterCases = relatedCasesForChapter(activeChapter);
   const tabCopy = {
     章节导读: "先把章节目标、核心概念和适用场景串起来，再进入公式和案例。",
     重点公式: `本专题核心公式是“${activeContent.formulaName}”，重点看适用条件、参数含义和计算边界。`,
@@ -1658,15 +1787,30 @@ function TextbookPage({ onNavigate, initialChapter, courseManifest }) {
         </div>
         <aside className="resourceRail">
           <h3>关联资料</h3>
-          <p>{activeContent.caseText}</p>
-          <button type="button" onClick={() => onNavigate("resources")}>
-            查看资料
-          </button>
+          <div className="railList">
+            {chapterResources.map((item) => (
+              <button
+                className="railMiniCard"
+                type="button"
+                key={item.title}
+                onClick={() => onNavigate("resources", { resourceTitle: item.title })}
+              >
+                <span>{item.type}</span>
+                <strong>{item.code}</strong>
+                <em>{item.link}</em>
+              </button>
+            ))}
+          </div>
           <h3>相关案例</h3>
-          <p>{activeContent.diagram}</p>
-          <button type="button" onClick={() => onNavigate("cases")}>
-            查看案例
-          </button>
+          <div className="railList">
+            {chapterCases.map((item) => (
+              <button className="railMiniCard case" type="button" key={item.title} onClick={() => onNavigate("cases", { caseTitle: item.title })}>
+                <span>{item.status}</span>
+                <strong>{item.tag}</strong>
+                <em>{item.title}</em>
+              </button>
+            ))}
+          </div>
         </aside>
       </div>
     </section>
@@ -2117,7 +2261,7 @@ function CasesPage({ initialCaseTitle }) {
           <article className={cx("caseCard", selectedCase.title === item.title && "active")} key={item.title}>
             <span>{item.tag}</span>
             <h3>{item.title}</h3>
-            <p>工程背景、问题表现、原因分析、涉及知识点与思考题已整理。</p>
+            <p>{item.problem}</p>
             <button type="button" onClick={() => setSelectedCase(item)}>
               {selectedCase.title === item.title ? "正在查看" : "查看详情"}
             </button>
@@ -2126,13 +2270,14 @@ function CasesPage({ initialCaseTitle }) {
       </div>
       <section className="detailPanel">
         <strong>{selectedCase.title}</strong>
-        <p>
-          当前案例已关联“{selectedCase.tag}”知识点，可用于课堂讨论、章节复习和练习题生成。建议先定位工程问题，再回到教材查看设计计算依据。
-        </p>
+        <p>{selectedCase.problem}</p>
+        <p>{selectedCase.lesson}</p>
         <div className="detailTags">
           <span>{selectedCase.status}</span>
           <span>{selectedCase.tag}</span>
-          <span>已关联教材</span>
+          {(selectedCase.relatedChapters ?? []).map((chapter) => (
+            <span key={chapter}>{chapter}</span>
+          ))}
         </div>
       </section>
     </section>
@@ -2170,8 +2315,14 @@ function ResourcesPage({ initialResourceTitle }) {
       <section className="detailPanel compact">
         <strong>{selectedResource.title}</strong>
         <p>
-          已定位到 {selectedResource.code}：重点用于“{selectedResource.link}”。后续可由指导老师补充正式附件、讲义和规范摘录。
+          已定位到 {selectedResource.code}：重点用于“{selectedResource.link}”。{selectedResource.status}
         </p>
+        <div className="detailTags">
+          <span>{selectedResource.type}</span>
+          {(selectedResource.relatedChapters ?? []).map((chapter) => (
+            <span key={chapter}>{chapter}</span>
+          ))}
+        </div>
       </section>
     </section>
   );
