@@ -1,0 +1,1368 @@
+{
+  "summary": {
+    "total": 79,
+    "thinking": 55,
+    "exercise": 24,
+    "chapters": [
+      "第1章绪论",
+      "第2章 浅基础",
+      "第3章 桩基础",
+      "第4章 沉井基础",
+      "第5章 基坑工程",
+      "第6章 地基处理",
+      "第7章 区域性地基"
+    ]
+  },
+  "exercises": [
+    {
+      "id": "ch1-思考题-1",
+      "number": "1-1",
+      "chapter": "第1章绪论",
+      "chapterNo": 1,
+      "type": "思考题",
+      "kind": "概念问答",
+      "sourceLine": 216,
+      "attachments": [],
+      "text": "“地基”与“基础”的核心差别是什么？",
+      "length": 18,
+      "difficulty": "基础",
+      "tags": [
+        "地基",
+        "基础"
+      ]
+    },
+    {
+      "id": "ch1-思考题-2",
+      "number": "1-2",
+      "chapter": "第1章绪论",
+      "chapterNo": 1,
+      "type": "思考题",
+      "kind": "概念问答",
+      "sourceLine": 218,
+      "attachments": [],
+      "text": "深基础和浅基础的差异体现在哪些方面？（提示：从埋置深度、受力分析、施工方法三个角度考虑)",
+      "length": 44,
+      "difficulty": "基础",
+      "tags": [
+        "基础",
+        "浅基础"
+      ]
+    },
+    {
+      "id": "ch1-思考题-3",
+      "number": "1-3",
+      "chapter": "第1章绪论",
+      "chapterNo": 1,
+      "type": "思考题",
+      "kind": "概念问答",
+      "sourceLine": 220,
+      "attachments": [],
+      "text": "地基与基础的设计要求有什么异同点?",
+      "length": 17,
+      "difficulty": "基础",
+      "tags": [
+        "地基",
+        "基础"
+      ]
+    },
+    {
+      "id": "ch1-思考题-4",
+      "number": "1-4",
+      "chapter": "第1章绪论",
+      "chapterNo": 1,
+      "type": "思考题",
+      "kind": "概念问答",
+      "sourceLine": 222,
+      "attachments": [],
+      "text": "基础学科发展趋势是怎样的，为什么会有这样的趋势？",
+      "length": 24,
+      "difficulty": "基础",
+      "tags": [
+        "基础"
+      ]
+    },
+    {
+      "id": "ch1-思考题-5",
+      "number": "1-5",
+      "chapter": "第1章绪论",
+      "chapterNo": 1,
+      "type": "思考题",
+      "kind": "概念问答",
+      "sourceLine": 224,
+      "attachments": [],
+      "text": "基础工程的学习方法与土木工程专业其他课程有什么差别？",
+      "length": 26,
+      "difficulty": "基础",
+      "tags": [
+        "基础"
+      ]
+    },
+    {
+      "id": "ch2-思考题-1",
+      "number": "2-1",
+      "chapter": "第2章 浅基础",
+      "chapterNo": 2,
+      "type": "思考题",
+      "kind": "概念问答",
+      "sourceLine": 2084,
+      "attachments": [],
+      "text": "常见浅基础有哪些类型？它们在构造、材料、地基承载面积利用率以及刚度方面各有何特点?",
+      "length": 41,
+      "difficulty": "基础",
+      "tags": [
+        "地基",
+        "基础",
+        "浅基础"
+      ]
+    },
+    {
+      "id": "ch2-思考题-2",
+      "number": "2-2",
+      "chapter": "第2章 浅基础",
+      "chapterNo": 2,
+      "type": "思考题",
+      "kind": "概念问答",
+      "sourceLine": 2086,
+      "attachments": [],
+      "text": "确定基础埋深的基本原则是什么？举例说明确定基础埋深时如何遵循这些基本原则。",
+      "length": 37,
+      "difficulty": "基础",
+      "tags": [
+        "基础"
+      ]
+    },
+    {
+      "id": "ch2-思考题-3",
+      "number": "2-3",
+      "chapter": "第2章 浅基础",
+      "chapterNo": 2,
+      "type": "思考题",
+      "kind": "概念问答",
+      "sourceLine": 2088,
+      "attachments": [],
+      "text": "确定地基承载力的方法有哪些？为什么实测地基承载力需要进行深、宽修正？",
+      "length": 34,
+      "difficulty": "基础",
+      "tags": [
+        "地基",
+        "承载力"
+      ]
+    },
+    {
+      "id": "ch2-思考题-4",
+      "number": "2-4",
+      "chapter": "第2章 浅基础",
+      "chapterNo": 2,
+      "type": "思考题",
+      "kind": "概念问答",
+      "sourceLine": 2090,
+      "attachments": [],
+      "text": "设计地基基础需做哪些计算？其中哪些计算内容需采用荷载效应的标准组合？",
+      "length": 34,
+      "difficulty": "基础",
+      "tags": [
+        "地基",
+        "基础"
+      ]
+    },
+    {
+      "id": "ch2-思考题-5",
+      "number": "2-5",
+      "chapter": "第2章 浅基础",
+      "chapterNo": 2,
+      "type": "思考题",
+      "kind": "概念问答",
+      "sourceLine": 2092,
+      "attachments": [],
+      "text": "在进行地基基础设计时，为什么地基承载力验算通过后，还要验算地基沉降变形？",
+      "length": 36,
+      "difficulty": "基础",
+      "tags": [
+        "地基",
+        "基础",
+        "承载力",
+        "沉降"
+      ]
+    },
+    {
+      "id": "ch2-思考题-6",
+      "number": "2-6",
+      "chapter": "第2章 浅基础",
+      "chapterNo": 2,
+      "type": "思考题",
+      "kind": "概念问答",
+      "sourceLine": 2094,
+      "attachments": [],
+      "text": "如何确定扩展基础的平面尺寸和高度？",
+      "length": 17,
+      "difficulty": "基础",
+      "tags": [
+        "基础"
+      ]
+    },
+    {
+      "id": "ch2-思考题-7",
+      "number": "2-7",
+      "chapter": "第2章 浅基础",
+      "chapterNo": 2,
+      "type": "思考题",
+      "kind": "概念问答",
+      "sourceLine": 2096,
+      "attachments": [],
+      "text": "钢筋混凝土柱下条形基础、墙下条形基础构造何差异？为什么二者分属不同的浅基础类型?",
+      "length": 40,
+      "difficulty": "基础",
+      "tags": [
+        "基础",
+        "浅基础"
+      ]
+    },
+    {
+      "id": "ch2-思考题-8",
+      "number": "2-8",
+      "chapter": "第2章 浅基础",
+      "chapterNo": 2,
+      "type": "思考题",
+      "kind": "概念问答",
+      "sourceLine": 2098,
+      "attachments": [],
+      "text": "从上下部共同作用的观点，倒梁法和剪力平衡法分别是如何考虑上部结构刚度的？其计算结果是偏大还是偏小？设计中如何补偿由计算偏差带来的风险？",
+      "length": 67,
+      "difficulty": "基础",
+      "tags": [
+        "基础工程"
+      ]
+    },
+    {
+      "id": "ch2-思考题-9",
+      "number": "2-9",
+      "chapter": "第2章 浅基础",
+      "chapterNo": 2,
+      "type": "思考题",
+      "kind": "概念问答",
+      "sourceLine": 2100,
+      "attachments": [],
+      "text": "建筑地基产生不均匀沉降对上部结构会产生哪些损害？如何在结构设计中避免？",
+      "length": 35,
+      "difficulty": "基础",
+      "tags": [
+        "地基",
+        "沉降"
+      ]
+    },
+    {
+      "id": "ch2-习题-1",
+      "number": "2-1",
+      "chapter": "第2章 浅基础",
+      "chapterNo": 2,
+      "type": "习题",
+      "kind": "计算设计",
+      "sourceLine": 2104,
+      "attachments": [],
+      "text": "某桥梁基础，基础埋置深度（一般冲刷线以下) $h = 4 . \\mathrm { ~ 5 ~ m ~ }$ ，基础底面短边尺寸$b { = } 2 . 5 \\mathrm { ~ m ~ }$ 。地基土为一般黏性土，天然孔隙比 $e _ { 0 } = 0 . 7$ ，液性指数 $I _ { L } = 0 . 7 5$ ，土在水面以下的容积密度（饱和状态) $\\gamma _ { \\mathrm { { 0 } } } { = } 2 8 \\ \\mathrm { { k N } / \\mathrm { { m } ^ { 3 } } }$ 。要求按《公路桥涵地基基础设计规范》(JTG3363—2019):\n（1）查表确定地基土的承载力特征值 $f _ { \\mathrm { a 0 } }$\n（2）计算对基础宽度、埋深修正后的地基承载力特征值 $f _ { \\mathrm { a } }$ 0",
+      "length": 403,
+      "difficulty": "提高",
+      "tags": [
+        "地基",
+        "基础",
+        "承载力"
+      ]
+    },
+    {
+      "id": "ch2-习题-2",
+      "number": "2-2",
+      "chapter": "第2章 浅基础",
+      "chapterNo": 2,
+      "type": "习题",
+      "kind": "计算设计",
+      "sourceLine": 2110,
+      "attachments": [],
+      "text": "已知某拟建筑物场地地质条件。第一层：杂填土，层厚1.2m， $\\gamma = 1$ 8 $\\mathrm { k N } / \\mathrm { m } ^ { 3 }$ 第二层：黏性土，层厚 $4 . 2 ~ \\mathrm { m } , ~ \\gamma = 1 9 . 5 ~ \\mathrm { k N / m ^ { 3 } } , ~ e = 0 . 7 5 , ~ I _ { \\mathrm { L } } = 0 . 7$ ，地基承载力特征值$f _ { \\mathrm { a k } } { = } 1 3 0 ~ \\mathrm { k P a }$ 。试按以下基础条件，分别计算修正后的地基承载力特征值：\n（1）基础底面为 $4 . 0 ~ \\mathrm { m } { \\times } 2 . 5 ~ \\mathrm { m }$ 的矩形独立基础，埋深 $d { = } 1 . 2 \\mathrm { ~ m ~ }$\n（2）基础底面为 $9 . 0 ~ \\mathrm { m } \\times 4 2 \\mathrm { ~ m ~ }$ 的箱形基础，埋深 $d { = } 4 . 2 \\ \\mathrm { m }$",
+      "length": 531,
+      "difficulty": "提高",
+      "tags": [
+        "地基",
+        "基础",
+        "承载力"
+      ]
+    },
+    {
+      "id": "ch2-习题-3",
+      "number": "2-3",
+      "chapter": "第2章 浅基础",
+      "chapterNo": 2,
+      "type": "习题",
+      "kind": "计算设计",
+      "sourceLine": 2116,
+      "attachments": [],
+      "text": "某建筑物承受中心荷载的柱下独立基础底面尺寸为 $3 . 5 ~ \\mathrm { m } \\times 2 . 0 ~ \\mathrm { m }$ ，埋深 $d =$ 1.5m；地基土为粉土，土的物理力学性质指标： $\\gamma { = } 1 7 . 8 \\ \\mathrm { k N / m ^ { 3 } } , \\ c _ { \\mathrm { k } } { = } 3 . 0$ kPa, $\\varphi _ { \\mathrm { k } } =$ $2 { 0 } ^ { \\circ }$ 。试确定持力层的地基承载力特征值。",
+      "length": 277,
+      "difficulty": "提高",
+      "tags": [
+        "地基",
+        "基础",
+        "承载力"
+      ]
+    },
+    {
+      "id": "ch2-习题-4",
+      "number": "2-4",
+      "chapter": "第2章 浅基础",
+      "chapterNo": 2,
+      "type": "习题",
+      "kind": "计算设计",
+      "sourceLine": 2118,
+      "attachments": [
+        {
+          "type": "image",
+          "path": "images/d9adeef00a756850a98e45a2d4b9b2f5de6f5b977c61f61a62f2fc8d14adf22b.jpg",
+          "caption": "图2-50习题2.4附图"
+        }
+      ],
+      "text": "某场地土层分布如图2-50所示，作用于条形基础顶面的荷载标准值 $F _ { \\mathrm { k } } =$\n$3 0 0 ~ \\mathrm { k N / m }$ ，弯矩 $M _ { \\mathrm { k } } { = } 3 5 ~ \\mathrm { k N \\cdot m / m }$ ，取基础埋置深度 $d { = } 0 . 8 \\mathrm { m }$ ，底宽 $b { = } 2 . 0 ~ \\mathrm { m }$ ，试按承载力要求验算所选基础底面尺寸是否合适。\n附图：图2-50习题2.4附图",
+      "length": 270,
+      "difficulty": "提高",
+      "tags": [
+        "基础",
+        "承载力"
+      ]
+    },
+    {
+      "id": "ch2-习题-5",
+      "number": "2-5",
+      "chapter": "第2章 浅基础",
+      "chapterNo": 2,
+      "type": "习题",
+      "kind": "计算设计",
+      "sourceLine": 2125,
+      "attachments": [],
+      "text": "某砌体承重结构，底层墙厚490mm，在荷载效应的标准组合下，传至土0.00标高（室内地面）的竖向荷载 $F _ { \\mathrm { k } } { = } 3 1 0 \\ \\mathrm { k N / m }$ ，室外地面标高为一0.30m，建设地点的标准冻深1.5m，场地条件如下：天然地面下4.5m为厚黏土层，下为30m厚中密稍湿状态的中砂，黏土层 $e = 0 . ~ 7 3$ , γ=19kN/m³，w=28%，wL=39%, $\\tau \\upsilon _ { \\mathrm { P } } = 1 8 ^ { \\circ } ,$ %, $c _ { \\mathrm { k } } = 2 2$ $\\mathrm { k P a } , \\ \\varphi _ { \\mathrm { k } } = 1 8 ^ { \\circ }$ ，中砂层 $\\gamma { = } 1 8 \\mathrm { ~ k N } / \\mathrm { m } ^ { 3 } , \\ \\varphi _ { \\mathrm { k } } { = } 3 0 ^ { \\circ }$ ，试设计该基础（基础材料自定）。",
+      "length": 517,
+      "difficulty": "提高",
+      "tags": [
+        "基础"
+      ]
+    },
+    {
+      "id": "ch2-习题-6",
+      "number": "2-6",
+      "chapter": "第2章 浅基础",
+      "chapterNo": 2,
+      "type": "习题",
+      "kind": "计算设计",
+      "sourceLine": 2127,
+      "attachments": [],
+      "text": "在2.5题的场地上，有一柱下独立基础，柱的截面尺寸为 $4 0 0 \\ \\mathrm { m m } \\times 6 0 0 \\ \\mathrm { m m }$ 在荷载效应的标准组合下，传至土0.00标高（室内地面）的竖向荷载 $F _ { \\mathrm { k } } = 2 4 0 0 \\ \\mathrm { k N }$ ?$M _ { \\mathrm { k } } { = } 2 1 0 ~ \\mathrm { k N m }$ ，水平力 $V _ { \\mathrm { k } } { = } 1 8 0 \\ \\mathrm { k N }$ （与M同方向），室外地面标高为一0.15m，试设计该基础（基础材料自定）。",
+      "length": 322,
+      "difficulty": "提高",
+      "tags": [
+        "基础"
+      ]
+    },
+    {
+      "id": "ch2-习题-7",
+      "number": "2-7",
+      "chapter": "第2章 浅基础",
+      "chapterNo": 2,
+      "type": "习题",
+      "kind": "计算设计",
+      "sourceLine": 2129,
+      "attachments": [
+        {
+          "type": "image",
+          "path": "images/ca562cdd3e6d23207f61bf14ef8cf027a2f36c44c771c2b22af7452de9a80c9a.jpg",
+          "caption": "图2-51习题2.7附图"
+        }
+      ],
+      "text": "某均质黏土地基，其孔隙比 $e { = } 0 , 9$ ，土的重度 $\\gamma { = } 1 9 \\ \\mathrm { k N } / \\mathrm { m } ^ { 3 }$ ，在如图2-51所示的框架结构中拟修建柱下筏形基础，按正常使用极限状态下的荷载效应标准组合时，传至各柱室内地面 $( \\pm 0 . 0 0 )$ 标高的荷载如图2-51所示，室外算起的基础埋深 $d = 1 . 5 0 \\mathrm { ~ m ~ }$ 室外标高一0.30m，地基土承载力特征值 $f _ { \\mathrm { a k } } = 1 0 6$ kPa，试设计该基础。（注：图中柱荷载单位为kN，柱采用C50 现浇混凝土，截面尺寸为 $6 0 0 ~ \\mathrm { { m m } \\times 6 0 0 ~ \\mathrm { { m m } } }$ ，柱外边缘悬挑跨度自定。)\n附图：图2-51习题2.7附图",
+      "length": 419,
+      "difficulty": "提高",
+      "tags": [
+        "地基",
+        "基础",
+        "承载力"
+      ]
+    },
+    {
+      "id": "ch3-思考题-1",
+      "number": "3-1",
+      "chapter": "第3章 桩基础",
+      "chapterNo": 3,
+      "type": "思考题",
+      "kind": "概念问答",
+      "sourceLine": 4048,
+      "attachments": [],
+      "text": "简述桩基础的适用场合及设计原则。",
+      "length": 16,
+      "difficulty": "基础",
+      "tags": [
+        "基础",
+        "桩基础"
+      ]
+    },
+    {
+      "id": "ch3-思考题-2",
+      "number": "3-2",
+      "chapter": "第3章 桩基础",
+      "chapterNo": 3,
+      "type": "思考题",
+      "kind": "概念问答",
+      "sourceLine": 4049,
+      "attachments": [],
+      "text": "分别根据桩的承载性状和桩的施工方法对桩进行分类。",
+      "length": 24,
+      "difficulty": "基础",
+      "tags": [
+        "基础工程"
+      ]
+    },
+    {
+      "id": "ch3-思考题-3",
+      "number": "3-3",
+      "chapter": "第3章 桩基础",
+      "chapterNo": 3,
+      "type": "思考题",
+      "kind": "概念问答",
+      "sourceLine": 4050,
+      "attachments": [],
+      "text": "简述单桩在竖向荷载下的工作性能以及其破坏性状。",
+      "length": 23,
+      "difficulty": "基础",
+      "tags": [
+        "基础工程"
+      ]
+    },
+    {
+      "id": "ch3-思考题-4",
+      "number": "3-4",
+      "chapter": "第3章 桩基础",
+      "chapterNo": 3,
+      "type": "思考题",
+      "kind": "概念问答",
+      "sourceLine": 4051,
+      "attachments": [],
+      "text": "什么叫负摩阻力、中性点？如何确定中性点的位置及负摩阻力的大小?",
+      "length": 31,
+      "difficulty": "基础",
+      "tags": [
+        "负摩阻力"
+      ]
+    },
+    {
+      "id": "ch3-思考题-5",
+      "number": "3-5",
+      "chapter": "第3章 桩基础",
+      "chapterNo": 3,
+      "type": "思考题",
+      "kind": "概念问答",
+      "sourceLine": 4052,
+      "attachments": [],
+      "text": "何谓单桩竖向承载力特征值？其与标准值、设计值有何异同?",
+      "length": 27,
+      "difficulty": "基础",
+      "tags": [
+        "承载力"
+      ]
+    },
+    {
+      "id": "ch3-思考题-6",
+      "number": "3-6",
+      "chapter": "第3章 桩基础",
+      "chapterNo": 3,
+      "type": "思考题",
+      "kind": "概念问答",
+      "sourceLine": 4053,
+      "attachments": [],
+      "text": "何谓群桩效应？如何验算桩基竖向承载力?",
+      "length": 19,
+      "difficulty": "基础",
+      "tags": [
+        "承载力",
+        "群桩"
+      ]
+    },
+    {
+      "id": "ch3-思考题-7",
+      "number": "3-7",
+      "chapter": "第3章 桩基础",
+      "chapterNo": 3,
+      "type": "思考题",
+      "kind": "概念问答",
+      "sourceLine": 4054,
+      "attachments": [],
+      "text": "单桩水平承载力与哪些因素有关？设计时如何确定?",
+      "length": 23,
+      "difficulty": "基础",
+      "tags": [
+        "承载力"
+      ]
+    },
+    {
+      "id": "ch3-思考题-8",
+      "number": "3-8",
+      "chapter": "第3章 桩基础",
+      "chapterNo": 3,
+      "type": "思考题",
+      "kind": "概念问答",
+      "sourceLine": 4055,
+      "attachments": [],
+      "text": "在工程实践中如何选择桩的直径、桩长以及桩的类型?",
+      "length": 24,
+      "difficulty": "基础",
+      "tags": [
+        "基础工程"
+      ]
+    },
+    {
+      "id": "ch3-思考题-9",
+      "number": "3-9",
+      "chapter": "第3章 桩基础",
+      "chapterNo": 3,
+      "type": "思考题",
+      "kind": "概念问答",
+      "sourceLine": 4056,
+      "attachments": [],
+      "text": "如何确定承台的平面尺寸及厚度？设计时应进行哪些验算?",
+      "length": 26,
+      "difficulty": "基础",
+      "tags": [
+        "基础工程"
+      ]
+    },
+    {
+      "id": "ch3-习题-1",
+      "number": "3-1",
+      "chapter": "第3章 桩基础",
+      "chapterNo": 3,
+      "type": "习题",
+      "kind": "计算设计",
+      "sourceLine": 4060,
+      "attachments": [],
+      "text": "某预制混凝土方桩，桩截面尺寸为 $3 5 0 ~ \\mathrm { m m } \\times 3 5 0 ~ \\mathrm { m m }$ ，桩长10m，桩身混凝土强度等级C30，主筋为8根C14，各土层分布情况如图3-40所示，试确定该基桩的单桩竖向抗压承载力设计值、竖向抗压极限承载力 $Q _ { \\mathrm { u k } }$ 和竖向承载力特征值 $R _ { a }$",
+      "length": 195,
+      "difficulty": "提高",
+      "tags": [
+        "承载力"
+      ]
+    },
+    {
+      "id": "ch3-习题-2",
+      "number": "3-2",
+      "chapter": "第3章 桩基础",
+      "chapterNo": 3,
+      "type": "习题",
+      "kind": "计算设计",
+      "sourceLine": 4062,
+      "attachments": [
+        {
+          "type": "image",
+          "path": "images/aec2e30f92bd6e26f668fcb09f143a8f28bb3c090a4394d6c4cd3d6f46fb5cff.jpg",
+          "caption": "图3-40习题3-1附图"
+        },
+        {
+          "type": "image",
+          "path": "images/289641f4f88311e553daed7bff6a20643ff350053dccfda9591dd2b74349c41c.jpg",
+          "caption": "图3-41习题3-2附图"
+        }
+      ],
+      "text": "某单桩基础桩径 $d { = } 0 . 5 \\mathrm { ~ m ~ }$ ，旋转钻施工，地质剖面如图3-41所示，试求该桩受到的下拉荷载值。\n附图：图3-40习题3-1附图\n附图：图3-41习题3-2附图",
+      "length": 107,
+      "difficulty": "提高",
+      "tags": [
+        "基础",
+        "桩基础"
+      ]
+    },
+    {
+      "id": "ch3-习题-3",
+      "number": "3-3",
+      "chapter": "第3章 桩基础",
+      "chapterNo": 3,
+      "type": "习题",
+      "kind": "计算设计",
+      "sourceLine": 4070,
+      "attachments": [
+        {
+          "type": "image",
+          "path": "images/28003f3cf77e004b4207df9ce90ea5b8544cefd8218a576a0746017e96b232a3.jpg",
+          "caption": "图3-42习题3-3附图"
+        }
+      ],
+      "text": "某工程一群桩基础中桩的布置及承台尺寸如图3-42所示，其中桩采用 $d =$ 500mm的钢筋混凝土预制桩，桩长12m，承台埋深1.2m。土层分布第一层为3m厚的填土，第二层为4m厚的可塑状态黏性土，其下为很厚的中密中砂层。上部结构传至承台的轴心荷载设计值为 $F = 5 ~ 4 0 0 ~ \\mathrm { k N }$ ，弯矩 $M { = } 1 ~ 2 0 0 ~ \\mathrm { k N } \\cdot \\mathrm { m }$ ，试验算该桩基础是否满足设计要求。\n附图：图3-42习题3-3附图",
+      "length": 259,
+      "difficulty": "提高",
+      "tags": [
+        "基础",
+        "桩基础",
+        "群桩"
+      ]
+    },
+    {
+      "id": "ch3-习题-4",
+      "number": "3-4",
+      "chapter": "第3章 桩基础",
+      "chapterNo": 3,
+      "type": "习题",
+      "kind": "计算设计",
+      "sourceLine": 4075,
+      "attachments": [],
+      "text": "某场地土层分布情况：第一层为填土，厚1.0m；第二层为淤泥，厚6.5m；第三层为粉质黏土， $I _ { \\mathrm { L } } = 0 . 2 5$ ，厚度较大。现需设计一框架内柱的预制桩3 桩群桩基础。柱尺寸 $4 0 0 ~ \\mathrm { m m } { \\times } 4 0 0 ~ \\mathrm { m m }$ ，柱底在地面处的竖向荷载设计值为 $F = 1 ~ 7 0 0 ~ \\mathrm { k N }$ ，弯矩为 $M =$ $1 8 0 ~ \\mathrm { k N \\cdot m }$ ，水平荷载 $H = 1 0 0 \\ \\mathrm { k N }$ ，试设计该桩基础。",
+      "length": 313,
+      "difficulty": "提高",
+      "tags": [
+        "基础",
+        "桩基础",
+        "群桩"
+      ]
+    },
+    {
+      "id": "ch4-思考题-1",
+      "number": "4-1",
+      "chapter": "第4章 沉井基础",
+      "chapterNo": 4,
+      "type": "思考题",
+      "kind": "概念问答",
+      "sourceLine": 4787,
+      "attachments": [],
+      "text": "何谓沉井基础？其适用于哪些场合？",
+      "length": 16,
+      "difficulty": "基础",
+      "tags": [
+        "基础",
+        "沉井"
+      ]
+    },
+    {
+      "id": "ch4-思考题-2",
+      "number": "4-2",
+      "chapter": "第4章 沉井基础",
+      "chapterNo": 4,
+      "type": "思考题",
+      "kind": "概念问答",
+      "sourceLine": 4789,
+      "attachments": [],
+      "text": "沉井基础的主要构造有哪些？各部分分别承担什么样的功能?",
+      "length": 27,
+      "difficulty": "基础",
+      "tags": [
+        "基础",
+        "沉井"
+      ]
+    },
+    {
+      "id": "ch4-思考题-3",
+      "number": "4-3",
+      "chapter": "第4章 沉井基础",
+      "chapterNo": 4,
+      "type": "思考题",
+      "kind": "概念问答",
+      "sourceLine": 4791,
+      "attachments": [],
+      "text": "沉井在施工中会遇到哪些问题？应如何处理?",
+      "length": 20,
+      "difficulty": "基础",
+      "tags": [
+        "沉井"
+      ]
+    },
+    {
+      "id": "ch4-思考题-4",
+      "number": "4-4",
+      "chapter": "第4章 沉井基础",
+      "chapterNo": 4,
+      "type": "思考题",
+      "kind": "概念问答",
+      "sourceLine": 4793,
+      "attachments": [],
+      "text": "沉井在施工过程中应进行哪些验算?",
+      "length": 16,
+      "difficulty": "基础",
+      "tags": [
+        "沉井"
+      ]
+    },
+    {
+      "id": "ch4-思考题-5",
+      "number": "4-5",
+      "chapter": "第4章 沉井基础",
+      "chapterNo": 4,
+      "type": "思考题",
+      "kind": "概念问答",
+      "sourceLine": 4795,
+      "attachments": [],
+      "text": "沉井作为整体深基础的验算内容有哪些?",
+      "length": 18,
+      "difficulty": "基础",
+      "tags": [
+        "基础",
+        "沉井"
+      ]
+    },
+    {
+      "id": "ch4-习题-1",
+      "number": "4-1",
+      "chapter": "第4章 沉井基础",
+      "chapterNo": 4,
+      "type": "习题",
+      "kind": "计算设计",
+      "sourceLine": 4799,
+      "attachments": [],
+      "text": "某水下圆形沉井基础直径7m，作用于基础上的竖向荷载18503kN（已扣除浮力3848kN），水平力503kN，弯矩7360kN·m（均为考虑了附加组合荷载的情况）。$h _ { 1 } = h _ { 2 } = 1 . 0 ~ \\mathrm { m }$ 。沉井埋深10m，土质为中等密实的砂砾层，重度21.0kN/m³，内摩擦角$3 5 ^ { \\circ }$ ，内聚力c为零，试验算该沉井基础的地基承载力及横向土抗力。",
+      "length": 214,
+      "difficulty": "提高",
+      "tags": [
+        "地基",
+        "基础",
+        "承载力",
+        "沉井"
+      ]
+    },
+    {
+      "id": "ch4-习题-2",
+      "number": "4-2",
+      "chapter": "第4章 沉井基础",
+      "chapterNo": 4,
+      "type": "习题",
+      "kind": "计算设计",
+      "sourceLine": 4801,
+      "attachments": [
+        {
+          "type": "image",
+          "path": "images/ac092940807daffb9ede0f4f970f11f385e28d64ceec9d57b22499b7e94c33f5.jpg",
+          "caption": "图4-22习题4-2附图"
+        }
+      ],
+      "text": "某旱桥桥墩为钢筋混凝土圆形沉井基础，各地基土层物理力学性质资料及沉井初拟尺寸如图4-22所示。底节沉井及盖板混凝土等级为C20，顶节为C15，井孔中空。作用于井顶中心处竖向荷载7075kN，水平力350kN，弯矩 $2 ~ 4 5 5 ~ \\mathrm { k N } \\cdot \\mathrm { m }$ ，试验算该沉井基础的基底应力是否满足要求。\n附图：图4-22习题4-2附图",
+      "length": 194,
+      "difficulty": "提高",
+      "tags": [
+        "地基",
+        "基础",
+        "沉井"
+      ]
+    },
+    {
+      "id": "ch5-思考题-1",
+      "number": "5-1",
+      "chapter": "第5章 基坑工程",
+      "chapterNo": 5,
+      "type": "思考题",
+      "kind": "概念问答",
+      "sourceLine": 5660,
+      "attachments": [],
+      "text": "支护结构有哪些类型？各适用于什么条件?",
+      "length": 19,
+      "difficulty": "基础",
+      "tags": [
+        "基础工程"
+      ]
+    },
+    {
+      "id": "ch5-思考题-2",
+      "number": "5-2",
+      "chapter": "第5章 基坑工程",
+      "chapterNo": 5,
+      "type": "思考题",
+      "kind": "概念问答",
+      "sourceLine": 5662,
+      "attachments": [],
+      "text": "支护结构和支挡结构有何异同？常见支挡结构有哪些?",
+      "length": 24,
+      "difficulty": "基础",
+      "tags": [
+        "基础工程"
+      ]
+    },
+    {
+      "id": "ch5-思考题-3",
+      "number": "5-3",
+      "chapter": "第5章 基坑工程",
+      "chapterNo": 5,
+      "type": "思考题",
+      "kind": "概念问答",
+      "sourceLine": 5664,
+      "attachments": [],
+      "text": "常见基坑支护结构的支护原理是什么?",
+      "length": 17,
+      "difficulty": "基础",
+      "tags": [
+        "基坑"
+      ]
+    },
+    {
+      "id": "ch5-思考题-4",
+      "number": "5-4",
+      "chapter": "第5章 基坑工程",
+      "chapterNo": 5,
+      "type": "思考题",
+      "kind": "概念问答",
+      "sourceLine": 5666,
+      "attachments": [],
+      "text": "基坑支护结构中土压力的计算方式有哪些？适用条件是什么？",
+      "length": 27,
+      "difficulty": "基础",
+      "tags": [
+        "基坑",
+        "土压力"
+      ]
+    },
+    {
+      "id": "ch5-思考题-5",
+      "number": "5-5",
+      "chapter": "第5章 基坑工程",
+      "chapterNo": 5,
+      "type": "思考题",
+      "kind": "概念问答",
+      "sourceLine": 5668,
+      "attachments": [],
+      "text": "排桩和地下连续墙支护结构计算中的静力平衡法和弹性支点法在计算原理上有何区别？",
+      "length": 38,
+      "difficulty": "基础",
+      "tags": [
+        "基础工程"
+      ]
+    },
+    {
+      "id": "ch5-思考题-6",
+      "number": "5-6",
+      "chapter": "第5章 基坑工程",
+      "chapterNo": 5,
+      "type": "思考题",
+      "kind": "概念问答",
+      "sourceLine": 5670,
+      "attachments": [],
+      "text": "土钉墙支护结构与传统的重力式挡土墙及加筋挡土墙有何异同?",
+      "length": 28,
+      "difficulty": "基础",
+      "tags": [
+        "基础工程"
+      ]
+    },
+    {
+      "id": "ch5-思考题-7",
+      "number": "5-7",
+      "chapter": "第5章 基坑工程",
+      "chapterNo": 5,
+      "type": "思考题",
+      "kind": "概念问答",
+      "sourceLine": 5672,
+      "attachments": [],
+      "text": "土钉与锚杆在加固机理、施工方法和设计计算中有何异同？",
+      "length": 26,
+      "difficulty": "基础",
+      "tags": [
+        "基础工程"
+      ]
+    },
+    {
+      "id": "ch5-思考题-8",
+      "number": "5-8",
+      "chapter": "第5章 基坑工程",
+      "chapterNo": 5,
+      "type": "思考题",
+      "kind": "概念问答",
+      "sourceLine": 5674,
+      "attachments": [],
+      "text": "桩式支挡结构的稳定验算包括哪些内容?",
+      "length": 18,
+      "difficulty": "基础",
+      "tags": [
+        "基础工程"
+      ]
+    },
+    {
+      "id": "ch5-思考题-9",
+      "number": "5-9",
+      "chapter": "第5章 基坑工程",
+      "chapterNo": 5,
+      "type": "思考题",
+      "kind": "概念问答",
+      "sourceLine": 5676,
+      "attachments": [],
+      "text": "常用的地下水控制方法有哪些？各有什么特点？",
+      "length": 21,
+      "difficulty": "基础",
+      "tags": [
+        "基础工程"
+      ]
+    },
+    {
+      "id": "ch5-思考题-10",
+      "number": "5-10",
+      "chapter": "第5章 基坑工程",
+      "chapterNo": 5,
+      "type": "思考题",
+      "kind": "概念问答",
+      "sourceLine": 5678,
+      "attachments": [],
+      "text": "基坑工程施工过程中为什么要进行现场监测？",
+      "length": 20,
+      "difficulty": "基础",
+      "tags": [
+        "基坑"
+      ]
+    },
+    {
+      "id": "ch5-习题-1",
+      "number": "5-1",
+      "chapter": "第5章 基坑工程",
+      "chapterNo": 5,
+      "type": "习题",
+      "kind": "计算设计",
+      "sourceLine": 5682,
+      "attachments": [],
+      "text": "在某黏土地层中开挖深5m的基坑，采用悬臂式灌注桩支护， $\\gamma = 1 9 . 5 \\mathrm { k N } / \\mathrm { m } ^ { 3 }$ ,黏聚力 $c = 1 0 ~ \\mathrm { k P a }$ ，內摩擦角 $\\varphi = 1 8 ^ { \\circ }$ ，地面施工荷载 $q _ { 0 } = 2 0 \\mathrm { k P a }$ 。不计地下水影响，试计算支护桩入土深度t、桩身最大弯矩 $M _ { \\mathrm { m a x } }$ 及最大弯矩点位置 $x _ { \\mathrm { m } }$",
+      "length": 288,
+      "difficulty": "提高",
+      "tags": [
+        "基坑"
+      ]
+    },
+    {
+      "id": "ch5-习题-2",
+      "number": "5-2",
+      "chapter": "第5章 基坑工程",
+      "chapterNo": 5,
+      "type": "习题",
+      "kind": "计算设计",
+      "sourceLine": 5684,
+      "attachments": [],
+      "text": "有一开挖深度 $h = 5 \\mathrm { ~ m ~ }$ 的基坑，采用水泥土桩墙支护，墙体宽度 $3 . 2 \\textrm { m }$ ，墙体入土深度（基坑开挖面以下）5.5m，墙体重度 $\\gamma = 2 0 . 0 \\mathrm { k N } / \\mathrm { m ^ { 3 } }$ ，墙体与土体摩擦系数 $\\mu =$ $0 . 3$ 。基坑周围土层重度 $\\gamma = 1 8 . 0 \\mathrm { k N } / \\mathrm { m } ^ { 3 }$ ，内摩擦角 $\\varphi = 1 2 ^ { \\circ }$ ，黏聚力 $c = 1 0 ~ \\mathrm { k P a }$ 。试计算水泥土墙抗倾覆稳定和抗滑移稳定性安全系数。",
+      "length": 349,
+      "difficulty": "提高",
+      "tags": [
+        "基坑"
+      ]
+    },
+    {
+      "id": "ch5-习题-3",
+      "number": "5-3",
+      "chapter": "第5章 基坑工程",
+      "chapterNo": 5,
+      "type": "习题",
+      "kind": "计算设计",
+      "sourceLine": 5686,
+      "attachments": [],
+      "text": "有一开挖深度 $h = 8 \\mathrm { ~ m ~ }$ 的基坑，采用排桩加一水平支撑支护结构，支护桩入土深度 $t = 7 . 0 \\mathrm { ~ m ~ }$ ，土层重度 $\\gamma = 1 9 . 0 \\ \\mathrm { k N / m ^ { 3 } }$ ，内摩擦角 $\\varphi = 1 5 ^ { \\circ }$ ，黏聚力 $c = 1 0 \\ \\mathrm { k P a }$ ,地面施工荷载 $q _ { 0 } = 2 0 \\ \\mathrm { k P a }$ ，地下水深 $2 \\textrm { m }$ 。试验算该基坑支挡结构的抗隆起和抗流土稳定性。",
+      "length": 307,
+      "difficulty": "提高",
+      "tags": [
+        "基坑"
+      ]
+    },
+    {
+      "id": "ch6-思考题-1",
+      "number": "6-1",
+      "chapter": "第6章 地基处理",
+      "chapterNo": 6,
+      "type": "思考题",
+      "kind": "概念问答",
+      "sourceLine": 6759,
+      "attachments": [],
+      "text": "软土、填土和一般土体的区别是什么？",
+      "length": 17,
+      "difficulty": "基础",
+      "tags": [
+        "基础工程"
+      ]
+    },
+    {
+      "id": "ch6-思考题-2",
+      "number": "6-2",
+      "chapter": "第6章 地基处理",
+      "chapterNo": 6,
+      "type": "思考题",
+      "kind": "概念问答",
+      "sourceLine": 6761,
+      "attachments": [],
+      "text": "什么是换填法？它适用范围是什么？换填垫层地基处理的机理是什么？",
+      "length": 31,
+      "difficulty": "基础",
+      "tags": [
+        "地基",
+        "地基处理"
+      ]
+    },
+    {
+      "id": "ch6-思考题-3",
+      "number": "6-3",
+      "chapter": "第6章 地基处理",
+      "chapterNo": 6,
+      "type": "思考题",
+      "kind": "概念问答",
+      "sourceLine": 6763,
+      "attachments": [],
+      "text": "强夯法的加固机理、特点及其适用范围是什么？",
+      "length": 21,
+      "difficulty": "基础",
+      "tags": [
+        "基础工程"
+      ]
+    },
+    {
+      "id": "ch6-思考题-4",
+      "number": "6-4",
+      "chapter": "第6章 地基处理",
+      "chapterNo": 6,
+      "type": "思考题",
+      "kind": "概念问答",
+      "sourceLine": 6765,
+      "attachments": [],
+      "text": "强夯法、重锤夯实法及强夯置换法有什么区别?",
+      "length": 21,
+      "difficulty": "基础",
+      "tags": [
+        "基础工程"
+      ]
+    },
+    {
+      "id": "ch6-思考题-5",
+      "number": "6-5",
+      "chapter": "第6章 地基处理",
+      "chapterNo": 6,
+      "type": "思考题",
+      "kind": "概念问答",
+      "sourceLine": 6767,
+      "attachments": [],
+      "text": "排水固结法的加固原理与应用条件是什么？",
+      "length": 19,
+      "difficulty": "基础",
+      "tags": [
+        "基础工程"
+      ]
+    },
+    {
+      "id": "ch6-思考题-6",
+      "number": "6-6",
+      "chapter": "第6章 地基处理",
+      "chapterNo": 6,
+      "type": "思考题",
+      "kind": "概念问答",
+      "sourceLine": 6769,
+      "attachments": [],
+      "text": "砂石挤密法的加固机理是什么?",
+      "length": 14,
+      "difficulty": "基础",
+      "tags": [
+        "基础工程"
+      ]
+    },
+    {
+      "id": "ch6-思考题-7",
+      "number": "6-7",
+      "chapter": "第6章 地基处理",
+      "chapterNo": 6,
+      "type": "思考题",
+      "kind": "概念问答",
+      "sourceLine": 6771,
+      "attachments": [],
+      "text": "复合地基的工作机理是什么？",
+      "length": 13,
+      "difficulty": "基础",
+      "tags": [
+        "地基",
+        "复合地基"
+      ]
+    },
+    {
+      "id": "ch6-思考题-8",
+      "number": "6-8",
+      "chapter": "第6章 地基处理",
+      "chapterNo": 6,
+      "type": "思考题",
+      "kind": "概念问答",
+      "sourceLine": 6773,
+      "attachments": [],
+      "text": "常用复合地基桩体有哪些类型？有何异同点？",
+      "length": 20,
+      "difficulty": "基础",
+      "tags": [
+        "地基",
+        "复合地基"
+      ]
+    },
+    {
+      "id": "ch6-思考题-9",
+      "number": "6-9",
+      "chapter": "第6章 地基处理",
+      "chapterNo": 6,
+      "type": "思考题",
+      "kind": "概念问答",
+      "sourceLine": 6775,
+      "attachments": [],
+      "text": "深层搅拌法的加固机理与高压旋喷桩的加固机理有何不同?",
+      "length": 26,
+      "difficulty": "基础",
+      "tags": [
+        "基础工程"
+      ]
+    },
+    {
+      "id": "ch6-思考题-10",
+      "number": "6-10",
+      "chapter": "第6章 地基处理",
+      "chapterNo": 6,
+      "type": "思考题",
+      "kind": "概念问答",
+      "sourceLine": 6777,
+      "attachments": [],
+      "text": "试述注浆法的浆液扩散模式受哪些因素决定。",
+      "length": 20,
+      "difficulty": "基础",
+      "tags": [
+        "基础工程"
+      ]
+    },
+    {
+      "id": "ch6-习题-1",
+      "number": "6-1",
+      "chapter": "第6章 地基处理",
+      "chapterNo": 6,
+      "type": "习题",
+      "kind": "计算设计",
+      "sourceLine": 6781,
+      "attachments": [],
+      "text": "某建筑基础为独立基础，基础尺寸为 $6 ~ \\mathrm { m } \\times 6 \\mathrm { ~ m ~ }$ ，埋深1.5m，基础顶面的轴心荷载 $F _ { \\mathrm { k } } { = } 5 ~ 0 0 0 ~ \\mathrm { k N / m }$ ，基础和基础上土重 $G _ { \\mathrm { k } } { = } 1 ~ 2 0 0 ~ \\mathrm { k N }$ ，场地地层为软塑黏土， $f _ { \\mathrm { a k } }$ 80 kPa, $\\gamma { = } 1 8 . 5 \\ \\mathrm { k N / m ^ { 3 } }$ ，拟采用碎石换填垫层处理。试计算垫层最小厚度与边长。",
+      "length": 337,
+      "difficulty": "提高",
+      "tags": [
+        "基础"
+      ]
+    },
+    {
+      "id": "ch6-习题-2",
+      "number": "6-2",
+      "chapter": "第6章 地基处理",
+      "chapterNo": 6,
+      "type": "习题",
+      "kind": "计算设计",
+      "sourceLine": 6783,
+      "attachments": [],
+      "text": "拟对某深厚饱和软黏土地基采用砂井排水固结法进行处理，土的竖向和横向固结系数值相等，均为 $C _ { \\mathrm { v } } { = } C _ { \\mathrm { h } } { = } 2 . 0 { \\times } 1 0 ^ { - 3 } \\mathrm { c m ^ { 2 } / s }$ ，砂井直径 $d _ { \\mathrm { w } } { = } 3 0 \\ \\mathrm { c m }$ 、长为10m、间距为1.5m，正三角形布置。求地基固结度达到90%所需的预压时间。",
+      "length": 260,
+      "difficulty": "提高",
+      "tags": [
+        "地基"
+      ]
+    },
+    {
+      "id": "ch6-习题-3",
+      "number": "6-3",
+      "chapter": "第6章 地基处理",
+      "chapterNo": 6,
+      "type": "习题",
+      "kind": "计算设计",
+      "sourceLine": 6785,
+      "attachments": [],
+      "text": "一饱和软黏土层：厚12m，固结不排水抗剪强度指标为 $c _ { \\mathrm { c u } } { = } 1 2 \\ \\mathrm { k P a } , \\ \\phi _ { \\mathrm { c u } } { = } 2 0 ^ { \\circ }$ ,竖向固结系数 $C _ { \\mathrm { v } } { = } 0 . 2 5 ~ \\mathrm { m m ^ { 2 } / s }$ 、水平向固结系数 $C _ { \\mathrm { h } } { = } 0 . 5 ~ \\mathrm { m m } ^ { 2 } / \\mathrm { s } _ { \\mathrm { \\ell } }$ ，其下为不透水层。采用砂井预压加固，预压荷载为100kPa，砂井直径30cm，间距为1.5m，等边三角形布置，砂井打穿软黏土层到达砂层。试求：\n①一次性瞬时加载后预压到第 30 天时地基的平均固结度。\n②继续预压直到第90天时，地基土抗剪强度增长值 $\\Delta \\tau _ { \\mathrm { f c } }$",
+      "length": 481,
+      "difficulty": "提高",
+      "tags": [
+        "地基"
+      ]
+    },
+    {
+      "id": "ch6-习题-4",
+      "number": "6-4",
+      "chapter": "第6章 地基处理",
+      "chapterNo": 6,
+      "type": "习题",
+      "kind": "计算设计",
+      "sourceLine": 6791,
+      "attachments": [],
+      "text": "某厚度10m的饱和软土地基，现场十字板抗剪强度为20kPa，固结不排水抗剪强度指标为 $c _ { \\mathrm { c u } } { = } 1 3 \\ \\mathrm { k P a } , \\ \\Phi _ { \\mathrm { c u } } { = } 1 2 ^ { \\circ }$ ，压缩模量 $E _ { \\mathrm { s } } { = } 2 . 5 ~ \\mathrm { M P a }$ 。现采用堆载预压法进行处理，预压荷载为120kPa，经过一段时间后软土层沉降150mm。试计算该时刻软土抗剪强度增长值。",
+      "length": 274,
+      "difficulty": "提高",
+      "tags": [
+        "地基",
+        "沉降"
+      ]
+    },
+    {
+      "id": "ch6-习题-5",
+      "number": "6-5",
+      "chapter": "第6章 地基处理",
+      "chapterNo": 6,
+      "type": "习题",
+      "kind": "计算设计",
+      "sourceLine": 6793,
+      "attachments": [],
+      "text": "某松砂地基，采用砂桩或振冲桩加固，桩径为0.55m。该地基土的最大空隙比$e _ { \\mathrm { m a x } } { = } 0 . 9 2$ ，最小空隙比 $e _ { \\mathrm { m i n } } = 0 . 6 8$ ，未加固时的孔隙比为0.85，要求处理后能抗震的相对密实度 $D _ { \\mathrm { r } } { = } 0 . 8 .$ ，试确定按等边三角形布桩和正方形布桩时砂桩的间距。",
+      "length": 216,
+      "difficulty": "提高",
+      "tags": [
+        "地基"
+      ]
+    },
+    {
+      "id": "ch6-习题-6",
+      "number": "6-6",
+      "chapter": "第6章 地基处理",
+      "chapterNo": 6,
+      "type": "习题",
+      "kind": "计算设计",
+      "sourceLine": 6795,
+      "attachments": [],
+      "text": "某工程建在一软黏土地基上，天然地基承载力为80kPa，要求达到地基承载力$1 1 0 \\ \\mathrm { k P a }$ ，拟采用振冲碎石桩法加固处理形成复合地基，碎石桩直径为0.5m，桩间距为1.0m。试分别计算等边三角形布桩和正方形布桩时复合地基置换率和承载力（碎石桩复合地基桩土应力比取n=3），并判定是否能满足工程要求。",
+      "length": 167,
+      "difficulty": "提高",
+      "tags": [
+        "地基",
+        "承载力",
+        "复合地基"
+      ]
+    },
+    {
+      "id": "ch7-思考题-1",
+      "number": "7-1",
+      "chapter": "第7章 区域性地基",
+      "chapterNo": 7,
+      "type": "思考题",
+      "kind": "概念问答",
+      "sourceLine": 7690,
+      "attachments": [],
+      "text": "黄土湿陷机理是什么？怎样区分自重湿陷性黄土和非自重湿陷性黄土？如何划分地基的湿陷等级?",
+      "length": 43,
+      "difficulty": "基础",
+      "tags": [
+        "地基",
+        "湿陷性黄土"
+      ]
+    },
+    {
+      "id": "ch7-思考题-2",
+      "number": "7-2",
+      "chapter": "第7章 区域性地基",
+      "chapterNo": 7,
+      "type": "思考题",
+      "kind": "概念问答",
+      "sourceLine": 7692,
+      "attachments": [],
+      "text": "膨胀土的膨胀机理是什么？什么是自由膨胀率？膨胀土地基胀缩等级分为多少级？",
+      "length": 36,
+      "difficulty": "基础",
+      "tags": [
+        "地基",
+        "膨胀土"
+      ]
+    },
+    {
+      "id": "ch7-思考题-3",
+      "number": "7-3",
+      "chapter": "第7章 区域性地基",
+      "chapterNo": 7,
+      "type": "思考题",
+      "kind": "概念问答",
+      "sourceLine": 7694,
+      "attachments": [],
+      "text": "湿陷性黄土和膨胀土对建筑物产生危害的特点有何不同?",
+      "length": 25,
+      "difficulty": "基础",
+      "tags": [
+        "湿陷性黄土",
+        "膨胀土"
+      ]
+    },
+    {
+      "id": "ch7-思考题-4",
+      "number": "7-4",
+      "chapter": "第7章 区域性地基",
+      "chapterNo": 7,
+      "type": "思考题",
+      "kind": "概念问答",
+      "sourceLine": 7696,
+      "attachments": [],
+      "text": "什么是冻土？多年冻土的融陷性等级是如何划分的?",
+      "length": 23,
+      "difficulty": "基础",
+      "tags": [
+        "冻土"
+      ]
+    },
+    {
+      "id": "ch7-思考题-5",
+      "number": "7-5",
+      "chapter": "第7章 区域性地基",
+      "chapterNo": 7,
+      "type": "思考题",
+      "kind": "概念问答",
+      "sourceLine": 7698,
+      "attachments": [],
+      "text": "盐渍土和冻土对建筑物产生危害的特点有何不同?",
+      "length": 22,
+      "difficulty": "基础",
+      "tags": [
+        "冻土"
+      ]
+    },
+    {
+      "id": "ch7-思考题-6",
+      "number": "7-6",
+      "chapter": "第7章 区域性地基",
+      "chapterNo": 7,
+      "type": "思考题",
+      "kind": "概念问答",
+      "sourceLine": 7700,
+      "attachments": [],
+      "text": "什么是土岩组合地基、岩溶地基、土洞地基和红黏土地基？其危害机理是什么？",
+      "length": 35,
+      "difficulty": "基础",
+      "tags": [
+        "地基"
+      ]
+    },
+    {
+      "id": "ch7-思考题-7",
+      "number": "7-7",
+      "chapter": "第7章 区域性地基",
+      "chapterNo": 7,
+      "type": "思考题",
+      "kind": "概念问答",
+      "sourceLine": 7702,
+      "attachments": [],
+      "text": "什么是震级、地震烈度、基本烈度和设防烈度?",
+      "length": 21,
+      "difficulty": "基础",
+      "tags": [
+        "基础工程"
+      ]
+    },
+    {
+      "id": "ch7-习题-1",
+      "number": "7-1",
+      "chapter": "第7章 区域性地基",
+      "chapterNo": 7,
+      "type": "习题",
+      "kind": "计算设计",
+      "sourceLine": 7706,
+      "attachments": [
+        {
+          "type": "table",
+          "html": "<table><tr><td rowspan=1 colspan=1>取土深度 $/ \\mathrm { m }$ </td><td rowspan=1 colspan=1>1</td><td rowspan=1 colspan=1>2</td><td rowspan=1 colspan=1>3</td><td rowspan=1 colspan=1>4</td><td rowspan=1 colspan=1>5</td><td rowspan=1 colspan=1>6</td><td rowspan=1 colspan=1>7</td><td rowspan=1 colspan=1>8</td><td rowspan=1 colspan=1>9</td><td rowspan=1 colspan=1>10</td></tr><tr><td rowspan=1 colspan=1> $\\delta _ { \\mathrm { z s } }$ </td><td rowspan=1 colspan=1>0.017</td><td rowspan=1 colspan=1>0.021</td><td rowspan=1 colspan=1>0.023</td><td rowspan=1 colspan=1>0.024</td><td rowspan=1 colspan=1>0.026</td><td rowspan=1 colspan=1>0.039</td><td rowspan=1 colspan=1>0.043</td><td rowspan=1 colspan=1>0.029</td><td rowspan=1 colspan=1>0.014</td><td rowspan=1 colspan=1>0.012</td></tr><tr><td rowspan=1 colspan=1> $\\delta _ { \\mathrm { s } }$ </td><td rowspan=1 colspan=1>0.086</td><td rowspan=1 colspan=1>0.074</td><td rowspan=1 colspan=1>0.076</td><td rowspan=1 colspan=1>0.078</td><td rowspan=1 colspan=1>0.087</td><td rowspan=1 colspan=1>0.094</td><td rowspan=1 colspan=1>0.076</td><td rowspan=1 colspan=1>0.049</td><td rowspan=1 colspan=1>0.012</td><td rowspan=1 colspan=1>0.002</td></tr></table>"
+        }
+      ],
+      "text": "某钻孔每隔1m取土样，测得各土样 $\\delta _ { s i }$ 和 $\\delta _ { z s i }$ 如表7-20所示，试确定该场地的湿 陷类型和地基的湿陷等级。\n表7-20习题7-1附表\n附表：题目含表格数据，已保留在教材原表中。",
+      "length": 124,
+      "difficulty": "提高",
+      "tags": [
+        "地基"
+      ]
+    },
+    {
+      "id": "ch7-习题-2",
+      "number": "7-2",
+      "chapter": "第7章 区域性地基",
+      "chapterNo": 7,
+      "type": "习题",
+      "kind": "计算设计",
+      "sourceLine": 7711,
+      "attachments": [],
+      "text": "某膨胀土室内自由膨胀率试验，测得土样原始体积为10mL，膨胀稳定后体积增大为16.1mL。试求此土样的自由膨胀率，并确定该膨胀土的膨胀潜势类别。",
+      "length": 72,
+      "difficulty": "提高",
+      "tags": [
+        "膨胀土"
+      ]
+    }
+  ]
+}
