@@ -2785,6 +2785,9 @@ function ReportPage({ learningStats }) {
   return (
     <section className="pagePanel">
       <PageHeader label="学习报告" title="学习画像" desc="根据章节学习和练习结果生成复习建议。" />
+      <p className="reportDataNote">
+        数据口径：已作答章节按本机最近一次练习评分计算，未作答章节暂显示课程基线，后续接入教师后台后可统一同步到班级数据库。
+      </p>
       <div className="reportRank">
         <Trophy size={24} />
         <div>

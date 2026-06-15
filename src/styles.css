@@ -2698,6 +2698,18 @@ button {
   grid-template-columns: 1fr;
 }
 
+.reportDataNote {
+  max-width: 780px;
+  margin: -4px 0 16px;
+  border: 1px solid #d7e8ff;
+  border-radius: 8px;
+  background: #f8fbff;
+  color: #526174;
+  padding: 12px 14px;
+  font-size: 13px;
+  line-height: 1.65;
+}
+
 .reportRank {
   display: flex;
   max-width: 780px;
