@@ -69,6 +69,20 @@ final result: passed
 
 ---
 
+error scan qa path: local browser at http://127.0.0.1:5173/foundation-smart-companion/
+state: 针对用户要求检查站点错误，复扫构建、主要路由、控制台错误、资源加载失败和横向溢出。
+
+**Verification**
+- Build: `npm run build` passed and generated `dist/404.html`.
+- Browser QA: 课程总览、教材学习、知识图谱、智能问答、练习中心、学习报告等主要路由均非空白，1280px 下无横向溢出。
+- Browser QA: 390px 移动端导航 9 个入口均有可见文字和 `aria-label`。
+- Initial finding: 浏览器自动请求 favicon 导致一个 404 控制台提示。
+- Fix: Added `public/favicon.svg` and linked it from `index.html`; final scan shows 0 console errors and 0 bad resource responses.
+
+final result: passed
+
+---
+
 responsive layout qa path: local browser at http://127.0.0.1:5173/foundation-smart-companion/
 state: 根据站点审查笔记修复移动端导航、知识图谱桌面溢出和总览模块卡片挤压。
 
