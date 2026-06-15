@@ -69,6 +69,27 @@ final result: passed
 
 ---
 
+responsive layout qa path: local browser at http://127.0.0.1:5173/foundation-smart-companion/
+state: 根据站点审查笔记修复移动端导航、知识图谱桌面溢出和总览模块卡片挤压。
+
+**Fixes**
+- Mobile navigation no longer uses a horizontally scrolling icon strip. It becomes a wrapping text grid, with visible labels for all 9 navigation items.
+- Navigation buttons now include `aria-label` and `title` matching their visible label.
+- Knowledge graph switches at medium desktop width to a two-column control/canvas layout with inspector below, preventing the right inspector from being clipped.
+- Overview module grid now uses `auto-fit` with a 300px minimum card width; card titles and actions keep short Chinese labels on one line.
+
+**Verification**
+- Browser QA 1280x900 overview: `documentElement.scrollWidth` = 1280, body scroll width = 1280; module cards render at 303px wide and labels are not split into single-character lines.
+- Browser QA 1280x900 graph: `documentElement.scrollWidth` = 1280, body scroll width = 1280; graph grid columns are `216px 680px`, inspector moves below the canvas instead of being cut off.
+- Browser QA 390x844 mobile: `documentElement.scrollWidth` = 390, body scroll width = 390; sidebar overflow-x is `visible`; nav grid is three equal columns; every nav button has visible text plus matching `aria-label`.
+- Browser QA route check: `/foundation-smart-companion/textbook/pile-foundation` opens 教材学习 > 桩基础; `/foundation-smart-companion/graph?node=桩侧阻力` opens 知识图谱 with inspector focused on 桩侧阻力.
+- Browser QA search polish: 搜索“湿陷性黄土”出现 9 个关键词高亮和 9 个“进入”动作，结果列表无横向溢出。
+- Build: `npm run build` passed.
+
+final result: passed
+
+---
+
 chapter relation qa path: local browser at http://localhost:5173/foundation-smart-companion/
 state: 教材章节、工程案例和关联资料已建立结构化关联，教材页右侧栏按当前章节动态显示资料和案例。
 

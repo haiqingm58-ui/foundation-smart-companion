@@ -471,6 +471,27 @@ button {
   font-weight: 800;
 }
 
+.globalSearchItems mark {
+  border-radius: 4px;
+  background: #fff2b8;
+  color: #7a4d00;
+  padding: 0 2px;
+}
+
+.searchResultFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.searchResultFooter strong {
+  color: #175cd3;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
 .emptySearchResult {
   margin: 0;
   color: #667085;
@@ -643,7 +664,7 @@ button {
 
 .moduleGrid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
   gap: 16px;
 }
 
@@ -720,6 +741,7 @@ button {
   margin: 4px 0 8px;
   color: #101828;
   font-size: 21px;
+  white-space: nowrap;
 }
 
 .moduleBody span {
@@ -742,6 +764,7 @@ button {
   gap: 10px;
   color: var(--blue);
   font-weight: 800;
+  white-space: nowrap;
 }
 
 .sideStack {
@@ -1330,11 +1353,13 @@ button {
   grid-template-columns: 216px minmax(580px, 1fr) 312px;
   gap: 16px;
   align-items: stretch;
+  min-width: 0;
 }
 
 .graphControlRail,
 .dynamicGraph {
   overflow: hidden;
+  min-width: 0;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: #fff;
@@ -1801,6 +1826,7 @@ button {
 .graphInspector {
   overflow: auto;
   max-height: 690px;
+  min-width: 0;
 }
 
 .inspectorKicker {
@@ -2833,6 +2859,17 @@ button {
   font-weight: 800;
 }
 
+@media (max-width: 1400px) {
+  .graphWorkbench {
+    grid-template-columns: 216px minmax(0, 1fr);
+  }
+
+  .graphInspector {
+    grid-column: 1 / -1;
+    max-height: none;
+  }
+}
+
 @media (max-width: 1180px) {
   .appShell {
     grid-template-columns: 82px minmax(0, 1fr);
@@ -2883,24 +2920,47 @@ button {
   .sidebar {
     position: static;
     height: auto;
-    flex-direction: row;
-    overflow-x: auto;
+    flex-direction: column;
+    overflow-x: visible;
     border-right: 0;
     border-bottom: 1px solid var(--line);
     padding: 12px;
   }
 
   .brand {
+    justify-content: flex-start;
     border-bottom: 0;
     padding: 0;
   }
 
+  .brand div:last-child {
+    display: block;
+  }
+
+  .brand strong {
+    white-space: normal;
+  }
+
   .navList {
-    flex-direction: row;
+    display: grid;
+    width: 100%;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 8px;
   }
 
   .navItem {
-    min-width: 52px;
+    min-width: 0;
+    flex-direction: column;
+    justify-content: center;
+    gap: 6px;
+    padding: 10px 6px;
+    text-align: center;
+  }
+
+  .navItem span {
+    display: block;
+    font-size: 12px;
+    line-height: 1.2;
   }
 
   .topbar {
@@ -2969,6 +3029,10 @@ button {
 }
 
 @media (max-width: 640px) {
+  .navList {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
   .heroCopy {
     padding: 26px 20px;
   }

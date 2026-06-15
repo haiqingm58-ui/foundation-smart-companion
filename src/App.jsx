@@ -654,6 +654,98 @@ function relatedCasesForChapter(chapterTitle) {
   });
 }
 
+function appBasePath() {
+  const base = import.meta.env.BASE_URL || "/";
+  if (base === "./") {
+    return "";
+  }
+  return base.endsWith("/") ? base.slice(0, -1) : base;
+}
+
+function stripAppBase(pathname) {
+  const base = appBasePath();
+  if (base && pathname.startsWith(base)) {
+    return pathname.slice(base.length) || "/";
+  }
+  return pathname || "/";
+}
+
+function chapterFromRouteSegment(courseManifest, segment) {
+  const decoded = decodeURIComponent(segment ?? "");
+  return courseChapters(courseManifest).find((chapter) => {
+    const numberSlug = `chapter-${String(chapter.number).padStart(2, "0")}`;
+    return chapter.slug === decoded || numberSlug === decoded || chapter.title === decoded || `第${chapter.number}章${chapter.title}` === decoded;
+  });
+}
+
+function routeFromLocation(courseManifest) {
+  if (typeof window === "undefined") {
+    return { page: "overview" };
+  }
+  const path = stripAppBase(window.location.pathname);
+  const segments = path.split("/").filter(Boolean).map((segment) => decodeURIComponent(segment));
+  const params = new URLSearchParams(window.location.search);
+  const [page = "overview", detail] = segments;
+
+  switch (page) {
+    case "textbook": {
+      const chapter = chapterFromRouteSegment(courseManifest, detail) ?? currentCourseChapter(courseManifest);
+      return { page: "textbook", chapter: chapter.title };
+    }
+    case "graph":
+      return { page: "graph", node: params.get("node") ?? "" };
+    case "qa":
+      return { page: "qa", mode: params.get("mode") ?? "" };
+    case "cases":
+      return { page: "cases", caseTitle: detail ?? params.get("case") ?? "" };
+    case "resources":
+      return { page: "resources", resourceTitle: detail ?? params.get("resource") ?? "" };
+    case "practice":
+      return { page: "practice", exerciseId: detail ?? params.get("exercise") ?? "", chapter: params.get("chapter") ?? "" };
+    case "report":
+    case "admin":
+    case "overview":
+      return { page };
+    default:
+      return { page: "overview" };
+  }
+}
+
+function routeToUrl(page, options = {}, courseManifest = defaultCourseManifest) {
+  const base = appBasePath();
+  const params = new URLSearchParams();
+  let path = "/";
+
+  if (page === "textbook") {
+    const chapter = courseChapters(courseManifest).find((item) => item.title === options.chapter) ?? currentCourseChapter(courseManifest);
+    path = `/textbook/${chapter.slug}`;
+  } else if (page === "graph") {
+    path = "/graph";
+    if (options.node) {
+      params.set("node", options.node);
+    }
+  } else if (page === "qa") {
+    path = "/qa";
+    if (options.mode) {
+      params.set("mode", options.mode);
+    }
+  } else if (page === "cases") {
+    path = options.caseTitle ? `/cases/${encodeURIComponent(options.caseTitle)}` : "/cases";
+  } else if (page === "resources") {
+    path = options.resourceTitle ? `/resources/${encodeURIComponent(options.resourceTitle)}` : "/resources";
+  } else if (page === "practice") {
+    path = options.exerciseId ? `/practice/${encodeURIComponent(options.exerciseId)}` : "/practice";
+    if (options.chapter) {
+      params.set("chapter", options.chapter);
+    }
+  } else if (["report", "admin"].includes(page)) {
+    path = `/${page}`;
+  }
+
+  const query = params.toString();
+  return `${base}${path}${query ? `?${query}` : ""}`;
+}
+
 function keywordTerms(text) {
   const compact = text.replace(/\s+/g, "");
   const terms = new Set();
@@ -1399,6 +1491,8 @@ function Sidebar({ active, onNavigate, learningStats }) {
             <button
               className={cx("navItem", active === item.id && "active")}
               type="button"
+              aria-label={item.label}
+              title={item.label}
               key={item.id}
               onClick={() => onNavigate(item.id)}
             >
@@ -2806,6 +2900,25 @@ function GlobalSearchPanel({ query, courseManifest, onNavigate, onClear }) {
     onClear();
   }
 
+  function highlighted(text) {
+    const value = text ?? "";
+    const keyword = query.trim();
+    if (!keyword) {
+      return value;
+    }
+    const index = value.toLowerCase().indexOf(keyword.toLowerCase());
+    if (index < 0) {
+      return value;
+    }
+    return (
+      <>
+        {value.slice(0, index)}
+        <mark>{value.slice(index, index + keyword.length)}</mark>
+        {value.slice(index + keyword.length)}
+      </>
+    );
+  }
+
   return (
     <section className="globalSearchPanel" aria-live="polite">
       <div className="globalSearchHeader">
@@ -2825,9 +2938,12 @@ function GlobalSearchPanel({ query, courseManifest, onNavigate, onClear }) {
               <div className="globalSearchItems">
                 {group.items.map((item) => (
                   <button type="button" key={item.id} onClick={() => openResult(item.action)}>
-                    <span>{item.title}</span>
-                    <p>{item.desc}</p>
-                    {item.meta && <em>{item.meta}</em>}
+                    <span>{highlighted(item.title)}</span>
+                    <p>{highlighted(item.desc)}</p>
+                    <div className="searchResultFooter">
+                      {item.meta && <em>{highlighted(item.meta)}</em>}
+                      <strong>进入 →</strong>
+                    </div>
                   </button>
                 ))}
               </div>
@@ -2879,13 +2995,14 @@ export function App() {
   const courseManifest = useJsonAsset("/course-manifest.json", defaultCourseManifest);
   const exerciseBank = useJsonAsset("/knowledge/exercises.json", { summary: null, exercises: [] });
   const [learningAttempts, setLearningAttempts] = useState(readLearningAttempts);
-  const [active, setActive] = useState("overview");
+  const initialRoute = routeFromLocation(defaultCourseManifest);
+  const [active, setActive] = useState(initialRoute.page);
   const [query, setQuery] = useState("");
-  const [activeChapter, setActiveChapter] = useState(currentCourseChapter(defaultCourseManifest).title);
-  const [activeGraphNode, setActiveGraphNode] = useState("");
-  const [activeCaseTitle, setActiveCaseTitle] = useState("");
-  const [activeResourceTitle, setActiveResourceTitle] = useState("");
-  const [activeExerciseId, setActiveExerciseId] = useState("");
+  const [activeChapter, setActiveChapter] = useState(initialRoute.chapter ?? currentCourseChapter(defaultCourseManifest).title);
+  const [activeGraphNode, setActiveGraphNode] = useState(initialRoute.node ?? "");
+  const [activeCaseTitle, setActiveCaseTitle] = useState(initialRoute.caseTitle ?? "");
+  const [activeResourceTitle, setActiveResourceTitle] = useState(initialRoute.resourceTitle ?? "");
+  const [activeExerciseId, setActiveExerciseId] = useState(initialRoute.exerciseId ?? "");
   const activeLabel = useMemo(() => navItems.find((item) => item.id === active)?.label ?? "课程总览", [active]);
   const learningStats = useMemo(
     () => buildLearningStats({ courseManifest, exerciseBank, attempts: learningAttempts }),
@@ -2896,15 +3013,37 @@ export function App() {
     window.localStorage.setItem(learningAttemptsKey, JSON.stringify(learningAttempts));
   }, [learningAttempts]);
 
-  function handleNavigate(page, options = {}) {
-    if (options.chapter) {
-      setActiveChapter(options.chapter);
+  function applyRoute(route) {
+    if (route.chapter) {
+      setActiveChapter(route.chapter);
     }
-    setActiveGraphNode(options.node ?? "");
-    setActiveCaseTitle(options.caseTitle ?? "");
-    setActiveResourceTitle(options.resourceTitle ?? "");
-    setActiveExerciseId(options.exerciseId ?? "");
-    setActive(page);
+    setActiveGraphNode(route.node ?? "");
+    setActiveCaseTitle(route.caseTitle ?? "");
+    setActiveResourceTitle(route.resourceTitle ?? "");
+    setActiveExerciseId(route.exerciseId ?? "");
+    setActive(route.page);
+  }
+
+  useEffect(() => {
+    applyRoute(routeFromLocation(courseManifest));
+  }, [courseManifest]);
+
+  useEffect(() => {
+    function handlePopState() {
+      applyRoute(routeFromLocation(courseManifest));
+    }
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, [courseManifest]);
+
+  function handleNavigate(page, options = {}) {
+    const routeOptions = { ...options };
+    if (page === "textbook" && !routeOptions.chapter) {
+      routeOptions.chapter = activeChapter;
+    }
+    const route = { page, ...routeOptions };
+    applyRoute(route);
+    window.history.pushState({ route }, "", routeToUrl(page, routeOptions, courseManifest));
   }
 
   function handleRecordAttempt(attempt) {
