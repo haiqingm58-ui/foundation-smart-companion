@@ -2440,15 +2440,98 @@ textarea:focus-visible,
   overflow: hidden;
 }
 
+.resourceSummary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(120px, 160px)) minmax(0, 1fr);
+  gap: 12px;
+  align-items: stretch;
+  margin-bottom: 16px;
+}
+
+.resourceSummary article,
+.resourceSummary p {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  padding: 16px;
+}
+
+.resourceSummary strong {
+  display: block;
+  color: var(--blue);
+  font-size: 26px;
+  line-height: 1;
+}
+
+.resourceSummary span,
+.resourceSummary p {
+  color: #667085;
+}
+
+.resourceSummary p {
+  margin: 0;
+  line-height: 1.6;
+}
+
+.resourceControls {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.resourceTypeFilter {
+  flex-wrap: wrap;
+  margin: 0;
+}
+
+.resourceSearch {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: min(360px, 100%);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  padding: 0 12px;
+  color: #667085;
+}
+
+.resourceSearch input {
+  width: 100%;
+  min-height: 42px;
+  border: 0;
+  outline: 0;
+  color: var(--ink);
+  font: inherit;
+}
+
+.resourceLibrary {
+  display: grid;
+  grid-template-columns: minmax(360px, 0.86fr) minmax(0, 1.14fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.resourceList {
+  max-height: 760px;
+  overflow: auto;
+}
+
 .resourceRow {
   display: grid;
-  grid-template-columns: 86px minmax(0, 1fr) 160px 88px;
+  grid-template-columns: 92px minmax(0, 1fr) 170px;
   gap: 16px;
   align-items: center;
   border: 1px solid transparent;
+  width: 100%;
   min-height: 88px;
   border-bottom: 1px solid var(--soft-line);
   padding: 0 20px;
+  background: #fff;
+  text-align: left;
+  cursor: pointer;
 }
 
 .resourceRow:last-child {
@@ -2460,6 +2543,13 @@ textarea:focus-visible,
   color: #667085;
 }
 
+.resourceRow small {
+  display: block;
+  margin-top: 6px;
+  color: #98a2b3;
+  line-height: 1.45;
+}
+
 .resourceRow em {
   color: var(--teal);
   font-style: normal;
@@ -2469,6 +2559,123 @@ textarea:focus-visible,
 .resourceRow button {
   background: #eef6ff;
   color: var(--blue);
+}
+
+.resourceDetail {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  padding: 22px;
+}
+
+.resourceDetailHeader {
+  border-bottom: 1px solid var(--soft-line);
+  padding-bottom: 16px;
+}
+
+.resourceDetailHeader h2 {
+  margin: 12px 0 6px;
+  color: var(--ink);
+  font-size: 24px;
+  letter-spacing: 0;
+}
+
+.resourceDetailHeader strong {
+  display: block;
+  color: var(--teal);
+  font-size: 18px;
+}
+
+.resourceDetailHeader p {
+  margin: 10px 0 0;
+  color: #667085;
+  line-height: 1.65;
+}
+
+.resourceMetaGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin: 16px 0;
+}
+
+.resourceMetaGrid div {
+  border: 1px solid var(--soft-line);
+  border-radius: 8px;
+  background: #f8fbff;
+  padding: 13px 14px;
+}
+
+.resourceMetaGrid span,
+.resourceSource span {
+  display: block;
+  color: #667085;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.resourceMetaGrid strong {
+  display: block;
+  margin-top: 5px;
+  color: var(--ink);
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.resourceSection {
+  border-top: 1px solid var(--soft-line);
+  padding-top: 16px;
+  margin-top: 16px;
+}
+
+.resourceSection h3 {
+  margin: 0 0 10px;
+  color: var(--ink);
+  font-size: 16px;
+}
+
+.resourceSection p {
+  margin: 0;
+  color: #526174;
+  line-height: 1.65;
+}
+
+.resourceBulletList {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding-left: 20px;
+  color: #526174;
+  line-height: 1.58;
+}
+
+.resourceSection.twoColumn {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(220px, 0.8fr);
+  gap: 18px;
+}
+
+.compactList {
+  gap: 6px;
+}
+
+.resourceSource {
+  margin-top: 16px;
+  border-radius: 8px;
+  background: #f7fafc;
+  padding: 13px 14px;
+}
+
+.resourceSource p {
+  margin: 5px 0 0;
+  color: #526174;
+  line-height: 1.55;
+}
+
+.emptySearch {
+  margin: 0;
+  padding: 22px;
+  color: #667085;
 }
 
 .practiceSummary {
@@ -3682,6 +3889,26 @@ textarea:focus-visible,
   }
 
   .exerciseList {
+    max-height: none;
+  }
+
+  .resourceSummary,
+  .resourceLibrary,
+  .resourceMetaGrid,
+  .resourceSection.twoColumn {
+    grid-template-columns: 1fr;
+  }
+
+  .resourceControls {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .resourceSearch {
+    width: 100%;
+  }
+
+  .resourceList {
     max-height: none;
   }
 

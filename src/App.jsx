@@ -314,67 +314,291 @@ const chapterStudyContent = {
 const resources = [
   {
     title: "建筑地基基础设计规范",
-    code: "GB 50007",
-    type: "规范",
+    code: "GB 50007-2011",
+    shortCode: "GB 50007",
+    type: "国家标准",
+    level: "基础主规范",
+    version: "2011版",
+    source: "教材参考文献[1]，中国建筑科学研究院，2012",
+    organization: "中国建筑科学研究院",
+    publisher: "中国建筑工业出版社",
+    publishedYear: "2012",
     link: "浅基础、承载力、沉降、软弱下卧层",
-    relatedChapters: ["绪论", "浅基础", "地基处理"],
-    status: "指导老师可补充条文摘录",
+    relatedChapters: ["绪论", "浅基础", "地基处理", "区域性地基"],
+    keyTopics: ["地基承载力特征值", "基础埋置深度", "地基变形验算", "软弱下卧层", "不均匀沉降"],
+    clauses: ["地基基础设计等级与设计原则", "承载力特征值及宽度、埋深修正", "沉降、倾斜和差异沉降控制", "浅基础构造和验算"],
+    useCases: ["浅基础尺寸初选", "承载力修正计算", "沉降验算和课堂例题引用"],
+    status: "教材引用版本；正式教学前由指导老师确认最新版",
   },
   {
     title: "建筑桩基技术规范",
-    code: "JGJ 94",
-    type: "规范",
+    code: "JGJ 94-2008",
+    shortCode: "JGJ 94",
+    type: "行业规范",
+    level: "桩基主规范",
+    version: "2008版",
+    source: "教材参考文献[6]，住房和城乡建设部，2008",
+    organization: "中华人民共和国住房和城乡建设部",
+    publisher: "中国建筑工业出版社",
+    publishedYear: "2008",
     link: "桩基础、单桩承载力、群桩效应",
     relatedChapters: ["桩基础"],
-    status: "指导老师可绑定课堂重点条款",
+    keyTopics: ["桩型选择", "单桩竖向承载力", "负摩阻力", "水平承载力", "群桩基础", "承台设计"],
+    clauses: ["桩基设计等级和基本规定", "单桩竖向承载力确定方法", "桩侧负摩阻力和中性点", "群桩承载力与沉降验算"],
+    useCases: ["桩基础方案比选", "单桩承载力例题", "群桩效应和承台验算"],
+    status: "教材引用版本；课堂条文摘录由指导老师维护",
   },
   {
     title: "建筑基坑支护技术规程",
-    code: "JGJ 120",
-    type: "规范",
+    code: "JGJ 120-2012",
+    shortCode: "JGJ 120",
+    type: "行业规程",
+    level: "基坑支护",
+    version: "2012版",
+    source: "教材参考文献[7]，中国建筑科学研究院，2012",
+    organization: "中国建筑科学研究院",
+    publisher: "中国建筑工业出版社",
+    publishedYear: "2012",
     link: "基坑支护、土压力、降水与监测",
     relatedChapters: ["基坑工程"],
-    status: "用于基坑工程章节",
+    keyTopics: ["支护结构选型", "土压力计算", "整体稳定", "抗隆起", "地下水控制"],
+    clauses: ["基坑支护设计原则", "排桩、地下连续墙和土钉墙设计", "稳定性验算", "地下水控制要求"],
+    useCases: ["基坑支护方案判断", "土压力计算题", "支挡结构稳定验算"],
+    status: "教材引用版本；用于基坑工程章节",
   },
   {
     title: "建筑地基处理技术规范",
-    code: "JGJ 79",
-    type: "规范",
+    code: "JGJ 79-2012",
+    shortCode: "JGJ 79",
+    type: "行业规范",
+    level: "地基处理",
+    version: "2012版",
+    source: "教材参考文献[9]，住房和城乡建设部，2013",
+    organization: "中华人民共和国住房和城乡建设部",
+    publisher: "中国建筑工业出版社",
+    publishedYear: "2013",
     link: "换填、强夯、复合地基、预压法",
     relatedChapters: ["地基处理"],
-    status: "用于处理方案比选",
+    keyTopics: ["换填垫层", "强夯法", "排水固结", "复合地基", "注浆法", "处理效果检验"],
+    clauses: ["常用地基处理方法适用范围", "垫层厚度和承载力验算", "复合地基承载力与变形", "施工质量检验"],
+    useCases: ["软土地基处理方案比选", "复合地基计算", "处理后承载力评价"],
+    status: "教材引用版本；用于处理方案比选",
   },
   {
     title: "湿陷性黄土地区建筑标准",
-    code: "GB 50025",
-    type: "规范",
+    code: "GB 50025-2018",
+    shortCode: "GB 50025",
+    type: "国家标准",
+    level: "特殊土",
+    version: "2018版",
+    source: "教材参考文献[11]，住房和城乡建设部，2019",
+    organization: "中华人民共和国住房和城乡建设部",
+    publisher: "中国建筑工业出版社",
+    publishedYear: "2019",
     link: "湿陷类型、湿陷等级、区域性地基",
     relatedChapters: ["区域性地基"],
-    status: "用于特殊土地基判别",
+    keyTopics: ["自重湿陷性", "非自重湿陷性", "湿陷等级", "地基处理措施"],
+    clauses: ["湿陷性黄土场地评价", "湿陷等级划分", "地基处理和基础措施", "检验与施工控制"],
+    useCases: ["湿陷等级判别题", "黄土地基处理方案", "区域性地基复习"],
+    status: "教材引用版本；用于特殊土地基判别",
   },
   {
     title: "公路桥涵地基与基础设计规范",
-    code: "JTG 3363",
-    type: "规范",
+    code: "JTG 3363-2019",
+    shortCode: "JTG 3363",
+    type: "行业规范",
+    level: "桥涵基础",
+    version: "2019版",
+    source: "教材参考文献[2]，中交公路规划设计院有限公司，2020",
+    organization: "中交公路规划设计院有限公司",
+    publisher: "人民交通出版社",
+    publishedYear: "2020",
     link: "桥梁沉井、深基础、承载与稳定",
-    relatedChapters: ["沉井基础"],
-    status: "用于桥梁沉井拓展",
+    relatedChapters: ["浅基础", "桩基础", "沉井基础"],
+    keyTopics: ["桥涵地基承载力", "扩大基础", "桩基础", "沉井基础", "冲刷影响"],
+    clauses: ["桥涵基础设计原则", "地基承载力取值与修正", "沉井基础构造与稳定", "桥梁桩基础验算"],
+    useCases: ["桥梁基础拓展题", "沉井基础案例", "公路桥涵地基承载力计算"],
+    status: "教材引用版本；用于桥梁沉井拓展",
+  },
+  {
+    title: "岩土工程勘察规范",
+    code: "GB 50021-2001（2009年版）",
+    shortCode: "GB 50021",
+    type: "国家标准",
+    level: "勘察资料",
+    version: "2009年版",
+    source: "教材参考文献[3]，建设综合勘察研究设计院，2009",
+    organization: "建设综合勘察研究设计院",
+    publisher: "中国建筑工业出版社",
+    publishedYear: "2009",
+    link: "勘察等级、岩土参数、原位测试、场地评价",
+    relatedChapters: ["绪论", "浅基础", "桩基础", "区域性地基"],
+    keyTopics: ["勘察分级", "岩土参数", "原位测试", "地下水", "不良地质作用"],
+    clauses: ["勘察阶段与工作量", "土工试验和原位测试", "地基土参数建议值", "勘察报告内容"],
+    useCases: ["读懂勘察报告", "参数取值依据", "工程案例地质条件整理"],
+    status: "教材引用版本；用于连接勘察资料和设计计算",
+  },
+  {
+    title: "混凝土结构设计规范",
+    code: "GB 50010-2010（2015年版）",
+    shortCode: "GB 50010",
+    type: "国家标准",
+    level: "结构设计",
+    version: "2015年版",
+    source: "教材参考文献[4]，中国建筑科学研究院，2016",
+    organization: "中国建筑科学研究院",
+    publisher: "中国建筑工业出版社",
+    publishedYear: "2016",
+    link: "基础结构配筋、承台、筏板、扩展基础",
+    relatedChapters: ["浅基础", "桩基础", "沉井基础"],
+    keyTopics: ["受弯承载力", "受冲切承载力", "剪切验算", "构造配筋", "裂缝控制"],
+    clauses: ["混凝土构件承载力设计", "基础板和承台配筋", "冲切与剪切验算", "耐久性和构造要求"],
+    useCases: ["扩展基础结构设计", "桩承台配筋", "筏形基础结构验算"],
+    status: "教材引用版本；用于基础构件结构计算",
+  },
+  {
+    title: "建筑基坑工程监测技术标准",
+    code: "GB 50497-2020",
+    shortCode: "GB 50497",
+    type: "国家标准",
+    level: "基坑监测",
+    version: "2020版",
+    source: "教材参考文献[8]，中国建筑科学研究院，2020",
+    organization: "中国建筑科学研究院",
+    publisher: "中国计划出版社",
+    publishedYear: "2020",
+    link: "监测项目、报警值、巡视、信息反馈",
+    relatedChapters: ["基坑工程"],
+    keyTopics: ["支护结构位移", "周边沉降", "地下水位", "监测频率", "报警控制"],
+    clauses: ["监测等级和监测项目", "监测点布置", "监测频率与报警", "信息反馈和应急处置"],
+    useCases: ["基坑案例复盘", "监测方案识读", "变形控制讨论"],
+    status: "教材引用版本；与基坑支护规程配套使用",
+  },
+  {
+    title: "膨胀土地区建筑技术规范",
+    code: "GB 50112-2013",
+    shortCode: "GB 50112",
+    type: "国家标准",
+    level: "特殊土",
+    version: "2013版",
+    source: "教材参考文献[10]，住房和城乡建设部，2013",
+    organization: "中华人民共和国住房和城乡建设部",
+    publisher: "中国建筑工业出版社",
+    publishedYear: "2013",
+    link: "膨胀潜势、胀缩等级、基础与地基处理",
+    relatedChapters: ["区域性地基"],
+    keyTopics: ["自由膨胀率", "膨胀潜势", "胀缩等级", "防水保湿", "地基处理"],
+    clauses: ["膨胀土地基评价", "地基胀缩等级", "基础措施和处理措施", "施工与维护要求"],
+    useCases: ["自由膨胀率习题", "膨胀土危害机理", "特殊土地基处置"],
+    status: "教材引用版本；用于膨胀土地基专题",
+  },
+  {
+    title: "冻土地区建筑地基基础设计规范",
+    code: "JGJ 118-2011",
+    shortCode: "JGJ 118",
+    type: "行业规范",
+    level: "特殊土",
+    version: "2011版",
+    source: "教材参考文献[12]，住房和城乡建设部，2012",
+    organization: "中华人民共和国住房和城乡建设部",
+    publisher: "中国建筑工业出版社",
+    publishedYear: "2012",
+    link: "多年冻土、季节冻土、冻胀融沉、基础措施",
+    relatedChapters: ["区域性地基"],
+    keyTopics: ["冻胀性", "融沉性", "多年冻土", "季节冻土", "保温隔热措施"],
+    clauses: ["冻土地基分类", "冻胀融沉评价", "基础埋深和防冻措施", "施工与维护"],
+    useCases: ["冻土地基概念辨析", "区域性地基对比", "基础防冻措施讨论"],
+    status: "教材引用版本；用于冻土地基专题",
+  },
+  {
+    title: "建筑抗震设计规范",
+    code: "GB 50011-2010（2016年版）",
+    shortCode: "GB 50011",
+    type: "国家标准",
+    level: "抗震与场地",
+    version: "2016年版",
+    source: "教材参考文献[13]，住房和城乡建设部，2016",
+    organization: "中华人民共和国住房和城乡建设部",
+    publisher: "中国建筑工业出版社",
+    publishedYear: "2016",
+    link: "场地类别、液化判别、抗震设防、地基基础抗震",
+    relatedChapters: ["绪论", "区域性地基"],
+    keyTopics: ["场地类别", "地震烈度", "液化判别", "抗震设防", "地基基础措施"],
+    clauses: ["抗震设防基本要求", "场地和地基评价", "液化土判别与处理", "地基基础抗震构造"],
+    useCases: ["地震区地基章节", "场地类别复习", "液化处理案例"],
+    status: "教材引用版本；用于地震区地基拓展",
+  },
+  {
+    title: "动力机器基础设计标准",
+    code: "GB 50040-2020",
+    shortCode: "GB 50040",
+    type: "国家标准",
+    level: "动力基础",
+    version: "2020版",
+    source: "教材参考文献[14]，住房和城乡建设部，2020",
+    organization: "中华人民共和国住房和城乡建设部",
+    publisher: "中国计划出版社",
+    publishedYear: "2020",
+    link: "动力机器基础、振动响应、动荷载、地基承载力折减",
+    relatedChapters: ["区域性地基"],
+    keyTopics: ["动力折减系数", "基础振动响应", "容许振幅", "动力荷载", "地基土类别"],
+    clauses: ["动力机器基础设计要求", "地基承载力动力折减", "振动位移、速度、加速度控制", "基础构造和隔振"],
+    useCases: ["动力机器基础专题", "第7章动力基础公式", "振动控制讨论"],
+    status: "教材引用版本；用于动力机器基础拓展",
+  },
+  {
+    title: "建筑工程容许振动标准",
+    code: "GB 50868-2013",
+    shortCode: "GB 50868",
+    type: "国家标准",
+    level: "振动控制",
+    version: "2013版",
+    source: "教材第7章动力基础正文提及",
+    organization: "住房和城乡建设主管部门",
+    publisher: "教材正文未列出版社",
+    publishedYear: "2013",
+    link: "容许振动、振动速度、振动加速度、设备影响",
+    relatedChapters: ["区域性地基"],
+    keyTopics: ["容许振动值", "振动速度", "振动加速度", "精密设备保护", "邻近建筑影响"],
+    clauses: ["建筑工程振动评价指标", "不同使用对象容许限值", "振动控制和评估方法"],
+    useCases: ["动力机器基础振动控制", "邻近建筑影响判断", "第7章拓展资料"],
+    status: "教材正文提及；详细版本由指导老师确认",
+  },
+  {
+    title: "岩溶地区建筑地基基础技术标准",
+    code: "GB/T 51238-2018",
+    shortCode: "GB/T 51238",
+    type: "国家标准",
+    level: "特殊地基",
+    version: "2018版",
+    source: "教材参考文献[15]，住房和城乡建设部，2018",
+    organization: "中华人民共和国住房和城乡建设部",
+    publisher: "中国计划出版社",
+    publishedYear: "2018",
+    link: "岩溶地基、土洞、溶洞、山区地基",
+    relatedChapters: ["区域性地基"],
+    keyTopics: ["岩溶发育", "土洞", "溶洞稳定", "地基处理", "山区地基"],
+    clauses: ["岩溶场地勘察评价", "地基稳定性分析", "处理措施与基础选型", "施工监测"],
+    useCases: ["山区地基案例", "岩溶地基危害机理", "特殊地基处理方案"],
+    status: "教材引用版本；用于山区和岩溶地基拓展",
   },
   {
     title: "土力学",
     code: "参考教材",
+    shortCode: "土力学",
     type: "教材",
+    level: "前置知识",
+    version: "课程前置知识",
+    source: "课程前置知识库",
+    organization: "任课教师指定",
+    publisher: "按授课教材为准",
+    publishedYear: "课堂指定",
     link: "抗剪强度、应力计算、变形计算",
     relatedChapters: ["绪论", "浅基础", "基坑工程"],
-    status: "前置知识复习",
-  },
-  {
-    title: "岩土工程勘察",
-    code: "课程资料",
-    type: "教材",
-    link: "地质勘察、土层识别、持力层选择",
-    relatedChapters: ["绪论", "桩基础", "区域性地基"],
-    status: "指导老师可上传附件",
+    keyTopics: ["土的物理性质", "地基应力", "压缩变形", "抗剪强度", "土压力"],
+    clauses: ["土体指标换算", "附加应力计算", "沉降计算基本方法", "库仑土压力理论"],
+    useCases: ["薄弱点复习", "基础工程计算前置", "章节学习补课"],
+    status: "前置知识复习；由指导老师指定版本",
   },
 ];
 
@@ -918,7 +1142,8 @@ function moduleMeta(cardId, { courseManifest, graphSummary, exerciseBank }) {
 function relatedResourcesForChapter(chapterTitle) {
   return resources.filter((item) => {
     const related = item.relatedChapters ?? [];
-    return related.includes(chapterTitle) || item.link.includes(chapterTitle);
+    const searchable = [item.link, item.level, item.status, ...(item.keyTopics ?? []), ...(item.clauses ?? [])].join(" ");
+    return related.includes(chapterTitle) || searchable.includes(chapterTitle);
   });
 }
 
@@ -1430,12 +1655,31 @@ function buildGlobalSearchResults({ query, courseManifest, chunks, graph, exerci
     }));
 
   const resourceResults = resources
-    .filter((item) => resultMatches(cleanQuery, item.title, item.code, item.type, item.link, item.status, ...(item.relatedChapters ?? [])))
+    .filter((item) =>
+      resultMatches(
+        cleanQuery,
+        item.title,
+        item.code,
+        item.shortCode,
+        item.type,
+        item.level,
+        item.version,
+        item.link,
+        item.status,
+        item.source,
+        item.organization,
+        item.publisher,
+        ...(item.relatedChapters ?? []),
+        ...(item.keyTopics ?? []),
+        ...(item.clauses ?? []),
+        ...(item.useCases ?? []),
+      ),
+    )
     .map((item) => ({
       id: `resource:${item.title}`,
       group: "关联资料",
       title: item.title,
-      desc: item.link,
+      desc: `${item.link}；重点：${(item.keyTopics ?? []).slice(0, 3).join("、")}`,
       meta: `${item.type} · ${item.code}`,
       action: { page: "resources", resourceTitle: item.title },
     }));
@@ -2855,6 +3099,34 @@ function CasesPage({ initialCaseTitle }) {
 
 function ResourcesPage({ initialResourceTitle }) {
   const [selectedResource, setSelectedResource] = useState(resources[0]);
+  const [typeFilter, setTypeFilter] = useState("全部");
+  const [resourceQuery, setResourceQuery] = useState("");
+  const resourceTypes = useMemo(() => ["全部", ...Array.from(new Set(resources.map((item) => item.type)))], []);
+  const standardCount = resources.filter((item) => item.type.includes("标准") || item.type.includes("规范") || item.type.includes("规程")).length;
+  const filteredResources = useMemo(() => {
+    const cleanQuery = resourceQuery.trim();
+    return resources.filter((item) => {
+      const typeMatched = typeFilter === "全部" || item.type === typeFilter;
+      const queryMatched =
+        !cleanQuery ||
+        resultMatches(
+          cleanQuery,
+          item.title,
+          item.code,
+          item.shortCode,
+          item.type,
+          item.level,
+          item.link,
+          item.source,
+          item.status,
+          ...(item.relatedChapters ?? []),
+          ...(item.keyTopics ?? []),
+          ...(item.clauses ?? []),
+          ...(item.useCases ?? []),
+        );
+      return typeMatched && queryMatched;
+    });
+  }, [resourceQuery, typeFilter]);
 
   useEffect(() => {
     const nextResource = resources.find((item) => item.title === initialResourceTitle);
@@ -2863,36 +3135,137 @@ function ResourcesPage({ initialResourceTitle }) {
     }
   }, [initialResourceTitle]);
 
+  useEffect(() => {
+    if (!filteredResources.length) {
+      return;
+    }
+    if (!filteredResources.some((item) => item.title === selectedResource.title)) {
+      setSelectedResource(filteredResources[0]);
+    }
+  }, [filteredResources, selectedResource.title]);
+
   return (
     <section className="pagePanel">
-      <PageHeader label="关联资料" title="资料中心" desc="统一管理规范、参考教材、课程资料和相关附件。" />
-      <div className="tablePanel">
-        {resources.map((item) => (
-          <div className={cx("resourceRow", selectedResource.title === item.title && "active")} key={item.title}>
-            <span className="typePill">{item.type}</span>
-            <div>
-              <strong>{item.title}</strong>
-              <p>{item.link}</p>
-            </div>
-            <em>{item.code}</em>
-            <button type="button" onClick={() => setSelectedResource(item)}>
-              {selectedResource.title === item.title ? "已查看" : "查看"}
-            </button>
-          </div>
-        ))}
+      <PageHeader label="关联资料" title="规范资料库" desc="按教材参考文献和正文提及的规范整理，帮助学生从章节直接定位到设计依据、适用范围和重点条文方向。" />
+      <div className="resourceSummary">
+        <article>
+          <strong>{resources.length}</strong>
+          <span>条资料</span>
+        </article>
+        <article>
+          <strong>{standardCount}</strong>
+          <span>规范/标准/规程</span>
+        </article>
+        <article>
+          <strong>7</strong>
+          <span>章课程关联</span>
+        </article>
+        <p>页面展示的是课程引用版本，不替代正式规范查新；教师可在后台继续上传条文摘录和课堂讲义。</p>
       </div>
-      <section className="detailPanel compact">
-        <strong>{selectedResource.title}</strong>
-        <p>
-          已定位到 {selectedResource.code}：重点用于“{selectedResource.link}”。{selectedResource.status}
-        </p>
-        <div className="detailTags">
-          <span>{selectedResource.type}</span>
-          {(selectedResource.relatedChapters ?? []).map((chapter) => (
-            <span key={chapter}>{chapter}</span>
+
+      <div className="resourceControls">
+        <div className="segmented resourceTypeFilter">
+          {resourceTypes.map((type) => (
+            <button className={cx(typeFilter === type && "active")} type="button" key={type} onClick={() => setTypeFilter(type)}>
+              {type}
+            </button>
           ))}
         </div>
-      </section>
+        <label className="resourceSearch">
+          <Search size={17} />
+          <input value={resourceQuery} onChange={(event) => setResourceQuery(event.target.value)} placeholder="搜索规范编号、章节、关键词…" />
+        </label>
+      </div>
+
+      <div className="resourceLibrary">
+        <div className="tablePanel resourceList">
+          {filteredResources.map((item) => (
+            <button className={cx("resourceRow", selectedResource.title === item.title && "active")} type="button" key={item.title} onClick={() => setSelectedResource(item)}>
+              <span className="typePill">{item.type}</span>
+              <div>
+                <strong>{item.title}</strong>
+                <p>{item.link}</p>
+                <small>{(item.keyTopics ?? []).slice(0, 4).join(" · ")}</small>
+              </div>
+              <em>{item.code}</em>
+            </button>
+          ))}
+          {!filteredResources.length && <p className="emptySearch">没有匹配的规范资料。</p>}
+        </div>
+
+        <section className="resourceDetail">
+          <div className="resourceDetailHeader">
+            <span className="typePill">{selectedResource.type}</span>
+            <h2>{selectedResource.title}</h2>
+            <strong>{selectedResource.code}</strong>
+            <p>{selectedResource.status}</p>
+          </div>
+
+          <div className="resourceMetaGrid">
+            <div>
+              <span>资料层级</span>
+              <strong>{selectedResource.level}</strong>
+            </div>
+            <div>
+              <span>引用版本</span>
+              <strong>{selectedResource.version}</strong>
+            </div>
+            <div>
+              <span>编制/发布单位</span>
+              <strong>{selectedResource.organization}</strong>
+            </div>
+            <div>
+              <span>出版社/年份</span>
+              <strong>
+                {selectedResource.publisher} · {selectedResource.publishedYear}
+              </strong>
+            </div>
+          </div>
+
+          <div className="resourceSection">
+            <h3>课程用途</h3>
+            <p>{selectedResource.link}</p>
+            <div className="detailTags">
+              {(selectedResource.relatedChapters ?? []).map((chapter) => (
+                <span key={chapter}>{chapter}</span>
+              ))}
+            </div>
+          </div>
+
+          <div className="resourceSection">
+            <h3>重点条文方向</h3>
+            <ul className="resourceBulletList">
+              {(selectedResource.clauses ?? []).map((clause) => (
+                <li key={clause}>{clause}</li>
+              ))}
+            </ul>
+          </div>
+
+          <div className="resourceSection twoColumn">
+            <div>
+              <h3>关键词</h3>
+              <div className="detailTags">
+                {(selectedResource.keyTopics ?? []).map((topic) => (
+                  <span key={topic}>{topic}</span>
+                ))}
+              </div>
+            </div>
+            <div>
+              <h3>适用场景</h3>
+              <ul className="resourceBulletList compactList">
+                {(selectedResource.useCases ?? []).map((item) => (
+                  <li key={item}>{item}</li>
+                ))}
+              </ul>
+            </div>
+          </div>
+
+          <div className="resourceSource">
+            <span>来源</span>
+            <p>{selectedResource.source}</p>
+          </div>
+        </section>
+      </div>
     </section>
   );
 }
