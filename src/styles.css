@@ -56,6 +56,28 @@ button {
   min-height: 100vh;
 }
 
+@keyframes pageEnter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes skeletonPulse {
+  0% {
+    background-position: 100% 0;
+  }
+
+  100% {
+    background-position: -100% 0;
+  }
+}
+
 button:focus-visible,
 input:focus-visible,
 textarea:focus-visible,
@@ -591,6 +613,10 @@ textarea:focus-visible,
   padding: 24px 28px 34px;
 }
 
+.routeSurface {
+  animation: pageEnter 220ms ease both;
+}
+
 .mobilePageLabel {
   display: none;
 }
@@ -666,9 +692,15 @@ textarea:focus-visible,
   cursor: pointer;
   padding: 12px;
   text-align: left;
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease,
+    transform 160ms ease,
+    background 160ms ease;
 }
 
 .globalSearchItems button:hover {
+  transform: translateY(-1px);
   border-color: #9bc4f5;
   background: #f6fbff;
   box-shadow: inset 3px 0 0 var(--blue);
@@ -1258,6 +1290,52 @@ textarea:focus-visible,
 .pagePanel {
   min-height: calc(100vh - 130px);
   padding: 28px;
+}
+
+.loadingSkeleton {
+  display: grid;
+  gap: 12px;
+  margin: 0 0 18px;
+  border: 1px solid #dfe8f5;
+  border-radius: 8px;
+  background: #fbfdff;
+  padding: 16px;
+}
+
+.loadingSkeleton div {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: #526174;
+  font-size: 13px;
+}
+
+.loadingSkeleton strong {
+  color: #27364a;
+  font-size: 14px;
+}
+
+.skeletonLine {
+  display: block;
+  width: min(100%, 560px);
+  height: 12px;
+  overflow: hidden;
+  border-radius: 999px;
+  background:
+    linear-gradient(90deg, #edf2f8 25%, #f8fbff 37%, #edf2f8 63%);
+  background-size: 200% 100%;
+  animation: skeletonPulse 1.15s ease-in-out infinite;
+}
+
+.skeletonLine.title {
+  width: 34px;
+  height: 34px;
+  flex: 0 0 auto;
+  border-radius: 8px;
+}
+
+.skeletonLine.wide {
+  width: min(100%, 720px);
 }
 
 .pageHeader {
@@ -4045,5 +4123,16 @@ textarea:focus-visible,
   .documentList article,
   .bindingTable article {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
 }

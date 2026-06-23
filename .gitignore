@@ -6,7 +6,7 @@ dist/
 AGENTS.md
 data/
 design-shots/
-scripts/
+scripts/*.py
 .playwright-cli/
 __pycache__/
 *.pyc

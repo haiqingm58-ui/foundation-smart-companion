@@ -699,13 +699,34 @@ function cx(...classes) {
   return classes.filter(Boolean).join(" ");
 }
 
-function useJsonAsset(path, fallback) {
-  const [data, setData] = useState(fallback);
+function useJsonAssetState(path, fallback, options = {}) {
+  const { enabled = true } = options;
+  const fallbackRef = useRef(fallback);
+  const [state, setState] = useState(() => ({
+    data: fallback,
+    status: enabled ? "loading" : "idle",
+    error: null,
+  }));
+
+  useEffect(() => {
+    fallbackRef.current = fallback;
+  }, [fallback]);
 
   useEffect(() => {
     let alive = true;
+    if (!enabled) {
+      setState({ data: fallbackRef.current, status: "idle", error: null });
+      return () => {
+        alive = false;
+      };
+    }
     const cleanPath = path.replace(/^\/+/, "");
     const assetUrl = `${import.meta.env.BASE_URL || "/"}${cleanPath}`;
+    setState((current) => ({
+      data: current.data ?? fallbackRef.current,
+      status: "loading",
+      error: null,
+    }));
     fetch(assetUrl)
       .then((response) => {
         if (!response.ok) {
@@ -715,20 +736,76 @@ function useJsonAsset(path, fallback) {
       })
       .then((nextData) => {
         if (alive) {
-          setData(nextData);
+          setState({ data: nextData, status: "success", error: null });
         }
       })
-      .catch(() => {
+      .catch((error) => {
         if (alive) {
-          setData(fallback);
+          setState({ data: fallbackRef.current, status: "error", error });
         }
       });
     return () => {
       alive = false;
     };
-  }, [path]);
+  }, [enabled, path]);
 
-  return data;
+  return state;
+}
+
+function useJsonAsset(path, fallback, options) {
+  return useJsonAssetState(path, fallback, options).data;
+}
+
+const puterScriptId = "puter-ai-script";
+let puterLoadPromise = null;
+
+function ensurePuterLoaded() {
+  if (typeof window === "undefined") {
+    return Promise.reject(new Error("FREE_AI_UNAVAILABLE"));
+  }
+  if (typeof window.puter?.ai?.chat === "function") {
+    return Promise.resolve();
+  }
+  if (!puterLoadPromise) {
+    puterLoadPromise = new Promise((resolve, reject) => {
+      const existingScript = document.getElementById(puterScriptId);
+      const script = existingScript ?? document.createElement("script");
+      let timeoutId = null;
+      const cleanup = () => {
+        window.clearTimeout(timeoutId);
+        script.removeEventListener("load", handleLoad);
+        script.removeEventListener("error", handleError);
+      };
+      const handleLoad = () => {
+        cleanup();
+        if (typeof window.puter?.ai?.chat === "function") {
+          resolve();
+        } else {
+          reject(new Error("FREE_AI_UNAVAILABLE"));
+        }
+      };
+      const handleError = () => {
+        cleanup();
+        reject(new Error("FREE_AI_UNAVAILABLE"));
+      };
+      script.id = puterScriptId;
+      script.src = "https://js.puter.com/v2/";
+      script.async = true;
+      script.addEventListener("load", handleLoad);
+      script.addEventListener("error", handleError);
+      timeoutId = window.setTimeout(() => {
+        cleanup();
+        reject(new Error("FREE_AI_TIMEOUT"));
+      }, 12000);
+      if (!existingScript) {
+        document.body.appendChild(script);
+      }
+    }).catch((error) => {
+      puterLoadPromise = null;
+      throw error;
+    });
+  }
+  return puterLoadPromise;
 }
 
 function courseChapters(courseManifest) {
@@ -1246,6 +1323,103 @@ function routeToUrl(page, options = {}, courseManifest = defaultCourseManifest) 
   return `${base}${path}${query ? `?${query}` : ""}`;
 }
 
+const pageSeo = {
+  overview: {
+    title: "《基础工程》智慧学伴",
+    description: "面向土木工程基础工程课程的教材学习、知识图谱、RAG 智能问答、关联规范资料、题库练习和学习报告平台。",
+  },
+  textbook: {
+    title: "教材学习 - 《基础工程》智慧学伴",
+    description: "按章节浏览《基础工程》教材内容，查看公式、图表解释、案例关联和章节练习。",
+  },
+  graph: {
+    title: "知识图谱 - 《基础工程》智慧学伴",
+    description: "以可交互知识图谱浏览基础工程章节、概念、关系和教材原文依据。",
+  },
+  qa: {
+    title: "RAG 智能问答 - 《基础工程》智慧学伴",
+    description: "基于教材切块、教师上传知识库和大模型生成的基础工程课程问答系统。",
+  },
+  cases: {
+    title: "工程案例 - 《基础工程》智慧学伴",
+    description: "围绕浅基础、桩基础、基坑工程、地基处理等主题的工程案例学习入口。",
+  },
+  resources: {
+    title: "关联资料 - 《基础工程》智慧学伴",
+    description: "整理基础工程课程相关规范、规程、参考教材和拓展资料，可查看标准编号、版本和关联章节。",
+  },
+  practice: {
+    title: "练习中心 - 《基础工程》智慧学伴",
+    description: "覆盖《基础工程》全书思考题和习题，支持按章节、题型、难度和关键词练习。",
+  },
+  report: {
+    title: "学习报告 - 《基础工程》智慧学伴",
+    description: "根据练习记录生成学习进度、掌握度、薄弱知识点和学习段位反馈。",
+  },
+  admin: {
+    title: "后台管理 - 《基础工程》智慧学伴",
+    description: "指导老师维护 RAG 知识库、题库、答疑口径和学生绑定关系。",
+  },
+};
+
+function routeSeo(page, details = {}) {
+  const base = pageSeo[page] ?? pageSeo.overview;
+  if (page === "textbook" && details.chapter) {
+    return {
+      title: `${details.chapter} - 教材学习 - 《基础工程》智慧学伴`,
+      description: `学习《基础工程》${details.chapter}，查看重点公式、图表解释、案例关联和章节练习。`,
+    };
+  }
+  if (page === "graph" && details.node) {
+    return {
+      title: `${details.node} - 知识图谱 - 《基础工程》智慧学伴`,
+      description: `在基础工程知识图谱中查看“${details.node}”的关联概念、关系和教材依据。`,
+    };
+  }
+  if (page === "cases" && details.caseTitle) {
+    return {
+      title: `${details.caseTitle} - 工程案例 - 《基础工程》智慧学伴`,
+      description: `查看基础工程案例“${details.caseTitle}”的工程背景、原因分析、处理措施和相关章节。`,
+    };
+  }
+  if (page === "resources" && details.resourceTitle) {
+    return {
+      title: `${details.resourceTitle} - 关联资料 - 《基础工程》智慧学伴`,
+      description: `查看关联资料“${details.resourceTitle}”的规范编号、版本信息、关键条款和课程章节关系。`,
+    };
+  }
+  return base;
+}
+
+function setDocumentMeta(selector, attributes) {
+  if (typeof document === "undefined") {
+    return;
+  }
+  let element = document.querySelector(selector);
+  if (!element) {
+    element = selector.startsWith("link") ? document.createElement("link") : document.createElement("meta");
+    if (selector.includes('rel="canonical"')) {
+      element.setAttribute("rel", "canonical");
+    }
+    if (selector.includes('name="description"')) {
+      element.setAttribute("name", "description");
+    }
+    if (selector.includes('property="og:title"')) {
+      element.setAttribute("property", "og:title");
+    }
+    if (selector.includes('property="og:description"')) {
+      element.setAttribute("property", "og:description");
+    }
+    if (selector.includes('property="og:url"')) {
+      element.setAttribute("property", "og:url");
+    }
+    document.head.appendChild(element);
+  }
+  Object.entries(attributes).forEach(([name, value]) => {
+    element.setAttribute(name, value);
+  });
+}
+
 function keywordTerms(text) {
   const compact = text.replace(/\s+/g, "");
   const terms = new Set();
@@ -1354,9 +1528,7 @@ function normalizeAiResponse(response) {
 }
 
 async function callFreeAi(prompt) {
-  if (typeof window === "undefined" || typeof window.puter?.ai?.chat !== "function") {
-    throw new Error("FREE_AI_UNAVAILABLE");
-  }
+  await ensurePuterLoaded();
   const response = await Promise.race([
     window.puter.ai.chat(prompt),
     new Promise((_, reject) => {
@@ -2430,11 +2602,9 @@ function WeakPanel({ onNavigate, courseManifest, learningStats }) {
 
 function Overview({ onNavigate, courseManifest, learningStats, exerciseBank: mergedExerciseBank }) {
   const graphSummary = useJsonAsset("/knowledge/build_summary.json", null);
-  const loadedExerciseBank = useJsonAsset("/knowledge/exercises.json", { summary: null, exercises: [] });
-  const exerciseBank = mergedExerciseBank ?? loadedExerciseBank;
   const cards = moduleCards.map((card) => ({
     ...card,
-    meta: moduleMeta(card.id, { courseManifest, graphSummary, exerciseBank }),
+    meta: moduleMeta(card.id, { courseManifest, graphSummary, exerciseBank: mergedExerciseBank }),
   }));
 
   return (
@@ -2572,9 +2742,12 @@ function TextbookPage({ onNavigate, initialChapter, courseManifest }) {
 }
 
 function GraphPage({ initialNode }) {
-  const summary = useJsonAsset("/knowledge/build_summary.json", null);
-  const graph = useJsonAsset("/knowledge/graph_preview.json", { nodes: [], edges: [] });
-  const chunks = useJsonAsset("/knowledge/chunks.json", []);
+  const summaryState = useJsonAssetState("/knowledge/build_summary.json", null);
+  const summary = summaryState.data;
+  const graphState = useJsonAssetState("/knowledge/graph_preview.json", { nodes: [], edges: [] });
+  const graph = graphState.data;
+  const chunkState = useJsonAssetState("/knowledge/chunks.json", []);
+  const chunks = chunkState.data;
   const centerNode = graph.nodes.find((node) => node.name === "第3章 桩基础") ?? graph.nodes.find((node) => node.label === "Chapter");
   const [expandedIds, setExpandedIds] = useState([]);
   const [selectedId, setSelectedId] = useState("");
@@ -2709,6 +2882,7 @@ function GraphPage({ initialNode }) {
       });
   }, [graphEdges, graphNodes, selected]);
   const sourceSnippets = useMemo(() => searchChunks(chunks, selected?.name ?? "", 3), [chunks, selected?.name]);
+  const isGraphLoading = graphState.status === "loading" && !graph.nodes.length;
 
   useEffect(() => {
     if (!initialNode) {
@@ -2754,6 +2928,9 @@ function GraphPage({ initialNode }) {
   return (
     <section className="pagePanel">
       <PageHeader label="知识图谱" title="教材知识图谱工作台" desc="完整知识库来自教材抽取，当前画布展示可交互演示子图。" />
+      {(summaryState.status === "loading" || isGraphLoading || (chunkState.status === "loading" && !chunks.length)) && (
+        <LoadingSkeleton title="正在加载图谱子图和教材索引" rows={3} />
+      )}
       {summary && (
         <div className="knowledgeStats" aria-label="知识库统计">
           <Metric label="完整节点" value={summary.graph_nodes} />
@@ -2898,12 +3075,14 @@ function QAPage({ ragChunks = [], qaConfig = defaultQaConfig, apiToken, backendS
   const [serverSources, setServerSources] = useState([]);
   const [aiStatus, setAiStatus] = useState("idle");
   const [aiError, setAiError] = useState("");
-  const baseChunks = useJsonAsset("/knowledge/chunks.json", []);
+  const baseChunkState = useJsonAssetState("/knowledge/chunks.json", []);
+  const baseChunks = baseChunkState.data;
   const chunks = useMemo(() => [...ragChunks, ...baseChunks], [baseChunks, ragChunks]);
   const modes = ["教材问答", "规范问答", "学习辅导"];
   const localResults = useMemo(() => searchChunks(chunks, question, 4), [chunks, question]);
   const results = serverSources.length ? serverSources : localResults;
   const answer = buildLocalRagAnswer(question, mode, results, qaConfig);
+  const isCorpusLoading = baseChunkState.status === "loading" && !baseChunks.length && !ragChunks.length;
 
   useEffect(() => {
     setAiAnswer("");
@@ -2989,6 +3168,7 @@ function QAPage({ ragChunks = [], qaConfig = defaultQaConfig, apiToken, backendS
         当前模式：{mode} · {backendStatus === "online" ? "服务器 RAG 已连接" : "本地演示索引"} · 教材 {baseChunks.length} 块，教师上传{" "}
         {ragChunks.length} 块。
       </div>
+      {isCorpusLoading && <LoadingSkeleton title="正在准备 RAG 教材索引" rows={3} />}
       <div className="qaShell">
         <div className="segmented">
           {modes.map((item) => (
@@ -3301,10 +3481,14 @@ function ResourcesPage({ initialResourceTitle }) {
   );
 }
 
-function PracticePage({ initialChapter, initialExerciseId, onRecordAttempt, exerciseBank: providedExerciseBank }) {
-  const loadedExerciseBank = useJsonAsset("/knowledge/exercises.json", { summary: { total: 0, thinking: 0, exercise: 0, chapters: [] }, exercises: [] });
-  const exerciseBank = providedExerciseBank ?? loadedExerciseBank;
-  const rubricBank = useJsonAsset("/knowledge/exercise_rubrics.json", { items: {} });
+function PracticePage({ initialChapter, initialExerciseId, onRecordAttempt, exerciseBank: providedExerciseBank, customExercises = [] }) {
+  const loadedExerciseState = useJsonAssetState("/knowledge/exercises.json", { summary: { total: 0, thinking: 0, exercise: 0, chapters: [] }, exercises: [] });
+  const exerciseBank = useMemo(
+    () => providedExerciseBank ?? mergeExerciseBank(loadedExerciseState.data, customExercises),
+    [customExercises, loadedExerciseState.data, providedExerciseBank],
+  );
+  const rubricState = useJsonAssetState("/knowledge/exercise_rubrics.json", { items: {} });
+  const rubricBank = rubricState.data;
   const exercises = exerciseBank.exercises ?? [];
   const summary = exerciseBank.summary ?? {};
   const exerciseChapters = useMemo(() => {
@@ -3383,6 +3567,7 @@ function PracticePage({ initialChapter, initialExerciseId, onRecordAttempt, exer
     : null;
   const selectedIndex = selectedExercise ? filteredExercises.findIndex((exercise) => exercise.id === selectedExercise.id) : -1;
   const scoreResult = submitted && selectedExerciseWithRubric ? scoreExerciseAnswer(answer, selectedExerciseWithRubric) : null;
+  const isExerciseLoading = loadedExerciseState.status === "loading" && !providedExerciseBank && !exercises.length;
 
   function selectExercise(exercise) {
     setSelectedExerciseId(exercise.id);
@@ -3443,6 +3628,9 @@ function PracticePage({ initialChapter, initialExerciseId, onRecordAttempt, exer
         title="全书练习题库"
         desc={`已导入本书 ${summary.total || exercises.length} 道思考题和习题，可按章节、题型和关键词练习。`}
       />
+      {(isExerciseLoading || (rubricState.status === "loading" && !Object.keys(rubricBank.items ?? {}).length)) && (
+        <LoadingSkeleton title="正在加载教材题库和评分 Rubric" rows={4} />
+      )}
       <div className="practiceSummary" aria-label="题库统计">
         <article>
           <strong>{summary.total || exercises.length}</strong>
@@ -3774,7 +3962,12 @@ function AdminPage({
   );
   const [exerciseStatus, setExerciseStatus] = useState("");
   const safeQaConfig = { ...defaultQaConfig, ...(qaConfig ?? {}) };
-  const mergedTotal = baseExerciseBank?.summary?.total ?? baseExerciseBank?.exercises?.length ?? 0;
+  const loadedExerciseState = useJsonAssetState("/knowledge/exercises.json", { summary: null, exercises: [] });
+  const managedExerciseBank = useMemo(
+    () => baseExerciseBank ?? mergeExerciseBank(loadedExerciseState.data, customExercises),
+    [baseExerciseBank, customExercises, loadedExerciseState.data],
+  );
+  const mergedTotal = managedExerciseBank?.summary?.total ?? managedExerciseBank?.exercises?.length ?? 0;
   const baseTotal = Math.max(0, mergedTotal - customExercises.length);
   const toolItems = [
     { id: "RAG知识库", icon: UploadCloud, desc: "上传 Markdown、TXT 或 JSON，生成本地检索切块" },
@@ -3925,6 +4118,7 @@ function AdminPage({
           道，教师导入题 {customExercises.length} 道，上传知识库 {ragDocuments.length} 份。
         </p>
       </div>
+      {loadedExerciseState.status === "loading" && !baseExerciseBank && <LoadingSkeleton title="正在加载教材基础题库" rows={2} />}
       <div className="adminGrid">
         {toolItems.map((item) => {
           const Icon = item.icon;
@@ -4047,7 +4241,7 @@ function AdminPage({
                 <span>教师导入</span>
               </article>
               <article>
-                <strong>{baseExerciseBank?.summary?.chapters?.length ?? 7}</strong>
+                <strong>{managedExerciseBank?.summary?.chapters?.length ?? 7}</strong>
                 <span>覆盖章节</span>
               </article>
             </div>
@@ -4150,17 +4344,41 @@ function PageHeader({ label, title, desc }) {
   );
 }
 
-function GlobalSearchPanel({ query, courseManifest, onNavigate, onClear, ragChunks = [], exerciseBank: mergedExerciseBank }) {
-  const baseChunks = useJsonAsset("/knowledge/chunks.json", []);
+function LoadingSkeleton({ title = "正在加载课程数据", rows = 3 }) {
+  return (
+    <div className="loadingSkeleton" aria-live="polite">
+      <div>
+        <span className="skeletonLine title" />
+        <strong>{title}</strong>
+      </div>
+      {Array.from({ length: rows }).map((_, index) => (
+        <span className={cx("skeletonLine", index % 2 === 0 && "wide")} key={index} />
+      ))}
+    </div>
+  );
+}
+
+function GlobalSearchPanel({ query, courseManifest, onNavigate, onClear, ragChunks = [], exerciseBank: providedExerciseBank, customExercises = [] }) {
+  const baseChunkState = useJsonAssetState("/knowledge/chunks.json", []);
+  const baseChunks = baseChunkState.data;
   const chunks = useMemo(() => [...ragChunks, ...baseChunks], [baseChunks, ragChunks]);
-  const graph = useJsonAsset("/knowledge/graph_preview.json", { nodes: [], edges: [] });
-  const loadedExerciseBank = useJsonAsset("/knowledge/exercises.json", { summary: null, exercises: [] });
-  const exerciseBank = mergedExerciseBank ?? loadedExerciseBank;
+  const graphState = useJsonAssetState("/knowledge/graph_preview.json", { nodes: [], edges: [] });
+  const graph = graphState.data;
+  const loadedExerciseState = useJsonAssetState("/knowledge/exercises.json", { summary: null, exercises: [] });
+  const exerciseBank = useMemo(
+    () => providedExerciseBank ?? mergeExerciseBank(loadedExerciseState.data, customExercises),
+    [customExercises, loadedExerciseState.data, providedExerciseBank],
+  );
   const resultGroups = useMemo(
     () => buildGlobalSearchResults({ query, courseManifest, chunks, graph, exerciseBank }),
     [chunks, courseManifest, exerciseBank, graph, query],
   );
   const totalResults = resultGroups.reduce((total, group) => total + group.items.length, 0);
+  const isSearchingAssets =
+    [baseChunkState.status, graphState.status, loadedExerciseState.status].includes("loading") &&
+    !chunks.length &&
+    !graph.nodes.length &&
+    !exerciseBank.exercises?.length;
 
   function openResult(action) {
     onNavigate(action.page, action);
@@ -4197,7 +4415,9 @@ function GlobalSearchPanel({ query, courseManifest, onNavigate, onClear, ragChun
           清空
         </button>
       </div>
-      {totalResults ? (
+      {isSearchingAssets ? (
+        <LoadingSkeleton title="正在检索教材、图谱和题库" rows={4} />
+      ) : totalResults ? (
         <div className="globalSearchGroups">
           {resultGroups.map((group) => (
             <section className="globalSearchGroup" key={group.group}>
@@ -4248,6 +4468,8 @@ function Page({
   backendStatus,
   onRefreshData,
 }) {
+  const fullExerciseBank = exerciseBank?._preview ? undefined : exerciseBank;
+
   switch (active) {
     case "textbook":
       return <TextbookPage onNavigate={onNavigate} initialChapter={activeChapter} courseManifest={courseManifest} />;
@@ -4260,7 +4482,15 @@ function Page({
     case "resources":
       return <ResourcesPage initialResourceTitle={activeResourceTitle} />;
     case "practice":
-      return <PracticePage initialChapter={activeChapter} initialExerciseId={activeExerciseId} onRecordAttempt={onRecordAttempt} exerciseBank={exerciseBank} />;
+      return (
+        <PracticePage
+          initialChapter={activeChapter}
+          initialExerciseId={activeExerciseId}
+          onRecordAttempt={onRecordAttempt}
+          exerciseBank={fullExerciseBank}
+          customExercises={customExercises}
+        />
+      );
     case "report":
       return <ReportPage learningStats={learningStats} />;
     case "admin":
@@ -4271,7 +4501,7 @@ function Page({
           apiToken={apiToken}
           backendStatus={backendStatus}
           onRefreshData={onRefreshData}
-          baseExerciseBank={exerciseBank}
+          baseExerciseBank={fullExerciseBank}
           ragDocuments={ragDocuments}
           setRagDocuments={setRagDocuments}
           ragChunks={ragChunks}
@@ -4292,7 +4522,6 @@ function Page({
 
 export function App() {
   const courseManifest = useJsonAsset("/course-manifest.json", defaultCourseManifest);
-  const baseExerciseBank = useJsonAsset("/knowledge/exercises.json", { summary: null, exercises: [] });
   const [currentUser, setCurrentUser] = usePersistentState(authSessionKey, null);
   const [ragDocuments, setRagDocuments] = usePersistentState(ragDocumentsKey, []);
   const [customExercises, setCustomExercises] = usePersistentState(customExercisesKey, []);
@@ -4301,7 +4530,20 @@ export function App() {
   const [backendStatus, setBackendStatus] = useState("checking");
   const [learningAttempts, setLearningAttempts] = useState(readLearningAttempts);
   const ragChunks = useMemo(() => buildLocalRagChunks(ragDocuments), [ragDocuments]);
-  const exerciseBank = useMemo(() => serverExerciseBank ?? mergeExerciseBank(baseExerciseBank, customExercises), [baseExerciseBank, customExercises, serverExerciseBank]);
+  const previewExerciseBank = useMemo(() => {
+    const chapters = courseChapters(courseManifest).map((chapter) => `第${chapter.number}章 ${chapter.title}`);
+    return {
+      _preview: true,
+      summary: {
+        total: customExercises.length || 79,
+        thinking: 0,
+        exercise: 0,
+        chapters,
+      },
+      exercises: customExercises,
+    };
+  }, [courseManifest, customExercises]);
+  const exerciseBank = useMemo(() => serverExerciseBank ?? previewExerciseBank, [previewExerciseBank, serverExerciseBank]);
   const initialRoute = routeFromLocation(defaultCourseManifest);
   const [active, setActive] = useState(initialRoute.page);
   const [query, setQuery] = useState("");
@@ -4311,10 +4553,34 @@ export function App() {
   const [activeResourceTitle, setActiveResourceTitle] = useState(initialRoute.resourceTitle ?? "");
   const [activeExerciseId, setActiveExerciseId] = useState(initialRoute.exerciseId ?? "");
   const activeLabel = useMemo(() => navItems.find((item) => item.id === active)?.label ?? "课程总览", [active]);
+  const activeRouteOptions = useMemo(
+    () => ({
+      chapter: activeChapter,
+      node: activeGraphNode,
+      caseTitle: activeCaseTitle,
+      resourceTitle: activeResourceTitle,
+      exerciseId: activeExerciseId,
+    }),
+    [activeCaseTitle, activeChapter, activeExerciseId, activeGraphNode, activeResourceTitle],
+  );
   const learningStats = useMemo(
     () => buildLearningStats({ courseManifest, exerciseBank, attempts: learningAttempts }),
     [courseManifest, exerciseBank, learningAttempts],
   );
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+    const seo = routeSeo(active, activeRouteOptions);
+    const canonical = `${window.location.origin}${routeToUrl(active, activeRouteOptions, courseManifest)}`;
+    document.title = seo.title;
+    setDocumentMeta('meta[name="description"]', { content: seo.description });
+    setDocumentMeta('meta[property="og:title"]', { content: seo.title });
+    setDocumentMeta('meta[property="og:description"]', { content: seo.description });
+    setDocumentMeta('meta[property="og:url"]', { content: canonical });
+    setDocumentMeta('link[rel="canonical"]', { href: canonical });
+  }, [active, activeRouteOptions, courseManifest]);
 
   useEffect(() => {
     window.localStorage.setItem(learningAttemptsKey, JSON.stringify(learningAttempts));
@@ -4435,33 +4701,36 @@ export function App() {
               onNavigate={handleNavigate}
               onClear={() => setQuery("")}
               ragChunks={ragChunks}
-              exerciseBank={exerciseBank}
+              exerciseBank={exerciseBank?._preview ? undefined : exerciseBank}
+              customExercises={customExercises}
             />
           )}
-          <Page
-            active={active}
-            onNavigate={handleNavigate}
-            activeChapter={activeChapter}
-            activeGraphNode={activeGraphNode}
-            activeCaseTitle={activeCaseTitle}
-            activeResourceTitle={activeResourceTitle}
-            activeExerciseId={activeExerciseId}
-            courseManifest={courseManifest}
-            learningStats={learningStats}
-            onRecordAttempt={handleRecordAttempt}
-            currentUser={currentUser}
-            exerciseBank={exerciseBank}
-            ragDocuments={ragDocuments}
-            setRagDocuments={setRagDocuments}
-            ragChunks={ragChunks}
-            customExercises={customExercises}
-            setCustomExercises={setCustomExercises}
-            qaConfig={qaConfig}
-            setQaConfig={setQaConfig}
-            apiToken={currentUser.token}
-            backendStatus={backendStatus}
-            onRefreshData={() => refreshServerData()}
-          />
+          <div className="routeSurface" key={active}>
+            <Page
+              active={active}
+              onNavigate={handleNavigate}
+              activeChapter={activeChapter}
+              activeGraphNode={activeGraphNode}
+              activeCaseTitle={activeCaseTitle}
+              activeResourceTitle={activeResourceTitle}
+              activeExerciseId={activeExerciseId}
+              courseManifest={courseManifest}
+              learningStats={learningStats}
+              onRecordAttempt={handleRecordAttempt}
+              currentUser={currentUser}
+              exerciseBank={exerciseBank}
+              ragDocuments={ragDocuments}
+              setRagDocuments={setRagDocuments}
+              ragChunks={ragChunks}
+              customExercises={customExercises}
+              setCustomExercises={setCustomExercises}
+              qaConfig={qaConfig}
+              setQaConfig={setQaConfig}
+              apiToken={currentUser.token}
+              backendStatus={backendStatus}
+              onRefreshData={() => refreshServerData()}
+            />
+          </div>
         </main>
       </div>
     </div>
