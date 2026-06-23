@@ -571,6 +571,27 @@ function usePersistentState(key, fallback) {
   return [value, setValue];
 }
 
+async function apiRequest(path, { method = "GET", body, token, headers = {} } = {}) {
+  const requestHeaders = { ...headers };
+  const options = { method, headers: requestHeaders };
+  if (token) {
+    requestHeaders.Authorization = `Bearer ${token}`;
+  }
+  if (body instanceof FormData) {
+    options.body = body;
+  } else if (body !== undefined) {
+    requestHeaders["Content-Type"] = "application/json";
+    options.body = JSON.stringify(body);
+  }
+  const response = await fetch(`/api${path}`, options);
+  const text = await response.text();
+  const data = text ? JSON.parse(text) : {};
+  if (!response.ok) {
+    throw new Error(data.detail || data.message || `API ${response.status}`);
+  }
+  return data;
+}
+
 function canManageContent(user) {
   return ["teacher", "admin"].includes(user?.role);
 }
@@ -1044,7 +1065,11 @@ function compactText(text = "", limit = 260) {
 function buildAiPrompt(question, mode, results, qaConfig = defaultQaConfig) {
   const context = results.length
     ? results
-        .map((item, index) => `${index + 1}. ${item.heading_path} L${item.source_line}: ${compactText(item.text, 360)}`)
+        .map((item, index) => {
+          const title = item.heading_path || item.documentTitle || item.title || "教材资料";
+          const line = item.source_line ? ` L${item.source_line}` : "";
+          return `${index + 1}. ${title}${line}: ${compactText(item.text ?? "", 360)}`;
+        })
         .join("\n")
     : "暂无教材检索片段。";
   return [
@@ -1763,6 +1788,7 @@ function LoginPage({ onLogin }) {
   const [username, setUsername] = useState(selectedUser.username);
   const [password, setPassword] = useState(selectedUser.password);
   const [error, setError] = useState("");
+  const [status, setStatus] = useState("idle");
 
   useEffect(() => {
     setUsername(selectedUser.username);
@@ -1770,14 +1796,18 @@ function LoginPage({ onLogin }) {
     setError("");
   }, [selectedUser.password, selectedUser.username]);
 
-  function submitLogin(event) {
+  async function submitLogin(event) {
     event.preventDefault();
     const matched = demoUsers.find((user) => user.username === username.trim() && user.password === password.trim());
-    if (!matched) {
-      setError("账号或密码不匹配。演示密码统一为 123456。");
+    setStatus("loading");
+    setError("");
+    const result = await onLogin({ username: username.trim(), password: password.trim(), fallbackUser: matched });
+    if (!result?.ok) {
+      setStatus("error");
+      setError(result?.message || "账号或密码不匹配。");
       return;
     }
-    onLogin(matched);
+    setStatus(result.offline ? "offline" : "success");
   }
 
   return (
@@ -1812,9 +1842,10 @@ function LoginPage({ onLogin }) {
             <input value={password} type="password" onChange={(event) => setPassword(event.target.value)} />
           </label>
           {error && <p className="loginError">{error}</p>}
-          <button type="submit">
+          {status === "offline" && <p className="loginHint">后端暂未连接，已进入本机演示模式。</p>}
+          <button type="submit" disabled={status === "loading"}>
             <LogIn size={18} />
-            登录平台
+            {status === "loading" ? "登录中" : "登录平台"}
           </button>
         </form>
       </section>
@@ -2614,31 +2645,60 @@ function GraphPage({ initialNode }) {
   );
 }
 
-function QAPage({ ragChunks = [], qaConfig = defaultQaConfig }) {
+function QAPage({ ragChunks = [], qaConfig = defaultQaConfig, apiToken, backendStatus = "offline" }) {
   const [mode, setMode] = useState("教材问答");
   const [question, setQuestion] = useState("桩侧阻力是如何产生的？影响它的主要因素有哪些？");
   const [draftQuestion, setDraftQuestion] = useState(question);
   const [searchCount, setSearchCount] = useState(1);
   const [aiAnswer, setAiAnswer] = useState("");
+  const [serverSources, setServerSources] = useState([]);
   const [aiStatus, setAiStatus] = useState("idle");
   const [aiError, setAiError] = useState("");
   const baseChunks = useJsonAsset("/knowledge/chunks.json", []);
   const chunks = useMemo(() => [...ragChunks, ...baseChunks], [baseChunks, ragChunks]);
   const modes = ["教材问答", "规范问答", "学习辅导"];
-  const results = useMemo(() => searchChunks(chunks, question, 4), [chunks, question]);
+  const localResults = useMemo(() => searchChunks(chunks, question, 4), [chunks, question]);
+  const results = serverSources.length ? serverSources : localResults;
   const answer = buildLocalRagAnswer(question, mode, results, qaConfig);
 
   useEffect(() => {
     setAiAnswer("");
+    setServerSources([]);
     setAiStatus("idle");
     setAiError("");
   }, [mode, question]);
 
-  function runSearch() {
+  async function askServer(nextQuestion, useLlm) {
+    if (!apiToken) {
+      throw new Error("NO_SERVER_TOKEN");
+    }
+    const data = await apiRequest("/qa", {
+      method: "POST",
+      token: apiToken,
+      body: { question: nextQuestion, mode, useLlm },
+    });
+    setServerSources(data.sources ?? []);
+    setAiAnswer(data.answer ?? "");
+    return data;
+  }
+
+  async function runSearch() {
     const nextQuestion = draftQuestion.trim() || "桩侧阻力是如何产生的？";
     setQuestion(nextQuestion);
     setDraftQuestion(nextQuestion);
     setSearchCount((count) => count + 1);
+    setAiStatus("loading");
+    setAiError("");
+    try {
+      const data = await askServer(nextQuestion, false);
+      setAiStatus("success");
+      setAiError(data.usedLlm ? "服务端大模型生成" : "服务端 RAG 检索回答");
+    } catch {
+      setServerSources([]);
+      setAiAnswer("");
+      setAiStatus("idle");
+      setAiError(apiToken ? "服务端暂不可用，已使用本地教材索引检索。" : "");
+    }
   }
 
   async function generateAiAnswer() {
@@ -2650,13 +2710,30 @@ function QAPage({ ragChunks = [], qaConfig = defaultQaConfig }) {
     setAiStatus("loading");
     setAiError("");
     try {
-      const responseText = await callFreeAi(buildAiPrompt(nextQuestion, mode, nextResults, qaConfig));
-      setAiAnswer(responseText);
+      const data = await askServer(nextQuestion, true);
       setAiStatus("success");
+      if (data.usedLlm) {
+        setAiError("服务端大模型生成 · 已结合 RAG 检索片段");
+        return;
+      }
+      try {
+        const responseText = await callFreeAi(buildAiPrompt(nextQuestion, mode, data.sources?.length ? data.sources : nextResults, qaConfig));
+        setAiAnswer(responseText);
+        setAiError("浏览器端免费 AI 生成 · 已结合服务器 RAG 片段");
+      } catch {
+        setAiError("免费 AI 需首次授权或暂不可用，已返回服务器 RAG 检索答案");
+      }
     } catch {
-      setAiAnswer("");
-      setAiStatus("error");
-      setAiError("免费 API 暂时没有返回，已保留本地教材检索结果。");
+      try {
+        const responseText = await callFreeAi(buildAiPrompt(nextQuestion, mode, nextResults, qaConfig));
+        setAiAnswer(responseText);
+        setAiStatus("success");
+        setAiError("浏览器端免费 AI 生成 · 服务端暂不可用");
+      } catch {
+        setAiAnswer("");
+        setAiStatus("error");
+        setAiError("大模型暂时没有返回，已保留本地教材检索结果。");
+      }
     }
   }
 
@@ -2665,7 +2742,8 @@ function QAPage({ ragChunks = [], qaConfig = defaultQaConfig }) {
       <PageHeader label="智能问答" title="RAG 检索问答" desc="已接入《基础工程》教材切块和教师上传知识库，先检索引用，再生成回答。" />
       <div className="teacherNotice">
         <Link2 size={17} />
-        当前模式：{mode} · 检索库：教材 {baseChunks.length} 块，教师上传 {ragChunks.length} 块。
+        当前模式：{mode} · {backendStatus === "online" ? "服务器 RAG 已连接" : "本地演示索引"} · 教材 {baseChunks.length} 块，教师上传{" "}
+        {ragChunks.length} 块。
       </div>
       <div className="qaShell">
         <div className="segmented">
@@ -2683,9 +2761,9 @@ function QAPage({ ragChunks = [], qaConfig = defaultQaConfig }) {
               <p>{aiAnswer || answer}</p>
               <span>
                 {aiStatus === "success"
-                  ? "Puter.js 免费 AI 生成 · 已结合 RAG 检索片段"
+                  ? aiError || "已结合 RAG 检索片段生成"
                   : aiStatus === "loading"
-                    ? "正在调用免费 AI 生成答案..."
+                    ? "正在请求服务端问答..."
                     : aiError || `引用：${results[0]?.heading_path ?? "教材索引"} ${results[0] ? `L${results[0].source_line}` : ""}`}
               </span>
             </div>
@@ -3257,6 +3335,9 @@ function ReportPage({ learningStats }) {
 function AdminPage({
   courseManifest,
   currentUser,
+  apiToken,
+  backendStatus = "offline",
+  onRefreshData,
   baseExerciseBank,
   ragDocuments,
   setRagDocuments,
@@ -3303,6 +3384,21 @@ function AdminPage({
     if (!files.length) {
       return;
     }
+    if (apiToken) {
+      try {
+        for (const file of files) {
+          const formData = new FormData();
+          formData.append("file", file);
+          await apiRequest("/documents/upload", { method: "POST", token: apiToken, body: formData });
+        }
+        setUploadStatus(`已上传 ${files.length} 个知识库文件到服务器 RAG。`);
+        await onRefreshData?.();
+        event.target.value = "";
+        return;
+      } catch {
+        setUploadStatus("服务器上传失败，已切换为本机演示导入。");
+      }
+    }
     const nextDocuments = [];
     for (const file of files) {
       const raw = await file.text();
@@ -3321,7 +3417,22 @@ function AdminPage({
     event.target.value = "";
   }
 
-  function addPastedDocument() {
+  async function addPastedDocument() {
+    if (apiToken) {
+      try {
+        await apiRequest("/documents", {
+          method: "POST",
+          token: apiToken,
+          body: { title: pasteTitle, text: pasteText, sourceType: "teacher-paste" },
+        });
+        setPasteText("");
+        setUploadStatus("已把粘贴内容写入服务器 RAG 知识库。");
+        await onRefreshData?.();
+        return;
+      } catch {
+        setUploadStatus("服务器写入失败，已切换为本机演示导入。");
+      }
+    }
     const document = makeRagDocument({ title: pasteTitle, text: pasteText, sourceType: "teacher-paste" });
     if (!document) {
       setUploadStatus("请先粘贴 Markdown 或文本内容。");
@@ -3332,15 +3443,30 @@ function AdminPage({
     setUploadStatus("已把粘贴内容加入 RAG 知识库。");
   }
 
-  function removeDocument(id) {
+  async function removeDocument(id) {
+    if (apiToken) {
+      try {
+        await apiRequest(`/documents/${encodeURIComponent(id)}`, { method: "DELETE", token: apiToken });
+        await onRefreshData?.();
+        return;
+      } catch {
+        setUploadStatus("服务器删除失败，请稍后重试。");
+      }
+    }
     setRagDocuments((current) => (current ?? []).filter((document) => document.id !== id));
   }
 
-  function importExercises() {
+  async function importExercises() {
     try {
       const imported = parseExerciseImport(exerciseJson);
       if (!imported.length) {
         setExerciseStatus("没有识别到有效题目，请使用 JSON 数组或 { exercises: [...] }。");
+        return;
+      }
+      if (apiToken) {
+        await apiRequest("/exercises/import", { method: "POST", token: apiToken, body: { exercises: imported } });
+        setExerciseStatus(`已导入 ${imported.length} 道题到服务器题库，练习中心会立即显示。`);
+        await onRefreshData?.();
         return;
       }
       setCustomExercises((current) => {
@@ -3354,12 +3480,31 @@ function AdminPage({
     }
   }
 
-  function removeCustomExercise(id) {
+  async function removeCustomExercise(id) {
+    if (apiToken) {
+      try {
+        await apiRequest(`/exercises/${encodeURIComponent(id)}`, { method: "DELETE", token: apiToken });
+        await onRefreshData?.();
+        return;
+      } catch {
+        setExerciseStatus("服务器删除失败，请稍后重试。");
+      }
+    }
     setCustomExercises((current) => (current ?? []).filter((exercise) => exercise.id !== id));
   }
 
-  function updateQaConfig(key, value) {
-    setQaConfig((current) => ({ ...(current ?? defaultQaConfig), [key]: value }));
+  async function updateQaConfig(key, value) {
+    const nextConfig = { ...(qaConfig ?? defaultQaConfig), [key]: value };
+    setQaConfig(nextConfig);
+    if (!apiToken) {
+      return;
+    }
+    try {
+      const saved = await apiRequest("/qa-config", { method: "PUT", token: apiToken, body: nextConfig });
+      setQaConfig(saved);
+    } catch {
+      setUploadStatus("答疑配置暂未同步到服务器，已先保存在本机。");
+    }
   }
 
   return (
@@ -3372,8 +3517,8 @@ function AdminPage({
           <strong>{currentUser?.name}</strong>
         </div>
         <p>
-          当前课程共 {courseManifest?.totalChapters ?? 7} 章，教材题库 {baseTotal} 道，教师导入题 {customExercises.length} 道，上传知识库{" "}
-          {ragDocuments.length} 份。
+          {backendStatus === "online" ? "服务器已连接" : "本机演示模式"} · 当前课程共 {courseManifest?.totalChapters ?? 7} 章，教材题库 {baseTotal}{" "}
+          道，教师导入题 {customExercises.length} 道，上传知识库 {ragDocuments.length} 份。
         </p>
       </div>
       <div className="adminGrid">
@@ -3695,6 +3840,9 @@ function Page({
   setCustomExercises,
   qaConfig,
   setQaConfig,
+  apiToken,
+  backendStatus,
+  onRefreshData,
 }) {
   switch (active) {
     case "textbook":
@@ -3702,7 +3850,7 @@ function Page({
     case "graph":
       return <GraphPage initialNode={activeGraphNode} />;
     case "qa":
-      return <QAPage ragChunks={ragChunks} qaConfig={qaConfig} />;
+      return <QAPage ragChunks={ragChunks} qaConfig={qaConfig} apiToken={apiToken} backendStatus={backendStatus} />;
     case "cases":
       return <CasesPage initialCaseTitle={activeCaseTitle} />;
     case "resources":
@@ -3716,6 +3864,9 @@ function Page({
         <AdminPage
           courseManifest={courseManifest}
           currentUser={currentUser}
+          apiToken={apiToken}
+          backendStatus={backendStatus}
+          onRefreshData={onRefreshData}
           baseExerciseBank={exerciseBank}
           ragDocuments={ragDocuments}
           setRagDocuments={setRagDocuments}
@@ -3742,9 +3893,11 @@ export function App() {
   const [ragDocuments, setRagDocuments] = usePersistentState(ragDocumentsKey, []);
   const [customExercises, setCustomExercises] = usePersistentState(customExercisesKey, []);
   const [qaConfig, setQaConfig] = usePersistentState(qaConfigKey, defaultQaConfig);
+  const [serverExerciseBank, setServerExerciseBank] = useState(null);
+  const [backendStatus, setBackendStatus] = useState("checking");
   const [learningAttempts, setLearningAttempts] = useState(readLearningAttempts);
   const ragChunks = useMemo(() => buildLocalRagChunks(ragDocuments), [ragDocuments]);
-  const exerciseBank = useMemo(() => mergeExerciseBank(baseExerciseBank, customExercises), [baseExerciseBank, customExercises]);
+  const exerciseBank = useMemo(() => serverExerciseBank ?? mergeExerciseBank(baseExerciseBank, customExercises), [baseExerciseBank, customExercises, serverExerciseBank]);
   const initialRoute = routeFromLocation(defaultCourseManifest);
   const [active, setActive] = useState(initialRoute.page);
   const [query, setQuery] = useState("");
@@ -3762,6 +3915,33 @@ export function App() {
   useEffect(() => {
     window.localStorage.setItem(learningAttemptsKey, JSON.stringify(learningAttempts));
   }, [learningAttempts]);
+
+  async function refreshServerData(user = currentUser) {
+    if (!user?.token) {
+      setBackendStatus("offline");
+      return false;
+    }
+    try {
+      const [documentsData, exercisesData, qaConfigData] = await Promise.all([
+        apiRequest("/documents", { token: user.token }),
+        apiRequest("/exercises", { token: user.token }),
+        apiRequest("/qa-config", { token: user.token }),
+      ]);
+      setRagDocuments(documentsData.documents ?? []);
+      setServerExerciseBank(exercisesData);
+      setCustomExercises((exercisesData.exercises ?? []).filter((exercise) => exercise._source === "teacher"));
+      setQaConfig({ ...defaultQaConfig, ...qaConfigData });
+      setBackendStatus("online");
+      return true;
+    } catch {
+      setBackendStatus("offline");
+      return false;
+    }
+  }
+
+  useEffect(() => {
+    refreshServerData();
+  }, [currentUser?.token]);
 
   function applyRoute(route) {
     if (route.chapter) {
@@ -3806,13 +3986,28 @@ export function App() {
     });
   }
 
-  function handleLogin(user) {
-    const { password: _password, ...session } = user;
-    setCurrentUser(session);
+  async function handleLogin({ username, password, fallbackUser }) {
+    try {
+      const data = await apiRequest("/auth/login", { method: "POST", body: { username, password } });
+      const session = { ...data.user, token: data.token };
+      setCurrentUser(session);
+      await refreshServerData(session);
+      return { ok: true };
+    } catch {
+      if (!fallbackUser) {
+        return { ok: false, message: "服务器登录失败，请检查账号密码或联系管理员。" };
+      }
+      const { password: _password, ...session } = fallbackUser;
+      setCurrentUser(session);
+      setBackendStatus("offline");
+      return { ok: true, offline: true };
+    }
   }
 
   function handleLogout() {
     setCurrentUser(null);
+    setServerExerciseBank(null);
+    setBackendStatus("offline");
     setQuery("");
     setActive("overview");
     window.history.pushState({ route: { page: "overview" } }, "", routeToUrl("overview", {}, courseManifest));
@@ -3859,6 +4054,9 @@ export function App() {
             setCustomExercises={setCustomExercises}
             qaConfig={qaConfig}
             setQaConfig={setQaConfig}
+            apiToken={currentUser.token}
+            backendStatus={backendStatus}
+            onRefreshData={() => refreshServerData()}
           />
         </main>
       </div>

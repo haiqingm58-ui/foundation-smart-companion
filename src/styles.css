@@ -212,6 +212,22 @@ textarea:focus-visible,
   font-weight: 800;
 }
 
+.loginHint {
+  margin: 0;
+  border: 1px solid #d9eee3;
+  border-radius: 8px;
+  background: #f5fcf8;
+  color: var(--green);
+  padding: 10px 12px;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.loginForm button:disabled {
+  cursor: wait;
+  opacity: 0.72;
+}
+
 .loginAside {
   max-width: 430px;
   padding: 28px;

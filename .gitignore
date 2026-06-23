@@ -7,3 +7,9 @@ AGENTS.md
 data/
 design-shots/
 scripts/
+.playwright-cli/
+__pycache__/
+*.pyc
+server/.venv/
+server/data/
+server/__pycache__/
