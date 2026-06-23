@@ -4,19 +4,26 @@ import {
   Bell,
   BookOpen,
   Bot,
+  BrainCircuit,
   BriefcaseBusiness,
   ChevronDown,
+  CheckCircle2,
   CircleHelp,
+  ClipboardList,
   Clock3,
   Database,
   FileText,
+  FileUp,
   Focus,
   GraduationCap,
   LayoutDashboard,
   LibraryBig,
   Link2,
   ListFilter,
+  LockKeyhole,
   LocateFixed,
+  LogIn,
+  LogOut,
   MessageSquareText,
   MousePointer2,
   Network,
@@ -27,8 +34,11 @@ import {
   RotateCcw,
   Search,
   Settings,
+  ShieldCheck,
   Target,
   Trophy,
+  UploadCloud,
+  UserPlus,
   UserRound,
   ZoomIn,
   ZoomOut,
@@ -46,6 +56,51 @@ const navItems = [
   { id: "report", label: "学习报告", icon: BarChart3 },
   { id: "admin", label: "后台管理", icon: Settings },
 ];
+
+const demoUsers = [
+  {
+    id: "student-zhang",
+    role: "student",
+    roleLabel: "学生",
+    name: "张同学",
+    username: "student",
+    password: "123456",
+    studentNo: "20220001",
+    college: "土木工程学院",
+    school: "某某大学",
+    mentor: "李老师",
+  },
+  {
+    id: "teacher-li",
+    role: "teacher",
+    roleLabel: "指导老师",
+    name: "李老师",
+    username: "teacher",
+    password: "123456",
+    studentNo: "T-001",
+    college: "土木工程学院",
+    school: "某某大学",
+    mentor: "课程负责人",
+  },
+  {
+    id: "admin-root",
+    role: "admin",
+    roleLabel: "管理员",
+    name: "管理员",
+    username: "admin",
+    password: "123456",
+    studentNo: "ADMIN",
+    college: "教务与资源中心",
+    school: "某某大学",
+    mentor: "平台运维",
+  },
+];
+
+const roleFeatures = {
+  student: ["教材学习", "RAG 问答", "题库练习", "学习报告"],
+  teacher: ["知识库上传", "题库导入", "答疑配置", "学生绑定"],
+  admin: ["全局后台", "内容审核", "数据维护", "权限管理"],
+};
 
 const defaultCourseManifest = {
   courseId: "foundation-engineering",
@@ -124,14 +179,6 @@ const weakPoints = [
   { name: "沉降计算", score: 62, note: "公式适用条件容易混淆" },
   { name: "桩侧阻力", score: 58, note: "荷载传递机制掌握不足" },
   { name: "群桩效应", score: 65, note: "与单桩承载力关联薄弱" },
-];
-
-const studentProfile = [
-  { label: "姓名", value: "张同学" },
-  { label: "学号", value: "20220001" },
-  { label: "学院", value: "土木工程学院" },
-  { label: "学校", value: "某某大学" },
-  { label: "辅导老师", value: "李老师" },
 ];
 
 const rankInfo = {
@@ -488,6 +535,213 @@ function progressPercent(courseManifest) {
 }
 
 const learningAttemptsKey = "foundation-smart-companion:learning-attempts";
+const authSessionKey = "foundation-smart-companion:auth-session";
+const ragDocumentsKey = "foundation-smart-companion:rag-documents";
+const customExercisesKey = "foundation-smart-companion:custom-exercises";
+const qaConfigKey = "foundation-smart-companion:qa-config";
+
+const defaultQaConfig = {
+  teacherInstruction: "回答时优先引用教材原文，涉及规范条文时提示学生以指导老师确认版本为准。",
+  answerStyle: "先给结论，再列关键依据，最后给复习建议。",
+  reviewRule: "低置信度答案和计算题高分答案建议教师复核。",
+};
+
+function readStoredJson(key, fallback) {
+  if (typeof window === "undefined") {
+    return fallback;
+  }
+  try {
+    const value = window.localStorage.getItem(key);
+    if (!value) {
+      return fallback;
+    }
+    return JSON.parse(value);
+  } catch {
+    return fallback;
+  }
+}
+
+function usePersistentState(key, fallback) {
+  const [value, setValue] = useState(() => readStoredJson(key, fallback));
+
+  useEffect(() => {
+    window.localStorage.setItem(key, JSON.stringify(value));
+  }, [key, value]);
+
+  return [value, setValue];
+}
+
+function canManageContent(user) {
+  return ["teacher", "admin"].includes(user?.role);
+}
+
+function profileRowsForUser(user) {
+  const profile = user ?? demoUsers[0];
+  return [
+    { label: "姓名", value: profile.name },
+    { label: profile.role === "student" ? "学号" : "工号", value: profile.studentNo },
+    { label: "学院", value: profile.college },
+    { label: "学校", value: profile.school },
+    { label: "辅导老师", value: profile.mentor },
+  ];
+}
+
+function cleanUploadedText(text = "") {
+  return text
+    .replace(/\r/g, "")
+    .replace(/\\n/g, "\n")
+    .replace(/[ \t]+\n/g, "\n")
+    .replace(/\n{4,}/g, "\n\n\n")
+    .trim();
+}
+
+function normalizeDocumentTitle(name = "补充资料") {
+  return name.replace(/\.(md|markdown|txt|json)$/i, "").slice(0, 42) || "补充资料";
+}
+
+function makeRagDocument({ title, text, sourceType = "teacher-upload" }) {
+  const clean = cleanUploadedText(text);
+  if (!clean) {
+    return null;
+  }
+  return {
+    id: `doc-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
+    title: normalizeDocumentTitle(title),
+    text: clean.slice(0, 180000),
+    sourceType,
+    uploadedAt: new Date().toISOString(),
+  };
+}
+
+function extractDocumentText(rawText) {
+  const clean = cleanUploadedText(rawText);
+  if (!clean) {
+    return "";
+  }
+  try {
+    const parsed = JSON.parse(clean);
+    if (Array.isArray(parsed)) {
+      return parsed.map((item) => item.text ?? item.content ?? item.title ?? "").join("\n\n");
+    }
+    if (Array.isArray(parsed.chunks)) {
+      return parsed.chunks.map((item) => item.text ?? item.content ?? "").join("\n\n");
+    }
+    if (Array.isArray(parsed.items)) {
+      return parsed.items.map((item) => item.text ?? item.content ?? item.title ?? "").join("\n\n");
+    }
+    return parsed.text ?? parsed.content ?? clean;
+  } catch {
+    return clean;
+  }
+}
+
+function chunkTextForRag(document) {
+  if (!document?.text) {
+    return [];
+  }
+  const lines = cleanUploadedText(document.text).split("\n");
+  const chunks = [];
+  let heading = document.title;
+  let buffer = [];
+  let startLine = 1;
+
+  function flush(endLine) {
+    const text = cleanUploadedText(buffer.join("\n"));
+    if (text.length < 18) {
+      buffer = [];
+      startLine = endLine + 1;
+      return;
+    }
+    chunks.push({
+      id: `upload:${document.id}:${chunks.length + 1}`,
+      kind: "teacher-upload",
+      sourceType: document.sourceType,
+      documentTitle: document.title,
+      text,
+      source_line: startLine,
+      end_line: endLine,
+      heading_path: `${document.title}${heading && heading !== document.title ? ` > ${heading}` : ""}`,
+    });
+    buffer = [];
+    startLine = endLine + 1;
+  }
+
+  lines.forEach((line, index) => {
+    const lineNumber = index + 1;
+    const headingMatch = line.match(/^(#{1,4})\s+(.+)$/);
+    if (headingMatch) {
+      flush(lineNumber - 1);
+      heading = headingMatch[2].trim().slice(0, 80);
+      startLine = lineNumber + 1;
+      return;
+    }
+    buffer.push(line);
+    if (buffer.join("\n").length >= 620 || (line.trim() === "" && buffer.join("\n").length >= 360)) {
+      flush(lineNumber);
+    }
+  });
+  flush(lines.length);
+  return chunks;
+}
+
+function buildLocalRagChunks(documents) {
+  return (documents ?? []).flatMap((document) => chunkTextForRag(document));
+}
+
+function mergeExerciseBank(baseBank, customExercises) {
+  const baseExercises = baseBank?.exercises ?? [];
+  const mergedMap = new Map();
+  [...(customExercises ?? []), ...baseExercises].forEach((exercise) => {
+    if (exercise?.id && !mergedMap.has(exercise.id)) {
+      mergedMap.set(exercise.id, exercise);
+    }
+  });
+  const exercises = Array.from(mergedMap.values());
+  const chapters = Array.from(new Set(exercises.map((item) => item.chapter).filter(Boolean)));
+  return {
+    summary: {
+      ...(baseBank?.summary ?? {}),
+      total: exercises.length,
+      thinking: exercises.filter((item) => item.type === "思考题").length,
+      exercise: exercises.filter((item) => item.type === "习题").length,
+      chapters,
+    },
+    exercises,
+  };
+}
+
+function normalizeImportedExercise(item, index) {
+  if (!item || typeof item !== "object") {
+    return null;
+  }
+  const text = String(item.text ?? item.title ?? item.question ?? "").trim();
+  if (!text) {
+    return null;
+  }
+  return {
+    id: item.id ?? `custom-exercise-${Date.now()}-${index}`,
+    number: item.number ?? `导入-${index + 1}`,
+    chapter: item.chapter ?? "第3章 桩基础",
+    chapterNo: item.chapterNo ?? null,
+    type: item.type ?? "思考题",
+    kind: item.kind ?? "教师导入",
+    difficulty: item.difficulty ?? "基础",
+    text,
+    tags: Array.isArray(item.tags) ? item.tags : ["教师导入"],
+    answer: item.answer ?? null,
+    attachments: Array.isArray(item.attachments) ? item.attachments : [],
+    sourceLine: item.sourceLine ?? "teacher-import",
+  };
+}
+
+function parseExerciseImport(rawText) {
+  const parsed = JSON.parse(rawText);
+  const list = Array.isArray(parsed) ? parsed : parsed.exercises ?? parsed.items ?? [];
+  if (!Array.isArray(list)) {
+    return [];
+  }
+  return list.map((item, index) => normalizeImportedExercise(item, index)).filter(Boolean);
+}
 
 function readLearningAttempts() {
   if (typeof window === "undefined") {
@@ -787,7 +1041,7 @@ function compactText(text = "", limit = 260) {
   return clean.length > limit ? `${clean.slice(0, limit)}...` : clean;
 }
 
-function buildAiPrompt(question, mode, results) {
+function buildAiPrompt(question, mode, results, qaConfig = defaultQaConfig) {
   const context = results.length
     ? results
         .map((item, index) => `${index + 1}. ${item.heading_path} L${item.source_line}: ${compactText(item.text, 360)}`)
@@ -796,10 +1050,41 @@ function buildAiPrompt(question, mode, results) {
   return [
     "你是《基础工程》课程的智慧学伴。请只基于给定教材片段回答，必要时说明还需要查教材。",
     `问答模式：${mode}`,
+    `指导老师要求：${qaConfig.teacherInstruction}`,
+    `回答风格：${qaConfig.answerStyle}`,
     `学生问题：${question}`,
     "教材片段：",
     context,
     "请用中文回答，结构简洁，包含：直接回答、关键概念、复习提醒。不要编造规范条文编号。",
+  ].join("\n");
+}
+
+function buildLocalRagAnswer(question, mode, results, qaConfig = defaultQaConfig) {
+  if (!results.length) {
+    return "暂时没有检索到足够相关的教材或教师上传资料。可以换一个更具体的关键词，例如“桩侧阻力”“地基承载力修正”或“主动土压力”。";
+  }
+  const top = results[0];
+  const concepts = keywordTerms(question)
+    .filter((term) => top.text.includes(term) || top.heading_path.includes(term))
+    .slice(0, 5);
+  const modeLead =
+    mode === "规范问答"
+      ? "按规范问答的口径，先定位到与问题相关的教材和关联资料片段；正式条文编号仍建议由指导老师确认最新版本。"
+      : mode === "学习辅导"
+        ? "按学习辅导的口径，可以先抓住教材中的关键说法，再回到练习题里验证掌握度。"
+        : "按教材问答的口径，当前最相关的依据如下。";
+  const support = results
+    .slice(0, 3)
+    .map((item, index) => `${index + 1}. ${compactText(item.text, 150)}（${item.heading_path || item.documentTitle || "教材资料"}）`)
+    .join("\n");
+  return [
+    modeLead,
+    "",
+    `直接回答：${compactText(top.text, 260)}`,
+    concepts.length ? `关键概念：${concepts.join("、")}` : "关键概念：建议结合检索片段中的术语继续追问。",
+    `复习提醒：${qaConfig.answerStyle}`,
+    "",
+    `引用依据：\n${support}`,
   ].join("\n");
 }
 
@@ -1472,7 +1757,96 @@ function DynamicKnowledgeGraph({ nodes, edges, selectedId, onSelect, onExpand })
   );
 }
 
-function Sidebar({ active, onNavigate, learningStats }) {
+function LoginPage({ onLogin }) {
+  const [selectedRole, setSelectedRole] = useState("student");
+  const selectedUser = demoUsers.find((user) => user.role === selectedRole) ?? demoUsers[0];
+  const [username, setUsername] = useState(selectedUser.username);
+  const [password, setPassword] = useState(selectedUser.password);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    setUsername(selectedUser.username);
+    setPassword(selectedUser.password);
+    setError("");
+  }, [selectedUser.password, selectedUser.username]);
+
+  function submitLogin(event) {
+    event.preventDefault();
+    const matched = demoUsers.find((user) => user.username === username.trim() && user.password === password.trim());
+    if (!matched) {
+      setError("账号或密码不匹配。演示密码统一为 123456。");
+      return;
+    }
+    onLogin(matched);
+  }
+
+  return (
+    <main className="loginPage">
+      <section className="loginPanel">
+        <div className="loginBrand">
+          <span>
+            <GraduationCap size={28} />
+          </span>
+          <div>
+            <p>Foundation Engineering</p>
+            <h1>《基础工程》智慧学伴</h1>
+          </div>
+        </div>
+        <p className="loginLead">学生学习、指导老师维护知识库和题库、管理员管理内容，一套入口完成强绑定。</p>
+        <div className="loginRoleGrid">
+          {demoUsers.map((user) => (
+            <button className={cx(selectedRole === user.role && "active")} type="button" key={user.id} onClick={() => setSelectedRole(user.role)}>
+              {user.role === "student" ? <UserRound size={20} /> : user.role === "teacher" ? <ShieldCheck size={20} /> : <LockKeyhole size={20} />}
+              <strong>{user.roleLabel}</strong>
+              <span>{user.username} / 123456</span>
+            </button>
+          ))}
+        </div>
+        <form className="loginForm" onSubmit={submitLogin}>
+          <label>
+            <span>账号</span>
+            <input value={username} onChange={(event) => setUsername(event.target.value)} />
+          </label>
+          <label>
+            <span>密码</span>
+            <input value={password} type="password" onChange={(event) => setPassword(event.target.value)} />
+          </label>
+          {error && <p className="loginError">{error}</p>}
+          <button type="submit">
+            <LogIn size={18} />
+            登录平台
+          </button>
+        </form>
+      </section>
+      <aside className="loginAside">
+        <div className="loginAsideHeader">
+          <BrainCircuit size={24} />
+          <div>
+            <strong>本次新增能力</strong>
+            <p>登录、后台、RAG 上传、问答和题库联动</p>
+          </div>
+        </div>
+        <div className="loginFeatureList">
+          {(roleFeatures[selectedRole] ?? []).map((feature) => (
+            <span key={feature}>
+              <CheckCircle2 size={16} />
+              {feature}
+            </span>
+          ))}
+        </div>
+        <div className="loginBinding">
+          <Link2 size={18} />
+          <p>学院、学校、题库和答疑由指导老师维护，学生端只展示绑定后的课程内容。</p>
+        </div>
+      </aside>
+    </main>
+  );
+}
+
+function Sidebar({ active, onNavigate, learningStats, currentUser }) {
+  const visibleNavItems = navItems.filter((item) => item.id !== "admin" || canManageContent(currentUser));
+  const profileRows = profileRowsForUser(currentUser);
+
   return (
     <aside className="sidebar">
       <div className="brand">
@@ -1485,7 +1859,7 @@ function Sidebar({ active, onNavigate, learningStats }) {
       </div>
 
       <nav className="navList" aria-label="主导航">
-        {navItems.map((item) => {
+        {visibleNavItems.map((item) => {
           const Icon = item.icon;
           return (
             <button
@@ -1514,7 +1888,7 @@ function Sidebar({ active, onNavigate, learningStats }) {
           指导老师强绑定
         </div>
         <div className="studentRows">
-          {studentProfile.map((item) => (
+          {profileRows.map((item) => (
             <div className="studentRow" key={item.label}>
               <span>{item.label}</span>
               <strong>{item.value}</strong>
@@ -1558,8 +1932,9 @@ function RankPanel({ compact = false, rank = rankInfo }) {
   );
 }
 
-function Header({ query, setQuery, onNavigate }) {
+function Header({ query, setQuery, onNavigate, currentUser, onLogout }) {
   const [openPanel, setOpenPanel] = useState("");
+  const isManager = canManageContent(currentUser);
 
   function togglePanel(panel) {
     setOpenPanel((current) => (current === panel ? "" : panel));
@@ -1592,7 +1967,7 @@ function Header({ query, setQuery, onNavigate }) {
           <span className="avatar">
             <UserRound size={18} />
           </span>
-          <span>张同学</span>
+          <span>{currentUser?.name ?? "未登录"}</span>
           <ChevronDown size={16} />
         </button>
         {openPanel && (
@@ -1617,14 +1992,23 @@ function Header({ query, setQuery, onNavigate }) {
             )}
             {openPanel === "user" && (
               <>
-                <strong>张同学</strong>
-                <p>土木工程学院 · 指导老师李老师已绑定</p>
+                <strong>{currentUser?.name ?? "未登录"}</strong>
+                <p>
+                  {currentUser?.college ?? "土木工程学院"} · {currentUser?.roleLabel ?? "学生"} · 指导老师
+                  {currentUser?.mentor ?? "李老师"}已绑定
+                </p>
                 <div className="popoverActions">
                   <button type="button" onClick={() => jumpTo("report")}>
                     学习报告
                   </button>
-                  <button type="button" onClick={() => jumpTo("admin")}>
-                    后台管理
+                  {isManager && (
+                    <button type="button" onClick={() => jumpTo("admin")}>
+                      后台管理
+                    </button>
+                  )}
+                  <button type="button" onClick={onLogout}>
+                    <LogOut size={15} />
+                    退出
                   </button>
                 </div>
               </>
@@ -1769,9 +2153,10 @@ function WeakPanel({ onNavigate, courseManifest, learningStats }) {
   );
 }
 
-function Overview({ onNavigate, courseManifest, learningStats }) {
+function Overview({ onNavigate, courseManifest, learningStats, exerciseBank: mergedExerciseBank }) {
   const graphSummary = useJsonAsset("/knowledge/build_summary.json", null);
-  const exerciseBank = useJsonAsset("/knowledge/exercises.json", { summary: null, exercises: [] });
+  const loadedExerciseBank = useJsonAsset("/knowledge/exercises.json", { summary: null, exercises: [] });
+  const exerciseBank = mergedExerciseBank ?? loadedExerciseBank;
   const cards = moduleCards.map((card) => ({
     ...card,
     meta: moduleMeta(card.id, { courseManifest, graphSummary, exerciseBank }),
@@ -2229,7 +2614,7 @@ function GraphPage({ initialNode }) {
   );
 }
 
-function QAPage() {
+function QAPage({ ragChunks = [], qaConfig = defaultQaConfig }) {
   const [mode, setMode] = useState("教材问答");
   const [question, setQuestion] = useState("桩侧阻力是如何产生的？影响它的主要因素有哪些？");
   const [draftQuestion, setDraftQuestion] = useState(question);
@@ -2237,10 +2622,11 @@ function QAPage() {
   const [aiAnswer, setAiAnswer] = useState("");
   const [aiStatus, setAiStatus] = useState("idle");
   const [aiError, setAiError] = useState("");
-  const chunks = useJsonAsset("/knowledge/chunks.json", []);
+  const baseChunks = useJsonAsset("/knowledge/chunks.json", []);
+  const chunks = useMemo(() => [...ragChunks, ...baseChunks], [baseChunks, ragChunks]);
   const modes = ["教材问答", "规范问答", "学习辅导"];
   const results = useMemo(() => searchChunks(chunks, question, 4), [chunks, question]);
-  const answer = results[0]?.text ?? "教材索引加载后，会在这里显示最相关的原文依据。";
+  const answer = buildLocalRagAnswer(question, mode, results, qaConfig);
 
   useEffect(() => {
     setAiAnswer("");
@@ -2264,7 +2650,7 @@ function QAPage() {
     setAiStatus("loading");
     setAiError("");
     try {
-      const responseText = await callFreeAi(buildAiPrompt(nextQuestion, mode, nextResults));
+      const responseText = await callFreeAi(buildAiPrompt(nextQuestion, mode, nextResults, qaConfig));
       setAiAnswer(responseText);
       setAiStatus("success");
     } catch {
@@ -2276,10 +2662,10 @@ function QAPage() {
 
   return (
     <section className="pagePanel">
-      <PageHeader label="智能问答" title="教材检索问答" desc="已接入《基础工程》Markdown 切块索引，并可调用免费浏览器端 AI 生成答案。" />
+      <PageHeader label="智能问答" title="RAG 检索问答" desc="已接入《基础工程》教材切块和教师上传知识库，先检索引用，再生成回答。" />
       <div className="teacherNotice">
         <Link2 size={17} />
-        当前模式：{mode} · 检索库来自本书 Markdown：{chunks.length ? `${chunks.length} 个教材块已加载` : "正在加载教材索引"}。
+        当前模式：{mode} · 检索库：教材 {baseChunks.length} 块，教师上传 {ragChunks.length} 块。
       </div>
       <div className="qaShell">
         <div className="segmented">
@@ -2297,19 +2683,30 @@ function QAPage() {
               <p>{aiAnswer || answer}</p>
               <span>
                 {aiStatus === "success"
-                  ? "Puter.js 免费 AI 生成 · 已结合教材检索片段"
+                  ? "Puter.js 免费 AI 生成 · 已结合 RAG 检索片段"
                   : aiStatus === "loading"
                     ? "正在调用免费 AI 生成答案..."
                     : aiError || `引用：${results[0]?.heading_path ?? "教材索引"} ${results[0] ? `L${results[0].source_line}` : ""}`}
               </span>
             </div>
           </div>
+          <div className="ragFlow" aria-label="RAG 流程">
+            {["提问", "检索教材/上传库", "抽取引用", "生成回答"].map((step, index) => (
+              <span key={step}>
+                <em>{index + 1}</em>
+                {step}
+              </span>
+            ))}
+          </div>
           <div className="sourceList">
             {results.map((item) => (
               <article className="sourceItem" key={item.id}>
                 <strong>{item.heading_path}</strong>
                 <p>{item.text.replace(/\s+/g, " ").slice(0, 150)}</p>
-                <span>来源行 {item.source_line} · {item.kind}</span>
+                <span>
+                  来源行 {item.source_line} · {item.kind}
+                  {item.documentTitle ? ` · ${item.documentTitle}` : ""}
+                </span>
               </article>
             ))}
           </div>
@@ -2422,8 +2819,9 @@ function ResourcesPage({ initialResourceTitle }) {
   );
 }
 
-function PracticePage({ initialChapter, initialExerciseId, onRecordAttempt }) {
-  const exerciseBank = useJsonAsset("/knowledge/exercises.json", { summary: { total: 0, thinking: 0, exercise: 0, chapters: [] }, exercises: [] });
+function PracticePage({ initialChapter, initialExerciseId, onRecordAttempt, exerciseBank: providedExerciseBank }) {
+  const loadedExerciseBank = useJsonAsset("/knowledge/exercises.json", { summary: { total: 0, thinking: 0, exercise: 0, chapters: [] }, exercises: [] });
+  const exerciseBank = providedExerciseBank ?? loadedExerciseBank;
   const rubricBank = useJsonAsset("/knowledge/exercise_rubrics.json", { items: {} });
   const exercises = exerciseBank.exercises ?? [];
   const summary = exerciseBank.summary ?? {};
@@ -2856,24 +3254,339 @@ function ReportPage({ learningStats }) {
   );
 }
 
-function AdminPage() {
-  const [activeTool, setActiveTool] = useState("上传教材");
+function AdminPage({
+  courseManifest,
+  currentUser,
+  baseExerciseBank,
+  ragDocuments,
+  setRagDocuments,
+  ragChunks,
+  customExercises,
+  setCustomExercises,
+  qaConfig,
+  setQaConfig,
+}) {
+  const [activeTool, setActiveTool] = useState("RAG知识库");
+  const [pasteTitle, setPasteTitle] = useState("课堂补充资料");
+  const [pasteText, setPasteText] = useState("");
+  const [uploadStatus, setUploadStatus] = useState("");
+  const [exerciseJson, setExerciseJson] = useState(
+    JSON.stringify(
+      [
+        {
+          number: "T-1",
+          chapter: "第3章 桩基础",
+          type: "思考题",
+          kind: "教师导入",
+          difficulty: "基础",
+          text: "什么是桩基础负摩阻力？它通常在什么条件下产生？",
+          tags: ["桩基础", "负摩阻力", "桩侧阻力"],
+        },
+      ],
+      null,
+      2,
+    ),
+  );
+  const [exerciseStatus, setExerciseStatus] = useState("");
+  const safeQaConfig = { ...defaultQaConfig, ...(qaConfig ?? {}) };
+  const mergedTotal = baseExerciseBank?.summary?.total ?? baseExerciseBank?.exercises?.length ?? 0;
+  const baseTotal = Math.max(0, mergedTotal - customExercises.length);
+  const toolItems = [
+    { id: "RAG知识库", icon: UploadCloud, desc: "上传 Markdown、TXT 或 JSON，生成本地检索切块" },
+    { id: "题库管理", icon: ClipboardList, desc: "导入教师题目，自动进入练习中心" },
+    { id: "答疑配置", icon: BrainCircuit, desc: "维护问答口径、教师提示词和复核规则" },
+    { id: "班级绑定", icon: UserPlus, desc: "维护学生、学院、学校和指导老师绑定关系" },
+  ];
+
+  async function handleKnowledgeFiles(event) {
+    const files = Array.from(event.target.files ?? []);
+    if (!files.length) {
+      return;
+    }
+    const nextDocuments = [];
+    for (const file of files) {
+      const raw = await file.text();
+      const text = extractDocumentText(raw);
+      const document = makeRagDocument({ title: file.name, text, sourceType: "file-upload" });
+      if (document) {
+        nextDocuments.push(document);
+      }
+    }
+    if (nextDocuments.length) {
+      setRagDocuments((current) => [...nextDocuments, ...(current ?? [])].slice(0, 40));
+      setUploadStatus(`已导入 ${nextDocuments.length} 个知识库文件，并生成可检索切块。`);
+    } else {
+      setUploadStatus("没有读到有效文本，请检查文件内容。");
+    }
+    event.target.value = "";
+  }
+
+  function addPastedDocument() {
+    const document = makeRagDocument({ title: pasteTitle, text: pasteText, sourceType: "teacher-paste" });
+    if (!document) {
+      setUploadStatus("请先粘贴 Markdown 或文本内容。");
+      return;
+    }
+    setRagDocuments((current) => [document, ...(current ?? [])].slice(0, 40));
+    setPasteText("");
+    setUploadStatus("已把粘贴内容加入 RAG 知识库。");
+  }
+
+  function removeDocument(id) {
+    setRagDocuments((current) => (current ?? []).filter((document) => document.id !== id));
+  }
+
+  function importExercises() {
+    try {
+      const imported = parseExerciseImport(exerciseJson);
+      if (!imported.length) {
+        setExerciseStatus("没有识别到有效题目，请使用 JSON 数组或 { exercises: [...] }。");
+        return;
+      }
+      setCustomExercises((current) => {
+        const next = new Map();
+        [...imported, ...(current ?? [])].forEach((exercise) => next.set(exercise.id, exercise));
+        return Array.from(next.values()).slice(0, 300);
+      });
+      setExerciseStatus(`已导入 ${imported.length} 道题，练习中心会立即显示。`);
+    } catch {
+      setExerciseStatus("JSON 格式不正确，检查逗号、引号和数组结构。");
+    }
+  }
+
+  function removeCustomExercise(id) {
+    setCustomExercises((current) => (current ?? []).filter((exercise) => exercise.id !== id));
+  }
+
+  function updateQaConfig(key, value) {
+    setQaConfig((current) => ({ ...(current ?? defaultQaConfig), [key]: value }));
+  }
 
   return (
     <section className="pagePanel">
-      <PageHeader label="后台管理" title="内容管理" desc="用于后续上传教材、资料、案例和题库，目前为展示状态。" />
-      <div className="adminGrid">
-        {["上传教材", "管理知识点", "维护案例", "导入题库"].map((item) => (
-          <button className={cx("adminTile", activeTool === item && "active")} type="button" key={item} onClick={() => setActiveTool(item)}>
-            <Database size={24} />
-            {item}
-          </button>
-        ))}
+      <PageHeader label="后台管理" title="教师内容管理台" desc="指导老师维护知识库、题库、答疑口径和学生绑定，学生端自动读取这些内容。" />
+      <div className="adminHero">
+        <div>
+          <ShieldCheck size={22} />
+          <span>{currentUser?.roleLabel}</span>
+          <strong>{currentUser?.name}</strong>
+        </div>
+        <p>
+          当前课程共 {courseManifest?.totalChapters ?? 7} 章，教材题库 {baseTotal} 道，教师导入题 {customExercises.length} 道，上传知识库{" "}
+          {ragDocuments.length} 份。
+        </p>
       </div>
-      <section className="detailPanel compact">
-        <strong>{activeTool}</strong>
-        <p>该入口已可选中展示。生产版本中，这里将由指导老师维护课程资料、答疑内容、案例和题库。</p>
-      </section>
+      <div className="adminGrid">
+        {toolItems.map((item) => {
+          const Icon = item.icon;
+          return (
+          <button className={cx("adminTile", activeTool === item.id && "active")} type="button" key={item.id} onClick={() => setActiveTool(item.id)}>
+            <Icon size={24} />
+            <strong>{item.id}</strong>
+            <span>{item.desc}</span>
+          </button>
+          );
+        })}
+      </div>
+      {activeTool === "RAG知识库" && (
+        <div className="adminWorkbench">
+          <section className="adminPanel wide">
+            <div className="adminPanelTitle">
+              <div>
+                <strong>知识库上传</strong>
+                <p>支持 `.md`、`.txt`、`.json`，上传后自动清洗并切成 RAG 检索块。</p>
+              </div>
+              <span>{ragChunks.length} 个上传切块</span>
+            </div>
+            <label className="uploadDrop">
+              <input type="file" multiple accept=".md,.markdown,.txt,.json" onChange={handleKnowledgeFiles} />
+              <UploadCloud size={28} />
+              <strong>选择知识库文件</strong>
+              <span>课堂讲义、规范摘录、答疑记录都可以上传</span>
+            </label>
+            <div className="pasteBox">
+              <input value={pasteTitle} onChange={(event) => setPasteTitle(event.target.value)} placeholder="资料标题" />
+              <textarea value={pasteText} onChange={(event) => setPasteText(event.target.value)} placeholder="也可以直接粘贴 Markdown / 文本内容" />
+              <button type="button" onClick={addPastedDocument}>
+                <FileUp size={17} />
+                加入知识库
+              </button>
+            </div>
+            {uploadStatus && <p className="adminStatus">{uploadStatus}</p>}
+          </section>
+          <aside className="adminPanel">
+            <div className="adminPanelTitle">
+              <div>
+                <strong>RAG 流程</strong>
+                <p>本地演示版先用关键词检索，生产版可换成向量库。</p>
+              </div>
+            </div>
+            <div className="ragPipeline">
+              {["上传资料", "切块清洗", "建立索引", "问答引用"].map((step, index) => (
+                <span key={step}>
+                  <em>{index + 1}</em>
+                  {step}
+                </span>
+              ))}
+            </div>
+          </aside>
+          <section className="adminPanel full">
+            <div className="adminPanelTitle">
+              <div>
+                <strong>已上传资料</strong>
+                <p>这些内容会进入智能问答的检索范围。</p>
+              </div>
+              {ragDocuments.length ? (
+                <button type="button" onClick={() => setRagDocuments([])}>
+                  清空上传库
+                </button>
+              ) : null}
+            </div>
+            <div className="documentList">
+              {ragDocuments.length ? (
+                ragDocuments.map((document) => (
+                  <article key={document.id}>
+                    <Database size={18} />
+                    <div>
+                      <strong>{document.title}</strong>
+                      <p>
+                        {chunkTextForRag(document).length} 个切块 · {Math.round(document.text.length / 100) / 10}k 字 ·{" "}
+                        {new Date(document.uploadedAt).toLocaleString("zh-CN")}
+                      </p>
+                    </div>
+                    <button type="button" onClick={() => removeDocument(document.id)}>
+                      删除
+                    </button>
+                  </article>
+                ))
+              ) : (
+                <p className="emptyExercise">还没有教师上传资料。可先上传本书 Markdown 或课堂讲义进行演示。</p>
+              )}
+            </div>
+          </section>
+        </div>
+      )}
+      {activeTool === "题库管理" && (
+        <div className="adminWorkbench">
+          <section className="adminPanel wide">
+            <div className="adminPanelTitle">
+              <div>
+                <strong>题库导入</strong>
+                <p>导入 JSON 后会合并到练习中心；没有 Rubric 的题会使用通用评分规则。</p>
+              </div>
+              <span>{mergedTotal} 道可练习</span>
+            </div>
+            <textarea className="jsonImportBox" value={exerciseJson} onChange={(event) => setExerciseJson(event.target.value)} />
+            <div className="adminButtonRow">
+              <button type="button" onClick={importExercises}>
+                导入题目
+              </button>
+              <button type="button" onClick={() => setCustomExercises([])}>
+                清空导入题
+              </button>
+            </div>
+            {exerciseStatus && <p className="adminStatus">{exerciseStatus}</p>}
+          </section>
+          <aside className="adminPanel">
+            <div className="adminMetricStack">
+              <article>
+                <strong>{baseTotal}</strong>
+                <span>教材原题</span>
+              </article>
+              <article>
+                <strong>{customExercises.length}</strong>
+                <span>教师导入</span>
+              </article>
+              <article>
+                <strong>{baseExerciseBank?.summary?.chapters?.length ?? 7}</strong>
+                <span>覆盖章节</span>
+              </article>
+            </div>
+          </aside>
+          <section className="adminPanel full">
+            <div className="adminPanelTitle">
+              <div>
+                <strong>教师导入题</strong>
+                <p>点击删除只会移除本机导入题，不影响教材题库。</p>
+              </div>
+            </div>
+            <div className="documentList compact">
+              {customExercises.length ? (
+                customExercises.map((exercise) => (
+                  <article key={exercise.id}>
+                    <ClipboardList size={18} />
+                    <div>
+                      <strong>
+                        {exercise.number} · {exercise.type}
+                      </strong>
+                      <p>{exercise.text}</p>
+                    </div>
+                    <button type="button" onClick={() => removeCustomExercise(exercise.id)}>
+                      删除
+                    </button>
+                  </article>
+                ))
+              ) : (
+                <p className="emptyExercise">暂未导入教师自定义题，练习中心当前使用教材原题。</p>
+              )}
+            </div>
+          </section>
+        </div>
+      )}
+      {activeTool === "答疑配置" && (
+        <div className="adminWorkbench single">
+          <section className="adminPanel full">
+            <div className="adminPanelTitle">
+              <div>
+                <strong>问答系统配置</strong>
+                <p>这些设置会进入智能问答 Prompt，指导老师可统一课程答疑口径。</p>
+              </div>
+            </div>
+            <div className="configGrid">
+              <label>
+                <span>指导老师要求</span>
+                <textarea value={safeQaConfig.teacherInstruction} onChange={(event) => updateQaConfig("teacherInstruction", event.target.value)} />
+              </label>
+              <label>
+                <span>回答风格</span>
+                <textarea value={safeQaConfig.answerStyle} onChange={(event) => updateQaConfig("answerStyle", event.target.value)} />
+              </label>
+              <label>
+                <span>复核规则</span>
+                <textarea value={safeQaConfig.reviewRule} onChange={(event) => updateQaConfig("reviewRule", event.target.value)} />
+              </label>
+            </div>
+          </section>
+        </div>
+      )}
+      {activeTool === "班级绑定" && (
+        <div className="adminWorkbench single">
+          <section className="adminPanel full">
+            <div className="adminPanelTitle">
+              <div>
+                <strong>学生强绑定</strong>
+                <p>学院、学校、指导老师、答疑资料都由指导老师或管理员维护，学生端只读。</p>
+              </div>
+            </div>
+            <div className="bindingTable">
+              {demoUsers
+                .filter((user) => user.role === "student")
+                .map((user) => (
+                  <article key={user.id}>
+                    <UserRound size={20} />
+                    <div>
+                      <strong>{user.name}</strong>
+                      <span>{user.studentNo}</span>
+                    </div>
+                    <p>{user.college}</p>
+                    <p>{user.school}</p>
+                    <em>辅导老师：{user.mentor}</em>
+                  </article>
+                ))}
+            </div>
+          </section>
+        </div>
+      )}
     </section>
   );
 }
@@ -2888,10 +3601,12 @@ function PageHeader({ label, title, desc }) {
   );
 }
 
-function GlobalSearchPanel({ query, courseManifest, onNavigate, onClear }) {
-  const chunks = useJsonAsset("/knowledge/chunks.json", []);
+function GlobalSearchPanel({ query, courseManifest, onNavigate, onClear, ragChunks = [], exerciseBank: mergedExerciseBank }) {
+  const baseChunks = useJsonAsset("/knowledge/chunks.json", []);
+  const chunks = useMemo(() => [...ragChunks, ...baseChunks], [baseChunks, ragChunks]);
   const graph = useJsonAsset("/knowledge/graph_preview.json", { nodes: [], edges: [] });
-  const exerciseBank = useJsonAsset("/knowledge/exercises.json", { summary: null, exercises: [] });
+  const loadedExerciseBank = useJsonAsset("/knowledge/exercises.json", { summary: null, exercises: [] });
+  const exerciseBank = mergedExerciseBank ?? loadedExerciseBank;
   const resultGroups = useMemo(
     () => buildGlobalSearchResults({ query, courseManifest, chunks, graph, exerciseBank }),
     [chunks, courseManifest, exerciseBank, graph, query],
@@ -2971,6 +3686,15 @@ function Page({
   courseManifest,
   learningStats,
   onRecordAttempt,
+  currentUser,
+  exerciseBank,
+  ragDocuments,
+  setRagDocuments,
+  ragChunks,
+  customExercises,
+  setCustomExercises,
+  qaConfig,
+  setQaConfig,
 }) {
   switch (active) {
     case "textbook":
@@ -2978,26 +3702,49 @@ function Page({
     case "graph":
       return <GraphPage initialNode={activeGraphNode} />;
     case "qa":
-      return <QAPage />;
+      return <QAPage ragChunks={ragChunks} qaConfig={qaConfig} />;
     case "cases":
       return <CasesPage initialCaseTitle={activeCaseTitle} />;
     case "resources":
       return <ResourcesPage initialResourceTitle={activeResourceTitle} />;
     case "practice":
-      return <PracticePage initialChapter={activeChapter} initialExerciseId={activeExerciseId} onRecordAttempt={onRecordAttempt} />;
+      return <PracticePage initialChapter={activeChapter} initialExerciseId={activeExerciseId} onRecordAttempt={onRecordAttempt} exerciseBank={exerciseBank} />;
     case "report":
       return <ReportPage learningStats={learningStats} />;
     case "admin":
-      return <AdminPage />;
+      return canManageContent(currentUser) ? (
+        <AdminPage
+          courseManifest={courseManifest}
+          currentUser={currentUser}
+          baseExerciseBank={exerciseBank}
+          ragDocuments={ragDocuments}
+          setRagDocuments={setRagDocuments}
+          ragChunks={ragChunks}
+          customExercises={customExercises}
+          setCustomExercises={setCustomExercises}
+          qaConfig={qaConfig}
+          setQaConfig={setQaConfig}
+        />
+      ) : (
+        <section className="pagePanel">
+          <PageHeader label="后台管理" title="需要指导老师权限" desc="后台用于维护学院、答疑知识库和题库。请使用指导老师或管理员账号登录。" />
+        </section>
+      );
     default:
-      return <Overview onNavigate={onNavigate} courseManifest={courseManifest} learningStats={learningStats} />;
+      return <Overview onNavigate={onNavigate} courseManifest={courseManifest} learningStats={learningStats} exerciseBank={exerciseBank} />;
   }
 }
 
 export function App() {
   const courseManifest = useJsonAsset("/course-manifest.json", defaultCourseManifest);
-  const exerciseBank = useJsonAsset("/knowledge/exercises.json", { summary: null, exercises: [] });
+  const baseExerciseBank = useJsonAsset("/knowledge/exercises.json", { summary: null, exercises: [] });
+  const [currentUser, setCurrentUser] = usePersistentState(authSessionKey, null);
+  const [ragDocuments, setRagDocuments] = usePersistentState(ragDocumentsKey, []);
+  const [customExercises, setCustomExercises] = usePersistentState(customExercisesKey, []);
+  const [qaConfig, setQaConfig] = usePersistentState(qaConfigKey, defaultQaConfig);
   const [learningAttempts, setLearningAttempts] = useState(readLearningAttempts);
+  const ragChunks = useMemo(() => buildLocalRagChunks(ragDocuments), [ragDocuments]);
+  const exerciseBank = useMemo(() => mergeExerciseBank(baseExerciseBank, customExercises), [baseExerciseBank, customExercises]);
   const initialRoute = routeFromLocation(defaultCourseManifest);
   const [active, setActive] = useState(initialRoute.page);
   const [query, setQuery] = useState("");
@@ -3040,6 +3787,9 @@ export function App() {
   }, [courseManifest]);
 
   function handleNavigate(page, options = {}) {
+    if (page === "admin" && !canManageContent(currentUser)) {
+      page = "overview";
+    }
     const routeOptions = { ...options };
     if (page === "textbook" && !routeOptions.chapter) {
       routeOptions.chapter = activeChapter;
@@ -3056,15 +3806,38 @@ export function App() {
     });
   }
 
+  function handleLogin(user) {
+    const { password: _password, ...session } = user;
+    setCurrentUser(session);
+  }
+
+  function handleLogout() {
+    setCurrentUser(null);
+    setQuery("");
+    setActive("overview");
+    window.history.pushState({ route: { page: "overview" } }, "", routeToUrl("overview", {}, courseManifest));
+  }
+
+  if (!currentUser) {
+    return <LoginPage onLogin={handleLogin} />;
+  }
+
   return (
     <div className="appShell">
-      <Sidebar active={active} onNavigate={handleNavigate} learningStats={learningStats} />
+      <Sidebar active={active} onNavigate={handleNavigate} learningStats={learningStats} currentUser={currentUser} />
       <div className="workspace">
-        <Header query={query} setQuery={setQuery} onNavigate={handleNavigate} />
+        <Header query={query} setQuery={setQuery} onNavigate={handleNavigate} currentUser={currentUser} onLogout={handleLogout} />
         <main className="content">
           <div className="mobilePageLabel">{activeLabel}</div>
           {query.trim() && (
-            <GlobalSearchPanel query={query} courseManifest={courseManifest} onNavigate={handleNavigate} onClear={() => setQuery("")} />
+            <GlobalSearchPanel
+              query={query}
+              courseManifest={courseManifest}
+              onNavigate={handleNavigate}
+              onClear={() => setQuery("")}
+              ragChunks={ragChunks}
+              exerciseBank={exerciseBank}
+            />
           )}
           <Page
             active={active}
@@ -3077,6 +3850,15 @@ export function App() {
             courseManifest={courseManifest}
             learningStats={learningStats}
             onRecordAttempt={handleRecordAttempt}
+            currentUser={currentUser}
+            exerciseBank={exerciseBank}
+            ragDocuments={ragDocuments}
+            setRagDocuments={setRagDocuments}
+            ragChunks={ragChunks}
+            customExercises={customExercises}
+            setCustomExercises={setCustomExercises}
+            qaConfig={qaConfig}
+            setQaConfig={setQaConfig}
           />
         </main>
       </div>

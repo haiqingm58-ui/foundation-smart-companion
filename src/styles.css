@@ -56,6 +56,218 @@ button {
   min-height: 100vh;
 }
 
+button:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+[tabindex]:focus-visible {
+  outline: 3px solid rgba(9, 94, 217, 0.35);
+  outline-offset: 2px;
+}
+
+.loginPage {
+  display: grid;
+  min-height: 100vh;
+  grid-template-columns: minmax(420px, 0.95fr) minmax(360px, 0.75fr);
+  gap: 24px;
+  align-items: center;
+  padding: 42px;
+  background:
+    linear-gradient(120deg, rgba(9, 94, 217, 0.1), rgba(18, 135, 92, 0.08)),
+    #f6f8fb;
+}
+
+.loginPanel,
+.loginAside {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: var(--shadow);
+}
+
+.loginPanel {
+  max-width: 680px;
+  justify-self: end;
+  padding: 36px;
+}
+
+.loginBrand {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.loginBrand > span {
+  display: grid;
+  width: 52px;
+  height: 52px;
+  place-items: center;
+  border-radius: 8px;
+  background: var(--blue);
+  color: white;
+}
+
+.loginBrand p {
+  margin: 0 0 5px;
+  color: var(--blue);
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.loginBrand h1 {
+  margin: 0;
+  color: var(--ink);
+  font-size: 30px;
+  line-height: 1.2;
+}
+
+.loginLead {
+  margin: 18px 0 24px;
+  color: #526174;
+  line-height: 1.75;
+}
+
+.loginRoleGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 22px;
+}
+
+.loginRoleGrid button {
+  display: grid;
+  gap: 6px;
+  min-height: 112px;
+  border: 1px solid #dbe5f1;
+  border-radius: 8px;
+  background: white;
+  color: #344054;
+  cursor: pointer;
+  padding: 14px;
+  text-align: left;
+}
+
+.loginRoleGrid button.active {
+  border-color: var(--blue);
+  background: var(--blue-50);
+  color: var(--blue);
+  box-shadow: inset 3px 0 0 var(--blue);
+}
+
+.loginRoleGrid strong,
+.loginRoleGrid span {
+  display: block;
+}
+
+.loginRoleGrid span {
+  color: #667085;
+  font-size: 12px;
+}
+
+.loginForm {
+  display: grid;
+  gap: 14px;
+}
+
+.loginForm label {
+  display: grid;
+  gap: 8px;
+}
+
+.loginForm label span {
+  color: #344054;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.loginForm input {
+  min-height: 44px;
+  border: 1px solid #d7e0ec;
+  border-radius: 8px;
+  background: #fbfdff;
+  color: var(--ink);
+  padding: 0 14px;
+}
+
+.loginForm button {
+  display: inline-flex;
+  min-height: 46px;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  border-radius: 8px;
+  background: var(--blue);
+  color: white;
+  cursor: pointer;
+  font-weight: 900;
+}
+
+.loginError {
+  margin: 0;
+  border: 1px solid #f4b7a8;
+  border-radius: 8px;
+  background: #fff4f0;
+  color: var(--red);
+  padding: 10px 12px;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.loginAside {
+  max-width: 430px;
+  padding: 28px;
+}
+
+.loginAsideHeader {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  margin-bottom: 18px;
+}
+
+.loginAsideHeader svg {
+  color: var(--green);
+}
+
+.loginAsideHeader strong {
+  display: block;
+  color: var(--ink);
+  font-size: 19px;
+}
+
+.loginAsideHeader p,
+.loginBinding p {
+  margin: 5px 0 0;
+  color: #667085;
+  line-height: 1.65;
+}
+
+.loginFeatureList {
+  display: grid;
+  gap: 10px;
+}
+
+.loginFeatureList span {
+  display: inline-flex;
+  min-height: 38px;
+  align-items: center;
+  gap: 9px;
+  border: 1px solid #d9eee3;
+  border-radius: 8px;
+  background: #f5fcf8;
+  color: var(--green);
+  padding: 0 12px;
+  font-weight: 900;
+}
+
+.loginBinding {
+  display: flex;
+  gap: 10px;
+  margin-top: 22px;
+  border-top: 1px solid var(--soft-line);
+  padding-top: 18px;
+  color: var(--blue);
+}
+
 .appShell {
   display: grid;
   min-height: 100vh;
@@ -335,7 +547,11 @@ button {
 }
 
 .topPopover button {
+  display: inline-flex;
   min-height: 36px;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
   border-radius: 8px;
   background: var(--blue);
   color: white;
@@ -2006,6 +2222,7 @@ button {
 .bubble p {
   margin: 0;
   line-height: 1.7;
+  white-space: pre-line;
 }
 
 .bubble span {
@@ -2018,6 +2235,41 @@ button {
 .sourceList {
   display: grid;
   gap: 10px;
+}
+
+.ragFlow {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  border: 1px solid #d7e8ff;
+  border-radius: 8px;
+  background: #f8fbff;
+  padding: 10px;
+}
+
+.ragFlow span {
+  display: inline-flex;
+  min-height: 34px;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  border-radius: 8px;
+  background: white;
+  color: #344054;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.ragFlow em {
+  display: inline-grid;
+  width: 20px;
+  height: 20px;
+  place-items: center;
+  border-radius: 999px;
+  background: var(--blue);
+  color: white;
+  font-size: 11px;
+  font-style: normal;
 }
 
 .sourceItem {
@@ -2863,12 +3115,385 @@ button {
 .adminTile {
   display: flex;
   min-height: 120px;
-  align-items: center;
+  flex-direction: column;
+  align-items: flex-start;
   justify-content: center;
   gap: 12px;
   color: #27364a;
   cursor: pointer;
   font-weight: 800;
+  text-align: left;
+}
+
+.adminTile span {
+  color: #667085;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.45;
+}
+
+.adminHero {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  margin: -6px 0 18px;
+  border: 1px solid #d7e8ff;
+  border-radius: 8px;
+  background: #f8fbff;
+  padding: 16px 18px;
+}
+
+.adminHero > div {
+  display: flex;
+  min-width: 190px;
+  align-items: center;
+  gap: 10px;
+}
+
+.adminHero svg {
+  color: var(--blue);
+}
+
+.adminHero span {
+  color: var(--blue);
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.adminHero strong {
+  color: var(--ink);
+}
+
+.adminHero p {
+  margin: 0;
+  color: #526174;
+  line-height: 1.6;
+}
+
+.adminWorkbench {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(260px, 0.75fr);
+  gap: 16px;
+  margin-top: 18px;
+}
+
+.adminWorkbench.single {
+  grid-template-columns: 1fr;
+}
+
+.adminPanel {
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: white;
+  padding: 20px;
+}
+
+.adminPanel.full {
+  grid-column: 1 / -1;
+}
+
+.adminPanelTitle {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 16px;
+}
+
+.adminPanelTitle strong {
+  display: block;
+  color: var(--ink);
+  font-size: 18px;
+}
+
+.adminPanelTitle p {
+  margin: 5px 0 0;
+  color: #667085;
+  line-height: 1.55;
+}
+
+.adminPanelTitle span,
+.adminPanelTitle button {
+  display: inline-flex;
+  min-height: 32px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: var(--blue-50);
+  color: var(--blue);
+  padding: 0 11px;
+  font-size: 12px;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.adminPanelTitle button {
+  border: 0;
+  cursor: pointer;
+}
+
+.uploadDrop {
+  display: grid;
+  min-height: 160px;
+  place-items: center;
+  border: 1px dashed #9bc4f5;
+  border-radius: 8px;
+  background: #f8fbff;
+  color: var(--blue);
+  cursor: pointer;
+  padding: 20px;
+  text-align: center;
+}
+
+.uploadDrop input {
+  display: none;
+}
+
+.uploadDrop strong,
+.uploadDrop span {
+  display: block;
+}
+
+.uploadDrop span {
+  color: #667085;
+  font-size: 13px;
+}
+
+.pasteBox {
+  display: grid;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.pasteBox input,
+.pasteBox textarea,
+.jsonImportBox,
+.configGrid textarea {
+  width: 100%;
+  border: 1px solid #d7e0ec;
+  border-radius: 8px;
+  background: #fbfdff;
+  color: var(--ink);
+  padding: 12px;
+}
+
+.pasteBox textarea {
+  min-height: 120px;
+  resize: vertical;
+}
+
+.pasteBox button,
+.adminButtonRow button {
+  display: inline-flex;
+  min-height: 40px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border-radius: 8px;
+  background: var(--blue);
+  color: white;
+  cursor: pointer;
+  padding: 0 14px;
+  font-weight: 900;
+}
+
+.adminStatus {
+  margin: 12px 0 0;
+  border: 1px solid #d9eee3;
+  border-radius: 8px;
+  background: #f5fcf8;
+  color: var(--green);
+  padding: 10px 12px;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.ragPipeline {
+  display: grid;
+  gap: 10px;
+}
+
+.ragPipeline span {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid #e3ebf5;
+  border-radius: 8px;
+  background: #fbfdff;
+  padding: 12px;
+  color: #344054;
+  font-weight: 900;
+}
+
+.ragPipeline em {
+  display: grid;
+  width: 28px;
+  height: 28px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 999px;
+  background: var(--green-50);
+  color: var(--green);
+  font-style: normal;
+}
+
+.documentList {
+  display: grid;
+  gap: 10px;
+}
+
+.documentList article {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  border: 1px solid #e3ebf5;
+  border-radius: 8px;
+  background: #fbfdff;
+  padding: 13px;
+}
+
+.documentList.compact article {
+  align-items: start;
+}
+
+.documentList svg {
+  color: var(--blue);
+}
+
+.documentList strong {
+  display: block;
+  color: var(--ink);
+}
+
+.documentList p {
+  margin: 4px 0 0;
+  color: #667085;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.documentList button {
+  min-height: 32px;
+  border-radius: 8px;
+  background: #fff1e9;
+  color: var(--orange);
+  cursor: pointer;
+  padding: 0 10px;
+  font-weight: 900;
+}
+
+.jsonImportBox {
+  min-height: 230px;
+  font-family: "SFMono-Regular", Consolas, monospace;
+  font-size: 13px;
+  line-height: 1.55;
+  resize: vertical;
+}
+
+.adminButtonRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.adminButtonRow button:last-child {
+  background: #eef6ff;
+  color: var(--blue);
+}
+
+.adminMetricStack {
+  display: grid;
+  gap: 10px;
+}
+
+.adminMetricStack article {
+  border: 1px solid #e3ebf5;
+  border-radius: 8px;
+  background: #fbfdff;
+  padding: 16px;
+}
+
+.adminMetricStack strong,
+.adminMetricStack span {
+  display: block;
+}
+
+.adminMetricStack strong {
+  color: var(--blue);
+  font-size: 28px;
+}
+
+.adminMetricStack span {
+  margin-top: 5px;
+  color: #667085;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.configGrid {
+  display: grid;
+  gap: 14px;
+}
+
+.configGrid label {
+  display: grid;
+  gap: 8px;
+}
+
+.configGrid span {
+  color: #344054;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.configGrid textarea {
+  min-height: 92px;
+  resize: vertical;
+}
+
+.bindingTable {
+  display: grid;
+  gap: 10px;
+}
+
+.bindingTable article {
+  display: grid;
+  grid-template-columns: 34px minmax(150px, 1fr) minmax(140px, 0.9fr) minmax(120px, 0.8fr) auto;
+  gap: 12px;
+  align-items: center;
+  border: 1px solid #e3ebf5;
+  border-radius: 8px;
+  background: #fbfdff;
+  padding: 13px;
+}
+
+.bindingTable svg {
+  color: var(--blue);
+}
+
+.bindingTable strong,
+.bindingTable span {
+  display: block;
+}
+
+.bindingTable span,
+.bindingTable p,
+.bindingTable em {
+  color: #667085;
+  font-size: 13px;
+}
+
+.bindingTable p {
+  margin: 0;
+}
+
+.bindingTable em {
+  font-style: normal;
+  font-weight: 900;
 }
 
 @media (max-width: 1400px) {
@@ -2883,6 +3508,18 @@ button {
 }
 
 @media (max-width: 1180px) {
+  .loginPage {
+    grid-template-columns: 1fr;
+    padding: 26px;
+  }
+
+  .loginPanel,
+  .loginAside {
+    width: 100%;
+    max-width: none;
+    justify-self: stretch;
+  }
+
   .appShell {
     grid-template-columns: 82px minmax(0, 1fr);
   }
@@ -2915,8 +3552,13 @@ button {
   }
 
   .studyLayout,
-  .graphWorkbench {
+  .graphWorkbench,
+  .adminWorkbench {
     grid-template-columns: 1fr;
+  }
+
+  .adminPanel.full {
+    grid-column: auto;
   }
 
   .graphSvg {
@@ -3008,8 +3650,15 @@ button {
   .knowledgeStats,
   .globalSearchGroups,
   .sideStack,
-  .practiceLayout {
+  .practiceLayout,
+  .ragFlow {
     grid-template-columns: 1fr;
+  }
+
+  .adminHero,
+  .adminPanelTitle {
+    align-items: stretch;
+    flex-direction: column;
   }
 
   .practiceSummary {
@@ -3041,6 +3690,23 @@ button {
 }
 
 @media (max-width: 640px) {
+  .loginPage {
+    padding: 14px;
+  }
+
+  .loginPanel,
+  .loginAside {
+    padding: 20px;
+  }
+
+  .loginRoleGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .loginBrand h1 {
+    font-size: 24px;
+  }
+
   .navList {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
@@ -3103,5 +3769,10 @@ button {
 
   .graphSvg {
     height: 380px;
+  }
+
+  .documentList article,
+  .bindingTable article {
+    grid-template-columns: 1fr;
   }
 }
