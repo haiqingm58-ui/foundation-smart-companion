@@ -1,3 +1,0 @@
-User-agent: *
-Allow: /
-Sitemap: https://haiqingm58-ui.github.io/foundation-smart-companion/sitemap.xml
