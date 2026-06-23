@@ -2521,7 +2521,7 @@ textarea:focus-visible,
 
 .resourceRow {
   display: grid;
-  grid-template-columns: 92px minmax(0, 1fr) 170px;
+  grid-template-columns: 92px minmax(0, 1fr) 170px 112px;
   gap: 16px;
   align-items: center;
   border: 1px solid transparent;
@@ -2532,6 +2532,15 @@ textarea:focus-visible,
   background: #fff;
   text-align: left;
   cursor: pointer;
+}
+
+.resourceRow:hover {
+  background: #f8fbff;
+}
+
+.resourceRow:focus-visible {
+  outline: 3px solid rgba(9, 94, 217, 0.22);
+  outline-offset: -3px;
 }
 
 .resourceRow:last-child {
@@ -2556,9 +2565,19 @@ textarea:focus-visible,
   font-weight: 800;
 }
 
-.resourceRow button {
+.resourceDetailButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
   background: #eef6ff;
   color: var(--blue);
+  white-space: nowrap;
+}
+
+.resourceRow.active .resourceDetailButton {
+  background: var(--blue);
+  color: #fff;
 }
 
 .resourceDetail {
@@ -2566,6 +2585,11 @@ textarea:focus-visible,
   border-radius: 8px;
   background: #fff;
   padding: 22px;
+}
+
+.resourceDetail:focus {
+  outline: 3px solid rgba(9, 94, 217, 0.2);
+  outline-offset: 3px;
 }
 
 .resourceDetailHeader {
@@ -3916,6 +3940,10 @@ textarea:focus-visible,
     grid-template-columns: 1fr;
     gap: 8px;
     padding: 18px;
+  }
+
+  .resourceDetailButton {
+    width: 100%;
   }
 
   .graphToolbar {

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   BarChart3,
   Bell,
@@ -3101,6 +3101,7 @@ function ResourcesPage({ initialResourceTitle }) {
   const [selectedResource, setSelectedResource] = useState(resources[0]);
   const [typeFilter, setTypeFilter] = useState("全部");
   const [resourceQuery, setResourceQuery] = useState("");
+  const detailRef = useRef(null);
   const resourceTypes = useMemo(() => ["全部", ...Array.from(new Set(resources.map((item) => item.type)))], []);
   const standardCount = resources.filter((item) => item.type.includes("标准") || item.type.includes("规范") || item.type.includes("规程")).length;
   const filteredResources = useMemo(() => {
@@ -3144,6 +3145,21 @@ function ResourcesPage({ initialResourceTitle }) {
     }
   }, [filteredResources, selectedResource.title]);
 
+  function openResourceDetail(item, shouldScroll = false) {
+    setSelectedResource(item);
+    window.requestAnimationFrame(() => {
+      const detail = detailRef.current;
+      if (!detail) {
+        return;
+      }
+      const narrowScreen = window.matchMedia?.("(max-width: 980px)")?.matches;
+      detail.focus({ preventScroll: true });
+      if (shouldScroll || narrowScreen) {
+        detail.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    });
+  }
+
   return (
     <section className="pagePanel">
       <PageHeader label="关联资料" title="规范资料库" desc="按教材参考文献和正文提及的规范整理，帮助学生从章节直接定位到设计依据、适用范围和重点条文方向。" />
@@ -3180,7 +3196,11 @@ function ResourcesPage({ initialResourceTitle }) {
       <div className="resourceLibrary">
         <div className="tablePanel resourceList">
           {filteredResources.map((item) => (
-            <button className={cx("resourceRow", selectedResource.title === item.title && "active")} type="button" key={item.title} onClick={() => setSelectedResource(item)}>
+            <article
+              className={cx("resourceRow", selectedResource.title === item.title && "active")}
+              key={item.title}
+              onClick={() => openResourceDetail(item)}
+            >
               <span className="typePill">{item.type}</span>
               <div>
                 <strong>{item.title}</strong>
@@ -3188,12 +3208,23 @@ function ResourcesPage({ initialResourceTitle }) {
                 <small>{(item.keyTopics ?? []).slice(0, 4).join(" · ")}</small>
               </div>
               <em>{item.code}</em>
-            </button>
+              <button
+                className="resourceDetailButton"
+                type="button"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  openResourceDetail(item, true);
+                }}
+              >
+                <FileText size={15} />
+                {selectedResource.title === item.title ? "正在查看" : "查看详情"}
+              </button>
+            </article>
           ))}
           {!filteredResources.length && <p className="emptySearch">没有匹配的规范资料。</p>}
         </div>
 
-        <section className="resourceDetail">
+        <section className="resourceDetail" ref={detailRef} tabIndex={-1} aria-label={`${selectedResource.title} 详情`}>
           <div className="resourceDetailHeader">
             <span className="typePill">{selectedResource.type}</span>
             <h2>{selectedResource.title}</h2>
