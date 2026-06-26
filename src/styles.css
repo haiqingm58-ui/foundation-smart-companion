@@ -2448,12 +2448,16 @@ textarea:focus-visible,
 .caseCard span,
 .typePill {
   display: inline-flex;
+  width: max-content;
+  max-width: 100%;
   border-radius: 999px;
   background: var(--blue-50);
   color: var(--blue);
   padding: 5px 10px;
   font-size: 13px;
   font-weight: 800;
+  line-height: 1.2;
+  white-space: nowrap;
 }
 
 .caseCard h3 {
@@ -2587,29 +2591,55 @@ textarea:focus-visible,
 
 .resourceLibrary {
   display: grid;
-  grid-template-columns: minmax(360px, 0.86fr) minmax(0, 1.14fr);
+  grid-template-columns: minmax(0, 0.86fr) minmax(0, 1.14fr);
   gap: 16px;
   align-items: start;
 }
 
 .resourceList {
   max-height: 760px;
-  overflow: auto;
+  overflow-x: hidden;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
 }
 
 .resourceRow {
   display: grid;
-  grid-template-columns: 92px minmax(0, 1fr) 170px 112px;
-  gap: 16px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    "badge action"
+    "body action"
+    "code action";
+  gap: 8px 14px;
   align-items: center;
   border: 1px solid transparent;
   width: 100%;
-  min-height: 88px;
+  min-width: 0;
+  min-height: 116px;
   border-bottom: 1px solid var(--soft-line);
-  padding: 0 20px;
+  padding: 16px 18px;
   background: #fff;
   text-align: left;
   cursor: pointer;
+  transition:
+    background 160ms ease,
+    border-color 160ms ease;
+}
+
+.resourceRow > .typePill {
+  grid-area: badge;
+  justify-self: start;
+}
+
+.resourceRow > div {
+  grid-area: body;
+  min-width: 0;
+}
+
+.resourceRow > em {
+  grid-area: code;
+  justify-self: start;
+  min-width: 0;
 }
 
 .resourceRow:hover {
@@ -2626,30 +2656,53 @@ textarea:focus-visible,
 }
 
 .resourceRow p {
+  display: -webkit-box;
+  overflow: hidden;
   margin: 5px 0 0;
   color: #667085;
+  line-height: 1.45;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 
 .resourceRow small {
-  display: block;
+  display: -webkit-box;
+  overflow: hidden;
   margin-top: 6px;
   color: #98a2b3;
   line-height: 1.45;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.resourceRow strong {
+  display: block;
+  overflow-wrap: anywhere;
+  color: var(--ink);
+  font-size: 16px;
+  line-height: 1.35;
 }
 
 .resourceRow em {
   color: var(--teal);
   font-style: normal;
   font-weight: 800;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
 }
 
 .resourceDetailButton {
   display: inline-flex;
+  grid-area: action;
+  width: 112px;
+  min-height: 38px;
   align-items: center;
   justify-content: center;
   gap: 6px;
+  align-self: center;
   background: #eef6ff;
   color: var(--blue);
+  padding: 0 12px;
   white-space: nowrap;
 }
 
@@ -3891,6 +3944,16 @@ textarea:focus-visible,
   }
 }
 
+@media (max-width: 1080px) {
+  .resourceLibrary {
+    grid-template-columns: 1fr;
+  }
+
+  .resourceList {
+    max-height: 520px;
+  }
+}
+
 @media (max-width: 900px) {
   .appShell {
     display: block;
@@ -4016,12 +4079,18 @@ textarea:focus-visible,
 
   .resourceRow {
     grid-template-columns: 1fr;
+    grid-template-areas:
+      "badge"
+      "body"
+      "code"
+      "action";
     gap: 8px;
     padding: 18px;
   }
 
   .resourceDetailButton {
     width: 100%;
+    justify-self: stretch;
   }
 
   .graphToolbar {
