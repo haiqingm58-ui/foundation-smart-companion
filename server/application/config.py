@@ -28,7 +28,7 @@ def load_settings() -> Settings:
     data_dir.mkdir(parents=True, exist_ok=True)
     upload_dir = Path(os.getenv("FOUNDATION_UPLOAD_DIR", data_dir / "uploads"))
     upload_dir.mkdir(parents=True, exist_ok=True)
-    database_url = os.getenv("FOUNDATION_DATABASE_URL", f"sqlite:///{data_dir / 'app.db'}")
+    database_url = os.getenv("FOUNDATION_DATABASE_URL", f"sqlite:///{data_dir / 'platform.db'}")
     return Settings(
         database_url=database_url,
         secret_key=os.getenv("FOUNDATION_SECRET_KEY", "development-only-change-me"),
