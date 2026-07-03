@@ -121,3 +121,46 @@ def test_teacher_dashboard_uses_real_owned_data(teacher_context) -> None:
     data = response.json()["data"]
     assert data["studentTotal"] == 1
     assert data["averageScore"] == 82
+
+
+def test_teacher_publishes_and_lists_notices(teacher_context) -> None:
+    client, _database, _settings = teacher_context
+    created = client.post(
+        "/api/teacher/notices",
+        json={"title": "本周答疑安排", "content": "周三下午在岩土楼答疑。", "audience": "class", "classScope": ["class-1"]},
+        headers={"X-CSRF-Token": "teacher-csrf"},
+    )
+    assert created.status_code == 200
+    response = client.get("/api/teacher/notices")
+    assert response.status_code == 200
+    assert response.json()["data"]["items"][0]["title"] == "本周答疑安排"
+
+
+def test_teacher_grades_only_owned_submission(teacher_context) -> None:
+    from server.application.models import Assignment, AssignmentTarget, Submission
+
+    client, database, _settings = teacher_context
+    now = datetime.now(timezone.utc)
+    with database.session() as session:
+        session.add(Assignment(id="assignment-owned", title="作业一", teacher_id="teacher-1", total_points=100, status="published"))
+        session.add(Assignment(id="assignment-other", title="作业二", teacher_id="teacher-2", total_points=100, status="published"))
+        session.add(AssignmentTarget(id="target-owned", assignment_id="assignment-owned", student_id="student-1", class_id="class-1"))
+        session.add(AssignmentTarget(id="target-other", assignment_id="assignment-other", student_id="student-2", class_id="class-1"))
+        session.add(Submission(id="submission-owned", assignment_id="assignment-owned", student_id="student-1", submitted_at=now, status="submitted"))
+        session.add(Submission(id="submission-other", assignment_id="assignment-other", student_id="student-2", submitted_at=now, status="submitted"))
+        session.commit()
+
+    response = client.put(
+        "/api/teacher/submissions/submission-owned/grade",
+        json={"score": 88, "feedback": "步骤完整，注意单位。"},
+        headers={"X-CSRF-Token": "teacher-csrf"},
+    )
+    assert response.status_code == 200
+    assert client.put(
+        "/api/teacher/submissions/submission-other/grade",
+        json={"score": 90, "feedback": "越权"},
+        headers={"X-CSRF-Token": "teacher-csrf"},
+    ).status_code == 404
+    listed = client.get("/api/teacher/submissions")
+    assert listed.status_code == 200
+    assert listed.json()["data"]["items"][0]["score"] == 88

@@ -116,4 +116,46 @@ def test_admin_dashboard_and_lists_return_real_counts(admin_context) -> None:
     assert dashboard.status_code == 200
     assert dashboard.json()["data"]["studentTotal"] == 1
     assert client.get("/api/admin/teachers?page=1&pageSize=20").status_code == 200
-    assert client.get("/api/admin/students?page=1&pageSize=20").status_code == 200
+    students = client.get("/api/admin/students?page=1&pageSize=20")
+    assert students.status_code == 200
+    assert students.json()["data"]["items"][0]["profileId"] is None
+
+
+def test_admin_disables_account_and_resets_password(admin_context) -> None:
+    from server.application.models import SessionToken, User
+    from server.application.security import verify_password
+
+    client, database = admin_context
+    disabled = client.patch(
+        "/api/admin/accounts/student-existing/status",
+        json={"status": "disabled"},
+        headers={"X-CSRF-Token": "admin-csrf"},
+    )
+    assert disabled.status_code == 200
+    reset = client.post(
+        "/api/admin/accounts/student-existing/reset-password",
+        json={"password": "Fresh-Student-123"},
+        headers={"X-CSRF-Token": "admin-csrf"},
+    )
+    assert reset.status_code == 200
+    with database.session() as session:
+        user = session.get(User, "student-existing")
+        assert user.status == "disabled"
+        assert user.must_change_password is True
+        assert verify_password("Fresh-Student-123", user.password_hash, user.password_algorithm)[0]
+        assert session.scalar(select(func.count(SessionToken.id)).where(SessionToken.user_id == user.id)) == 0
+
+
+def test_admin_previews_student_file_without_writing_database(admin_context) -> None:
+    from server.application.models import Student
+
+    client, database = admin_context
+    response = client.post(
+        "/api/admin/import/preview",
+        files={"file": ("students.csv", "姓名,学号,班级\n李同学,20260002,土木工程2401班\n".encode("utf-8"), "text/csv")},
+        headers={"X-CSRF-Token": "admin-csrf"},
+    )
+    assert response.status_code == 200
+    assert response.json()["data"]["valid"][0]["studentNo"] == "20260002"
+    with database.session() as session:
+        assert session.scalar(select(func.count(Student.id))) == 0

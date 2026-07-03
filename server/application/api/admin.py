@@ -3,17 +3,18 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from uuid import uuid4
 
-from fastapi import APIRouter, Depends, Query, Request
+from fastapi import APIRouter, Depends, File, Query, Request, UploadFile
 from fastapi.responses import Response
-from sqlalchemy import func, or_, select
+from sqlalchemy import delete, func, or_, select
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import aliased
 
 from ..errors import APIError
-from ..models import ClassRoom, OperationLog, Student, Teacher, TeacherStudentBinding, User
-from ..schemas.admin import BindingInput, ClassInput, TeacherStudentWizard
+from ..models import ClassRoom, OperationLog, SessionToken, Student, Teacher, TeacherStudentBinding, User
+from ..schemas.admin import AccountStatusInput, BindingInput, ClassInput, PasswordResetInput, TeacherStudentWizard
 from ..security import hash_password
 from ..services.audit import add_log
-from ..services.imports import build_import_template
+from ..services.imports import build_import_template, parse_student_file
 from .auth import client_ip
 from .dependencies import AuthContext, require_admin
 
@@ -59,10 +60,17 @@ def list_role_users(request: Request, role: str, page: int, page_size: int, sear
         users = session.scalars(
             select(User).where(*filters).order_by(User.created_at.desc()).offset((page - 1) * page_size).limit(page_size)
         ).all()
+        user_ids = [user.id for user in users]
+        profiles = {}
+        if role == "teacher" and user_ids:
+            profiles = {item.user_id: item for item in session.scalars(select(Teacher).where(Teacher.user_id.in_(user_ids))).all()}
+        if role == "student" and user_ids:
+            profiles = {item.user_id: item for item in session.scalars(select(Student).where(Student.user_id.in_(user_ids))).all()}
         items = [
             {
                 "id": user.id, "name": user.name, "username": user.username, "number": user.student_no,
                 "college": user.college, "status": user.status, "lastLoginAt": user.last_login_at,
+                "profileId": profiles[user.id].id if user.id in profiles else None,
             }
             for user in users
         ]
@@ -77,6 +85,38 @@ def teachers(request: Request, page: int = Query(1, ge=1), pageSize: int = Query
 @router.get("/students")
 def students(request: Request, page: int = Query(1, ge=1), pageSize: int = Query(20, ge=1, le=100), search: str = "", status: str | None = None, _auth: AuthContext = Depends(require_admin)):
     return list_role_users(request, "student", page, pageSize, search, status)
+
+
+@router.patch("/accounts/{user_id}/status")
+def update_account_status(user_id: str, body: AccountStatusInput, request: Request, auth: AuthContext = Depends(require_admin)):
+    if user_id == auth.user.id and body.status == "disabled":
+        raise APIError(400, "不能停用当前管理员账号", "CANNOT_DISABLE_SELF")
+    with request.app.state.database.session() as session:
+        user = session.get(User, user_id)
+        if not user:
+            raise APIError(404, "账号不存在", "ACCOUNT_NOT_FOUND")
+        user.status = body.status
+        if body.status == "disabled":
+            session.execute(delete(SessionToken).where(SessionToken.user_id == user.id))
+        add_log(session, auth.user.id, "account.status", "user", user.id, {"status": body.status}, client_ip(request))
+        session.commit()
+    return request.app.state.success(request, {"id": user_id, "status": body.status}, "账号状态已更新")
+
+
+@router.post("/accounts/{user_id}/reset-password")
+def reset_account_password(user_id: str, body: PasswordResetInput, request: Request, auth: AuthContext = Depends(require_admin)):
+    with request.app.state.database.session() as session:
+        user = session.get(User, user_id)
+        if not user:
+            raise APIError(404, "账号不存在", "ACCOUNT_NOT_FOUND")
+        user.password_hash = hash_password(body.password)
+        user.password_algorithm = "argon2"
+        user.password_salt = None
+        user.must_change_password = True
+        session.execute(delete(SessionToken).where(SessionToken.user_id == user.id))
+        add_log(session, auth.user.id, "account.reset_password", "user", user.id, {}, client_ip(request))
+        session.commit()
+    return request.app.state.success(request, {"id": user_id}, "密码已重置")
 
 
 @router.get("/classes")
@@ -105,20 +145,26 @@ def create_class(body: ClassInput, request: Request, auth: AuthContext = Depends
 @router.get("/bindings")
 def bindings(request: Request, _auth: AuthContext = Depends(require_admin)):
     with request.app.state.database.session() as session:
+        teacher_user = aliased(User)
+        student_user = aliased(User)
         rows = session.execute(
-            select(TeacherStudentBinding, Teacher, Student, User)
+            select(TeacherStudentBinding, Teacher, Student, teacher_user, student_user, ClassRoom)
             .join(Teacher, Teacher.id == TeacherStudentBinding.teacher_id)
             .join(Student, Student.id == TeacherStudentBinding.student_id)
-            .join(User, User.id == Student.user_id)
+            .join(teacher_user, teacher_user.id == Teacher.user_id)
+            .join(student_user, student_user.id == Student.user_id)
+            .outerjoin(ClassRoom, ClassRoom.id == TeacherStudentBinding.class_id)
             .order_by(TeacherStudentBinding.created_at.desc())
         ).all()
         items = [
             {
                 "id": binding.id, "teacherId": teacher.id, "studentId": student.id,
-                "studentName": user.name, "studentNo": student.student_no,
-                "classId": binding.class_id, "status": binding.status,
+                "teacherName": teacher_user_row.name, "teacherNo": teacher.teacher_no,
+                "studentName": student_user_row.name, "studentNo": student.student_no,
+                "classId": binding.class_id, "className": classroom.name if classroom else None,
+                "status": binding.status,
             }
-            for binding, teacher, student, user in rows
+            for binding, teacher, student, teacher_user_row, student_user_row, classroom in rows
         ]
     return request.app.state.success(request, {"items": items, "total": len(items)})
 
@@ -244,6 +290,21 @@ def import_template(_auth: AuthContext = Depends(require_admin)):
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         headers={"Content-Disposition": 'attachment; filename="student-import-template.xlsx"'},
     )
+
+
+@router.post("/import/preview")
+async def preview_import(request: Request, file: UploadFile = File(...), _auth: AuthContext = Depends(require_admin)):
+    filename = file.filename or "students.xlsx"
+    if not filename.lower().endswith((".xlsx", ".csv")):
+        raise APIError(415, "仅支持 XLSX 或 CSV 文件", "IMPORT_FILE_TYPE")
+    content = await file.read()
+    if len(content) > 5 * 1024 * 1024:
+        raise APIError(413, "导入文件不能超过 5MB", "IMPORT_FILE_TOO_LARGE")
+    try:
+        result = parse_student_file(content, filename)
+    except Exception as exc:
+        raise APIError(422, "无法解析导入文件，请检查模板格式", "IMPORT_PARSE_FAILED") from exc
+    return request.app.state.success(request, result, "导入预检完成")
 
 
 @router.get("/logs")

@@ -3,6 +3,7 @@ from __future__ import annotations
 from uuid import uuid4
 
 from fastapi import FastAPI, Request
+from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -26,7 +27,7 @@ def create_app(settings: Settings | None = None, database: Database | None = Non
 
     def success(request: Request, data, message: str = "操作成功") -> JSONResponse:
         return JSONResponse(
-            {"success": True, "message": message, "data": data, "requestId": request.state.request_id}
+            jsonable_encoder({"success": True, "message": message, "data": data, "requestId": request.state.request_id})
         )
 
     app.state.success = success

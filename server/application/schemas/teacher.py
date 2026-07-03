@@ -39,3 +39,10 @@ class AssignmentInput(TeacherModel):
 class GradeInput(TeacherModel):
     score: float = Field(ge=0)
     feedback: str = Field(default="", max_length=8000)
+
+
+class NoticeInput(TeacherModel):
+    title: str = Field(min_length=1, max_length=255)
+    content: str = Field(min_length=1, max_length=12000)
+    audience: str = Field(default="all", pattern="^(all|class)$")
+    classScope: list[str] = Field(default_factory=list)

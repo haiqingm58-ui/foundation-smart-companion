@@ -74,3 +74,18 @@ class BindingInput(StrictModel):
     teacher_id: str = Field(alias="teacherId")
     student_ids: list[str] = Field(alias="studentIds", min_length=1)
     class_id: str | None = Field(default=None, alias="classId")
+
+
+class AccountStatusInput(StrictModel):
+    status: str = Field(pattern="^(active|disabled)$")
+
+
+class PasswordResetInput(StrictModel):
+    password: str = Field(min_length=8, max_length=128)
+
+    @field_validator("password")
+    @classmethod
+    def strong_password(cls, value: str) -> str:
+        if not PASSWORD_PATTERN.match(value):
+            raise ValueError("密码必须包含大写字母、小写字母和数字")
+        return value

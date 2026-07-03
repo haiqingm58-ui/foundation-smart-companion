@@ -250,6 +250,7 @@ class Submission(Base):
     attempt_number: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
     status: Mapped[str] = mapped_column(String(24), default="submitted", nullable=False, index=True)
     score: Mapped[float | None] = mapped_column(Float)
+    feedback: Mapped[str] = mapped_column(Text, default="", nullable=False)
     submitted_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
     graded_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     graded_by: Mapped[str | None] = mapped_column(ForeignKey("users.id"))

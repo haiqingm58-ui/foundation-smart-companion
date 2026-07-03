@@ -2,6 +2,11 @@ const appBase = (import.meta.env.BASE_URL || "/").replace(/\/$/, "");
 const apiBase = import.meta.env.DEV ? "/api" : `${appBase}/api`;
 
 
+export function apiUrl(path) {
+  return `${apiBase}${path}`;
+}
+
+
 export class ApiError extends Error {
   constructor(message, { status, code, requestId } = {}) {
     super(message);
