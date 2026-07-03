@@ -872,11 +872,22 @@ function usePersistentState(key, fallback) {
   return [value, setValue];
 }
 
-async function apiRequest(path, { method = "GET", body, token, headers = {} } = {}) {
+function csrfCookie() {
+  return document.cookie
+    .split(";")
+    .map((item) => item.trim())
+    .find((item) => item.startsWith("foundation_csrf="))
+    ?.split("=")
+    .slice(1)
+    .join("=") ?? "";
+}
+
+async function apiRequest(path, { method = "GET", body, headers = {} } = {}) {
   const requestHeaders = { ...headers };
-  const options = { method, headers: requestHeaders };
-  if (token) {
-    requestHeaders.Authorization = `Bearer ${token}`;
+  const options = { method, headers: requestHeaders, credentials: "include" };
+  if (!["GET", "HEAD", "OPTIONS"].includes(method.toUpperCase())) {
+    const csrf = csrfCookie();
+    if (csrf) requestHeaders["X-CSRF-Token"] = decodeURIComponent(csrf);
   }
   if (body instanceof FormData) {
     options.body = body;
@@ -884,13 +895,14 @@ async function apiRequest(path, { method = "GET", body, token, headers = {} } = 
     requestHeaders["Content-Type"] = "application/json";
     options.body = JSON.stringify(body);
   }
-  const response = await fetch(`/api${path}`, options);
+  const base = import.meta.env.DEV ? "/api" : `${appBasePath()}/api`;
+  const response = await fetch(`${base}${path}`, options);
   const text = await response.text();
   const data = text ? JSON.parse(text) : {};
   if (!response.ok) {
     throw new Error(data.detail || data.message || `API ${response.status}`);
   }
-  return data;
+  return data.success === true ? data.data : data;
 }
 
 function canManageContent(user) {
@@ -1260,7 +1272,8 @@ function routeFromLocation(courseManifest) {
     return { page: "overview" };
   }
   const path = stripAppBase(window.location.pathname);
-  const segments = path.split("/").filter(Boolean).map((segment) => decodeURIComponent(segment));
+  const rawSegments = path.split("/").filter(Boolean).map((segment) => decodeURIComponent(segment));
+  const segments = rawSegments[0] === "student" ? rawSegments.slice(1) : rawSegments;
   const params = new URLSearchParams(window.location.search);
   const [page = "overview", detail] = segments;
 
@@ -1320,7 +1333,8 @@ function routeToUrl(page, options = {}, courseManifest = defaultCourseManifest) 
   }
 
   const query = params.toString();
-  return `${base}${path}${query ? `?${query}` : ""}`;
+  const studentPath = path === "/" ? "/student" : `/student${path}`;
+  return `${base}${studentPath}${query ? `?${query}` : ""}`;
 }
 
 const pageSeo = {
@@ -4520,9 +4534,8 @@ function Page({
   }
 }
 
-export function App() {
+export function StudentExperience({ currentUser, onLogout }) {
   const courseManifest = useJsonAsset("/course-manifest.json", defaultCourseManifest);
-  const [currentUser, setCurrentUser] = usePersistentState(authSessionKey, null);
   const [ragDocuments, setRagDocuments] = usePersistentState(ragDocumentsKey, []);
   const [customExercises, setCustomExercises] = usePersistentState(customExercisesKey, []);
   const [qaConfig, setQaConfig] = usePersistentState(qaConfigKey, defaultQaConfig);
@@ -4586,21 +4599,9 @@ export function App() {
     window.localStorage.setItem(learningAttemptsKey, JSON.stringify(learningAttempts));
   }, [learningAttempts]);
 
-  async function refreshServerData(user = currentUser) {
-    if (!user?.token) {
-      setBackendStatus("offline");
-      return false;
-    }
+  async function refreshServerData() {
     try {
-      const [documentsData, exercisesData, qaConfigData] = await Promise.all([
-        apiRequest("/documents", { token: user.token }),
-        apiRequest("/exercises", { token: user.token }),
-        apiRequest("/qa-config", { token: user.token }),
-      ]);
-      setRagDocuments(documentsData.documents ?? []);
-      setServerExerciseBank(exercisesData);
-      setCustomExercises((exercisesData.exercises ?? []).filter((exercise) => exercise._source === "teacher"));
-      setQaConfig({ ...defaultQaConfig, ...qaConfigData });
+      await apiRequest("/student/dashboard");
       setBackendStatus("online");
       return true;
     } catch {
@@ -4611,7 +4612,7 @@ export function App() {
 
   useEffect(() => {
     refreshServerData();
-  }, [currentUser?.token]);
+  }, [currentUser?.id]);
 
   function applyRoute(route) {
     if (route.chapter) {
@@ -4650,41 +4651,26 @@ export function App() {
   }
 
   function handleRecordAttempt(attempt) {
+    apiRequest(`/student/exercises/${encodeURIComponent(attempt.questionId)}/attempts`, {
+      method: "POST",
+      body: { answer: attempt.answerPreview },
+    }).catch(() => {});
     setLearningAttempts((current) => {
       const attemptNumber = current.filter((item) => item.questionId === attempt.questionId).length + 1;
       return [{ ...attempt, attemptNumber }, ...current].slice(0, 300);
     });
   }
 
-  async function handleLogin({ username, password, fallbackUser }) {
-    try {
-      const data = await apiRequest("/auth/login", { method: "POST", body: { username, password } });
-      const session = { ...data.user, token: data.token };
-      setCurrentUser(session);
-      await refreshServerData(session);
-      return { ok: true };
-    } catch {
-      if (!fallbackUser) {
-        return { ok: false, message: "服务器登录失败，请检查账号密码或联系管理员。" };
-      }
-      const { password: _password, ...session } = fallbackUser;
-      setCurrentUser(session);
-      setBackendStatus("offline");
-      return { ok: true, offline: true };
-    }
-  }
-
-  function handleLogout() {
-    setCurrentUser(null);
+  async function handleLogout() {
     setServerExerciseBank(null);
     setBackendStatus("offline");
     setQuery("");
     setActive("overview");
-    window.history.pushState({ route: { page: "overview" } }, "", routeToUrl("overview", {}, courseManifest));
+    await onLogout?.();
   }
 
   if (!currentUser) {
-    return <LoginPage onLogin={handleLogin} />;
+    return <LoadingSkeleton title="正在恢复学生信息" />;
   }
 
   return (
@@ -4726,7 +4712,7 @@ export function App() {
               setCustomExercises={setCustomExercises}
               qaConfig={qaConfig}
               setQaConfig={setQaConfig}
-              apiToken={currentUser.token}
+              apiToken="cookie-session"
               backendStatus={backendStatus}
               onRefreshData={() => refreshServerData()}
             />
