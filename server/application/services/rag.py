@@ -17,7 +17,7 @@ from ..models import KnowledgeChunk
 
 @lru_cache(maxsize=1)
 def textbook_chunks() -> list[dict[str, Any]]:
-    path = ROOT_DIR / "public" / "knowledge" / "chunks.json"
+    path = ROOT_DIR / "server" / "data" / "knowledge" / "chunks.json"
     if not path.exists():
         return []
     rows = json.loads(path.read_text(encoding="utf-8"))
@@ -29,6 +29,22 @@ def textbook_chunks() -> list[dict[str, Any]]:
         }
         for row in rows
         if len((row.get("text") or "").strip()) >= 12
+    ]
+
+
+@lru_cache(maxsize=1)
+def standard_chunks() -> list[dict[str, Any]]:
+    path = ROOT_DIR / "server" / "data" / "knowledge" / "standards.json"
+    if not path.exists():
+        return []
+    rows = json.loads(path.read_text(encoding="utf-8"))
+    return [
+        {
+            "id": f"standard:{row['code']}", "sourceType": "standard",
+            "heading": f"{row['title']}（{row['code']}）", "text": row["text"],
+            "chapter": row.get("chapter"), "page": None, "line": None,
+        }
+        for row in rows
     ]
 
 
@@ -52,7 +68,7 @@ def score(query: str, heading: str, text: str) -> float:
 
 def search(session: Session, query: str, mode: str, limit: int = 5) -> list[dict[str, Any]]:
     database_rows = session.scalars(select(KnowledgeChunk)).all()
-    rows = textbook_chunks() + [
+    rows = textbook_chunks() + standard_chunks() + [
         {"id": row.id, "sourceType": row.source_type, "heading": row.heading, "text": row.text, "chapter": row.chapter, "page": row.page, "line": None}
         for row in database_rows
     ]

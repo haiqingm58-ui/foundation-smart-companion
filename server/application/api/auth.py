@@ -4,7 +4,7 @@ from datetime import datetime, timedelta, timezone
 from uuid import uuid4
 
 from fastapi import APIRouter, Depends, Request
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from sqlalchemy import func, select
 
 from ..errors import APIError
@@ -23,6 +23,18 @@ class LoginBody(BaseModel):
     role: str = Field(pattern="^(student|teacher|admin)$")
     captchaId: str = Field(min_length=1, max_length=80)
     captchaCode: str = Field(min_length=4, max_length=8)
+
+
+class ChangePasswordBody(BaseModel):
+    currentPassword: str = Field(min_length=1, max_length=200)
+    newPassword: str = Field(min_length=8, max_length=128)
+
+    @field_validator("newPassword")
+    @classmethod
+    def strong_password(cls, value: str) -> str:
+        if not any(char.islower() for char in value) or not any(char.isupper() for char in value) or not any(char.isdigit() for char in value):
+            raise ValueError("密码必须包含大写字母、小写字母和数字")
+        return value
 
 
 def client_ip(request: Request) -> str:
@@ -160,3 +172,23 @@ def logout(request: Request, auth: AuthContext = Depends(current_auth)):
     response.delete_cookie(SESSION_COOKIE, path=request.app.state.settings.cookie_path)
     response.delete_cookie(CSRF_COOKIE, path=request.app.state.settings.cookie_path)
     return response
+
+
+@router.post("/change-password")
+def change_password(body: ChangePasswordBody, request: Request, auth: AuthContext = Depends(current_auth)):
+    database = request.app.state.database
+    with database.session() as session:
+        user = session.get(User, auth.user.id)
+        valid, _needs_rehash = verify_password(
+            body.currentPassword, user.password_hash, user.password_algorithm, user.password_salt
+        )
+        if not valid:
+            raise APIError(400, "当前密码不正确", "CURRENT_PASSWORD_INVALID")
+        if body.currentPassword == body.newPassword:
+            raise APIError(400, "新密码不能与当前密码相同", "PASSWORD_UNCHANGED")
+        user.password_hash = hash_password(body.newPassword)
+        user.password_algorithm = "argon2"
+        user.password_salt = None
+        user.must_change_password = False
+        session.commit()
+    return request.app.state.success(request, {"mustChangePassword": False}, "密码修改成功")

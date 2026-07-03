@@ -23,5 +23,14 @@ def ask(body: QaInput, request: Request, _auth: AuthContext = Depends(current_au
         sources = search(session, body.question, body.mode, 5)
     llm_answer = call_llm(request.app.state.settings, body.question, body.mode, sources) if body.useLlm else None
     answer = llm_answer or local_answer(body.question, sources)
-    citations = [{"id": item["id"], "sourceType": item["sourceType"], "heading": item["heading"], "chapter": item.get("chapter"), "page": item.get("page"), "line": item.get("line"), "excerpt": item["text"][:260], "score": round(item["score"], 2)} for item in sources]
+    citations = [
+        {
+            "id": item["id"], "sourceType": item["sourceType"], "heading": item["heading"],
+            "heading_path": item["heading"], "chapter": item.get("chapter"), "page": item.get("page"),
+            "line": item.get("line"), "source_line": item.get("line"), "text": item["text"],
+            "excerpt": item["text"][:260], "kind": item["sourceType"],
+            "documentTitle": item["heading"], "score": round(item["score"], 2),
+        }
+        for item in sources
+    ]
     return request.app.state.success(request, {"answer": answer, "sources": citations, "usedLlm": bool(llm_answer), "llmConfigured": bool(request.app.state.settings.llm_api_url and request.app.state.settings.llm_api_key)})

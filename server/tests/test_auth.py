@@ -147,3 +147,28 @@ def test_five_wrong_passwords_temporarily_lock_account(auth_app) -> None:
         locked = login(client, captcha(client))
         assert locked.status_code == 429
         assert locked.json()["code"] == "LOGIN_LOCKED"
+
+
+def test_authenticated_user_changes_password_and_clears_first_login_flag(auth_app) -> None:
+    from server.application.models import User
+    from server.application.security import verify_password
+
+    app, database = auth_app
+    with database.session() as session:
+        user = session.get(User, "student-test")
+        user.must_change_password = True
+        session.commit()
+    with TestClient(app) as client:
+        assert login(client, captcha(client)).status_code == 200
+        csrf = client.cookies.get("foundation_csrf")
+        response = client.post(
+            "/api/auth/change-password",
+            json={"currentPassword": "Correct-123", "newPassword": "Changed-456"},
+            headers={"X-CSRF-Token": csrf},
+        )
+        assert response.status_code == 200
+        assert response.json()["data"]["mustChangePassword"] is False
+        with database.session() as session:
+            user = session.get(User, "student-test")
+            assert user.must_change_password is False
+            assert verify_password("Changed-456", user.password_hash, user.password_algorithm)[0]

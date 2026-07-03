@@ -4,7 +4,7 @@ dist/
 .npm-cache/
 *.log
 AGENTS.md
-data/
+/data/
 design-shots/
 scripts/*.py
 .playwright-cli/
@@ -12,5 +12,9 @@ scripts/*.py
 __pycache__/
 *.pyc
 server/.venv/
-server/data/
+server/data/*
+!server/data/knowledge/
+server/data/knowledge/*
+!server/data/knowledge/chunks.json
+!server/data/knowledge/standards.json
 server/__pycache__/

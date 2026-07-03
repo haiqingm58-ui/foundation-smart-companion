@@ -1764,6 +1764,96 @@ textarea:focus-visible,
   }
 }
 
+.passwordGate {
+  display: grid;
+  min-height: 100vh;
+  place-items: center;
+  background: #eef3f9;
+  padding: 24px;
+}
+
+.passwordGate > section {
+  width: min(470px, 100%);
+  border: 1px solid #d8e1ec;
+  border-radius: 8px;
+  background: white;
+  box-shadow: 0 22px 54px rgba(19, 38, 62, 0.12);
+  padding: 32px;
+}
+
+.passwordGate img {
+  display: block;
+  width: 74px;
+  height: 74px;
+  margin: 0 auto 18px;
+  border: 1px solid #cbd9ea;
+  border-radius: 50%;
+  object-fit: contain;
+}
+
+.passwordGate > section > span {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  color: #075bcf;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.passwordGate h1 {
+  margin: 8px 0 0;
+  color: #142033;
+  font-size: 24px;
+  text-align: center;
+}
+
+.passwordGate > section > p {
+  margin: 10px 0 22px;
+  color: #667085;
+  font-size: 12px;
+  line-height: 1.7;
+  text-align: center;
+}
+
+.passwordGate form,
+.passwordGate label {
+  display: grid;
+  gap: 8px;
+}
+
+.passwordGate form {
+  gap: 14px;
+}
+
+.passwordGate label span {
+  color: #344054;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.passwordGate input {
+  min-height: 42px;
+  border: 1px solid #d4deea;
+  border-radius: 6px;
+  background: #fbfcfe;
+  padding: 0 11px;
+}
+
+.passwordGate form > button {
+  min-height: 44px;
+  border-radius: 6px;
+  background: #075bcf;
+  color: white;
+  cursor: pointer;
+  font-weight: 900;
+}
+
+.passwordGate form > button:disabled {
+  cursor: wait;
+  opacity: 0.64;
+}
+
 .routeSurface {
   animation: pageEnter 220ms ease both;
 }

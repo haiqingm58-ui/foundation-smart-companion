@@ -3,11 +3,11 @@ import path from "node:path";
 
 const distDir = path.resolve("dist");
 const basePath = "/foundation-smart-companion";
-const canonicalOrigin = "https://haiqingm58-ui.github.io";
+const canonicalOrigin = process.env.PRERENDER_ORIGIN || "http://111.228.5.243";
 
 const routes = [
   {
-    path: "/",
+    path: "/login",
     title: "《基础工程》智慧学伴",
     description: "面向土木工程基础工程课程的教材学习、知识图谱、RAG 智能问答、关联规范资料、题库练习和学习报告平台。",
     keywords: "基础工程,智慧学伴,土木工程,地基基础,知识图谱,RAG,智能问答,题库练习",
@@ -15,7 +15,7 @@ const routes = [
     points: ["课程总览", "教材学习", "知识图谱", "智能问答", "关联资料", "练习中心", "学习报告"],
   },
   {
-    path: "/textbook",
+    path: "/student/textbook",
     title: "教材学习 - 《基础工程》智慧学伴",
     description: "按章节浏览《基础工程》教材内容，查看公式、图表解释、案例关联和章节练习。",
     keywords: "基础工程教材,浅基础,桩基础,基坑工程,地基处理",
@@ -23,7 +23,7 @@ const routes = [
     points: ["章节导读", "重点公式", "图表解释", "案例关联", "章节练习"],
   },
   {
-    path: "/graph",
+    path: "/student/knowledge-graph",
     title: "知识图谱 - 《基础工程》智慧学伴",
     description: "以可交互知识图谱浏览基础工程章节、概念、关系和教材原文依据。",
     keywords: "基础工程知识图谱,地基基础概念,教材关系图谱",
@@ -31,7 +31,7 @@ const routes = [
     points: ["节点搜索", "关系过滤", "节点展开", "教材依据"],
   },
   {
-    path: "/qa",
+    path: "/student/qa",
     title: "RAG 智能问答 - 《基础工程》智慧学伴",
     description: "基于教材切块、教师上传知识库和大模型生成的基础工程课程问答系统。",
     keywords: "RAG问答,基础工程智能问答,教材问答,规范问答",
@@ -39,7 +39,7 @@ const routes = [
     points: ["教材问答", "规范问答", "学习辅导", "来源引用"],
   },
   {
-    path: "/cases",
+    path: "/student/cases",
     title: "工程案例 - 《基础工程》智慧学伴",
     description: "围绕浅基础、桩基础、基坑工程、地基处理等主题的工程案例学习入口。",
     keywords: "基础工程案例,桩基础案例,基坑工程案例,地基处理案例",
@@ -47,7 +47,7 @@ const routes = [
     points: ["工程背景", "地质条件", "处理措施", "经验启示"],
   },
   {
-    path: "/resources",
+    path: "/student/resources",
     title: "关联资料 - 《基础工程》智慧学伴",
     description: "整理基础工程课程相关规范、规程、参考教材和拓展资料，可查看标准编号、版本和关联章节。",
     keywords: "基础工程规范,GB 50007,JGJ 94,JGJ 120,关联资料",
@@ -55,7 +55,7 @@ const routes = [
     points: ["标准规范", "参考教材", "课程讲义", "论文与拓展阅读"],
   },
   {
-    path: "/practice",
+    path: "/student/exercises",
     title: "练习中心 - 《基础工程》智慧学伴",
     description: "覆盖《基础工程》全书思考题和习题，支持按章节、题型、难度和关键词练习。",
     keywords: "基础工程习题,基础工程题库,思考题,章节练习",
@@ -63,7 +63,7 @@ const routes = [
     points: ["全书题库", "Rubric 评分", "错题反馈", "教师复核"],
   },
   {
-    path: "/report",
+    path: "/student/report",
     title: "学习报告 - 《基础工程》智慧学伴",
     description: "根据练习记录生成学习进度、掌握度、薄弱知识点和学习段位反馈。",
     keywords: "学习报告,基础工程学习进度,知识点掌握度,学习段位",
@@ -147,11 +147,7 @@ function renderRoute(template, route) {
 
 async function writeRoute(template, route) {
   const html = renderRoute(template, route);
-  if (route.path === "/") {
-    await writeFile(path.join(distDir, "index.html"), html);
-    await writeFile(path.join(distDir, "404.html"), html);
-    return;
-  }
+  if (route.path === "/login") await writeFile(path.join(distDir, "index.html"), html);
   const routeDir = path.join(distDir, route.path.replace(/^\//, ""));
   await mkdir(routeDir, { recursive: true });
   await writeFile(path.join(routeDir, "index.html"), html);
@@ -177,6 +173,7 @@ ${urls}
 
 const template = await readFile(path.join(distDir, "index.html"), "utf8");
 await Promise.all(routes.map((route) => writeRoute(template, route)));
+await writeFile(path.join(distDir, "404.html"), renderRoute(template, routes[0]));
 await writeFile(path.join(distDir, "sitemap.xml"), buildSitemap());
 await writeFile(
   path.join(distDir, "robots.txt"),

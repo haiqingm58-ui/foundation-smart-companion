@@ -3089,14 +3089,13 @@ function QAPage({ ragChunks = [], qaConfig = defaultQaConfig, apiToken, backendS
   const [serverSources, setServerSources] = useState([]);
   const [aiStatus, setAiStatus] = useState("idle");
   const [aiError, setAiError] = useState("");
-  const baseChunkState = useJsonAssetState("/knowledge/chunks.json", []);
-  const baseChunks = baseChunkState.data;
-  const chunks = useMemo(() => [...ragChunks, ...baseChunks], [baseChunks, ragChunks]);
+  const baseChunks = [];
+  const chunks = useMemo(() => [...ragChunks], [ragChunks]);
   const modes = ["教材问答", "规范问答", "学习辅导"];
   const localResults = useMemo(() => searchChunks(chunks, question, 4), [chunks, question]);
   const results = serverSources.length ? serverSources : localResults;
   const answer = buildLocalRagAnswer(question, mode, results, qaConfig);
-  const isCorpusLoading = baseChunkState.status === "loading" && !baseChunks.length && !ragChunks.length;
+  const isCorpusLoading = false;
 
   useEffect(() => {
     setAiAnswer("");
@@ -3179,8 +3178,7 @@ function QAPage({ ragChunks = [], qaConfig = defaultQaConfig, apiToken, backendS
       <PageHeader label="智能问答" title="RAG 检索问答" desc="已接入《基础工程》教材切块和教师上传知识库，先检索引用，再生成回答。" />
       <div className="teacherNotice">
         <Link2 size={17} />
-        当前模式：{mode} · {backendStatus === "online" ? "服务器 RAG 已连接" : "本地演示索引"} · 教材 {baseChunks.length} 块，教师上传{" "}
-        {ragChunks.length} 块。
+        当前模式：{mode} · {backendStatus === "online" ? "服务器 RAG 已连接，教材切块在私有知识库中检索" : "服务器暂未连接"}
       </div>
       {isCorpusLoading && <LoadingSkeleton title="正在准备 RAG 教材索引" rows={3} />}
       <div className="qaShell">

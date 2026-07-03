@@ -1,6 +1,7 @@
 import { lazy, Suspense } from "react";
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { AuthProvider, useAuth } from "../stores/AuthContext.jsx";
+import { PasswordChangeGate } from "../components/auth/PasswordChangeGate.jsx";
 import { RoleGuard } from "./RoleGuard.jsx";
 
 
@@ -32,8 +33,9 @@ export function RouterApp() {
   return (
     <BrowserRouter basename="/foundation-smart-companion">
       <AuthProvider>
-        <Suspense fallback={<Loading />}>
-          <Routes>
+        <PasswordChangeGate>
+          <Suspense fallback={<Loading />}>
+            <Routes>
             <Route path="/" element={<HomeRedirect />} />
             <Route path="/login" element={<LoginPage />} />
             <Route element={<RoleGuard allowedRoles={["student"]} />}>
@@ -46,8 +48,9 @@ export function RouterApp() {
               <Route path="/admin/*" element={<AdminApp />} />
             </Route>
             <Route path="*" element={<HomeRedirect />} />
-          </Routes>
-        </Suspense>
+            </Routes>
+          </Suspense>
+        </PasswordChangeGate>
       </AuthProvider>
     </BrowserRouter>
   );
