@@ -18,6 +18,7 @@ class Settings:
     session_ttl_seconds: int
     captcha_ttl_seconds: int
     cookie_secure: bool
+    cookie_path: str
     llm_api_url: str
     llm_api_key: str
     llm_model: str
@@ -37,6 +38,7 @@ def load_settings() -> Settings:
         session_ttl_seconds=int(os.getenv("FOUNDATION_SESSION_TTL_SECONDS", str(60 * 60 * 12))),
         captcha_ttl_seconds=int(os.getenv("FOUNDATION_CAPTCHA_TTL_SECONDS", "120")),
         cookie_secure=os.getenv("FOUNDATION_COOKIE_SECURE", "false").lower() == "true",
+        cookie_path=os.getenv("FOUNDATION_COOKIE_PATH", "/foundation-smart-companion"),
         llm_api_url=os.getenv("FOUNDATION_LLM_API_URL", "").strip(),
         llm_api_key=os.getenv("FOUNDATION_LLM_API_KEY", "").strip(),
         llm_model=os.getenv("FOUNDATION_LLM_MODEL", "gpt-4o-mini").strip(),
