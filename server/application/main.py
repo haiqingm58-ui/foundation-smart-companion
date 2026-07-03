@@ -8,6 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from .api.auth import router as auth_router
+from .api.admin import router as admin_router
 from .config import Settings, load_settings
 from .database import Database, create_database
 from .errors import APIError
@@ -60,4 +61,5 @@ def create_app(settings: Settings | None = None, database: Database | None = Non
         return success(request, {"status": "ok", "llmConfigured": bool(settings.llm_api_url and settings.llm_api_key)})
 
     app.include_router(auth_router)
+    app.include_router(admin_router)
     return app
