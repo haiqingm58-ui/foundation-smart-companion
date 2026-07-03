@@ -268,6 +268,22 @@ class SubmissionAnswer(Base):
     feedback: Mapped[str | None] = mapped_column(Text)
 
 
+class PracticeAttempt(Base):
+    __tablename__ = "practice_attempts"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    student_id: Mapped[str] = mapped_column(ForeignKey("students.id", ondelete="CASCADE"), nullable=False, index=True)
+    question_id: Mapped[str] = mapped_column(ForeignKey("questions.id"), nullable=False, index=True)
+    answer: Mapped[Any] = mapped_column(JSON, nullable=False)
+    score: Mapped[float] = mapped_column(Float, nullable=False)
+    max_score: Mapped[float] = mapped_column(Float, nullable=False)
+    criteria_scores: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
+    confidence: Mapped[float] = mapped_column(Float, default=1, nullable=False)
+    feedback: Mapped[str] = mapped_column(Text, default="", nullable=False)
+    attempt_number: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+    submitted_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False, index=True)
+
+
 class LearningProgress(Base):
     __tablename__ = "learning_progress"
     __table_args__ = (UniqueConstraint("student_id", "chapter_id", name="uq_student_chapter_progress"),)
