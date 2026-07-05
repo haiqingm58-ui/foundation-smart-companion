@@ -4,7 +4,7 @@ from pathlib import Path
 from uuid import uuid4
 
 from fastapi import APIRouter, Depends, File, Form, Query, Request, UploadFile
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, Response
 from datetime import datetime, timezone
 
 from sqlalchemy import func, or_, select
@@ -26,9 +26,10 @@ from ..models import (
     TeacherStudentBinding,
     User,
 )
-from ..schemas.teacher import AssignmentInput, GradeInput, NoticeInput, QuestionInput
+from ..schemas.teacher import AssignmentInput, GradeInput, NoticeInput, QuestionImportInput, QuestionInput
 from ..services.audit import add_log
 from ..services.storage import chunk_text, extract_text, save_upload
+from ..services.question_imports import build_question_import_template, parse_question_import
 from .auth import client_ip
 from .dependencies import AuthContext, require_teacher
 
@@ -264,6 +265,54 @@ def questions(request: Request, search: str = "", chapter: str | None = None, qu
         records = session.scalars(select(Question).where(*filters).order_by(Question.created_at.desc())).all()
         items = [question_payload(item) for item in records]
     return request.app.state.success(request, {"items": items, "total": len(items)})
+
+
+@router.get("/question-import-template")
+def question_import_template(_auth: AuthContext = Depends(require_teacher)):
+    return Response(
+        content=build_question_import_template(),
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": 'attachment; filename="foundation-question-import.xlsx"'},
+    )
+
+
+@router.post("/questions/import-preview")
+async def preview_question_import(request: Request, file: UploadFile = File(...), _auth: AuthContext = Depends(require_teacher)):
+    content = await file.read()
+    if len(content) > 5 * 1024 * 1024:
+        raise APIError(413, "题库文件不能超过 5MB", "QUESTION_IMPORT_TOO_LARGE")
+    try:
+        result = parse_question_import(file.filename or "questions.xlsx", content)
+    except ValueError as exc:
+        raise APIError(400, str(exc), "QUESTION_IMPORT_INVALID") from exc
+    return request.app.state.success(request, result)
+
+
+@router.post("/questions/import")
+def import_questions(body: QuestionImportInput, request: Request, auth: AuthContext = Depends(require_teacher)):
+    texts = [item.text.strip() for item in body.rows]
+    if len(texts) != len(set(texts)):
+        raise APIError(400, "提交数据中存在重复题干", "QUESTION_IMPORT_DUPLICATE")
+    created_ids = []
+    with request.app.state.database.session() as session:
+        existing = session.scalars(
+            select(Question.text).where(Question.created_by == auth.user.id, Question.text.in_(texts))
+        ).all()
+        if existing:
+            raise APIError(409, f"已有相同题目：{existing[0]}", "QUESTION_ALREADY_EXISTS")
+        for item in body.rows:
+            question = Question(
+                id=str(uuid4()), text=item.text.strip(), question_type=item.questionType,
+                options=item.options, correct_answer=item.correctAnswer, explanation=item.explanation,
+                rubric=item.rubric, difficulty=item.difficulty, points=item.points,
+                chapter=item.chapter, knowledge_point=item.knowledgePoint,
+                source="teacher-import", created_by=auth.user.id,
+            )
+            session.add(question)
+            created_ids.append(question.id)
+        add_log(session, auth.user.id, "question.import", "question", None, {"count": len(created_ids)}, client_ip(request))
+        session.commit()
+    return request.app.state.success(request, {"created": len(created_ids), "ids": created_ids}, "题库导入成功")
 
 
 def question_payload(item: Question) -> dict:

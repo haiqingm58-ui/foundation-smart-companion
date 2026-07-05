@@ -1,11 +1,27 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
+from io import BytesIO
 from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
+from openpyxl import Workbook, load_workbook
 from sqlalchemy import select
+
+
+QUESTION_IMPORT_HEADERS = ["章节", "题型", "题干", "选项A", "选项B", "选项C", "选项D", "正确答案", "解析", "知识点", "难度", "分值"]
+
+
+def question_workbook(rows: list[list]) -> bytes:
+    workbook = Workbook()
+    sheet = workbook.active
+    sheet.append(QUESTION_IMPORT_HEADERS)
+    for row in rows:
+        sheet.append(row)
+    buffer = BytesIO()
+    workbook.save(buffer)
+    return buffer.getvalue()
 
 
 @pytest.fixture()
@@ -168,3 +184,68 @@ def test_teacher_grades_only_owned_submission(teacher_context) -> None:
     listed = client.get("/api/teacher/submissions")
     assert listed.status_code == 200
     assert listed.json()["data"]["items"][0]["score"] == 88
+
+
+def test_teacher_downloads_template_and_previews_question_import(teacher_context) -> None:
+    client, _database, _settings = teacher_context
+    template = client.get("/api/teacher/question-import-template")
+    assert template.status_code == 200
+    assert "attachment" in template.headers["content-disposition"]
+    workbook = load_workbook(BytesIO(template.content), read_only=True)
+    assert [cell.value for cell in next(workbook.active.iter_rows())] == QUESTION_IMPORT_HEADERS
+
+    preview = client.post(
+        "/api/teacher/questions/import-preview",
+        files={"file": ("questions.xlsx", question_workbook([
+            ["第3章 桩基础", "单项选择题", "单桩竖向承载力由哪些部分组成？", "桩侧阻力和桩端阻力", "仅桩端阻力", "仅桩侧阻力", "基础自重", "A", "考查荷载传递", "单桩承载力", "基础", 10],
+        ]), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")},
+        headers={"X-CSRF-Token": "teacher-csrf"},
+    )
+    assert preview.status_code == 200
+    data = preview.json()["data"]
+    assert data["summary"] == {"total": 1, "valid": 1, "errors": 0}
+    assert data["rows"][0]["questionType"] == "单项选择题"
+    assert data["rows"][0]["options"][0] == {"label": "A", "text": "桩侧阻力和桩端阻力"}
+    assert data["rows"][0]["correctAnswer"] == "A"
+
+
+def test_question_import_reports_rows_and_inserts_transactionally(teacher_context) -> None:
+    from server.application.models import Question
+
+    client, database, _settings = teacher_context
+    invalid = client.post(
+        "/api/teacher/questions/import-preview",
+        files={"file": ("bad.xlsx", question_workbook([
+            ["第3章 桩基础", "未知题型", "重复题干", "A项", "B项", "", "", "A", "", "桩基础", "基础", 10],
+            ["第3章 桩基础", "单项选择题", "重复题干", "A项", "B项", "", "", "", "", "桩基础", "基础", 10],
+            ["第3章 桩基础", "简答题", "=1+1", "", "", "", "", "答案", "", "桩基础", "基础", 10],
+        ]), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")},
+        headers={"X-CSRF-Token": "teacher-csrf"},
+    )
+    assert invalid.status_code == 200
+    errors = invalid.json()["data"]["errors"]
+    assert {item["code"] for item in errors} >= {"INVALID_TYPE", "DUPLICATE_IN_FILE", "ANSWER_REQUIRED", "FORMULA_NOT_ALLOWED"}
+
+    rows = [
+        {"text": "桩侧负摩阻力在什么条件下产生？", "questionType": "简答题", "options": [], "correctAnswer": "土体相对桩身向下位移", "explanation": "考查相对位移", "rubric": [], "difficulty": "中等", "points": 12, "chapter": "第3章 桩基础", "knowledgePoint": "负摩阻力"},
+        {"text": "地基承载力验算的基本要求是什么？", "questionType": "简答题", "options": [], "correctAnswer": "基底压力不超过承载力特征值", "explanation": "", "rubric": [], "difficulty": "基础", "points": 10, "chapter": "第2章 浅基础", "knowledgePoint": "地基承载力"},
+    ]
+    imported = client.post(
+        "/api/teacher/questions/import",
+        json={"rows": rows}, headers={"X-CSRF-Token": "teacher-csrf"},
+    )
+    assert imported.status_code == 200
+    assert imported.json()["data"]["created"] == 2
+    with database.session() as session:
+        owned = session.scalars(select(Question).where(Question.created_by == "teacher-user-1")).all()
+        assert len(owned) == 2
+        assert all(item.source == "teacher-import" for item in owned)
+
+    rejected = client.post(
+        "/api/teacher/questions/import",
+        json={"rows": [rows[0], {**rows[1], "questionType": "未知题型"}]},
+        headers={"X-CSRF-Token": "teacher-csrf"},
+    )
+    assert rejected.status_code == 422
+    with database.session() as session:
+        assert len(session.scalars(select(Question).where(Question.created_by == "teacher-user-1")).all()) == 2

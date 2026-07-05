@@ -23,6 +23,10 @@ class QuestionInput(TeacherModel):
     knowledgePoint: str | None = Field(default=None, max_length=160)
 
 
+class QuestionImportInput(TeacherModel):
+    rows: list[QuestionInput] = Field(min_length=1, max_length=1000)
+
+
 class AssignmentInput(TeacherModel):
     title: str = Field(min_length=1, max_length=255)
     description: str = Field(default="", max_length=12000)
