@@ -11,7 +11,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:backend": "server/.venv/bin/pytest server/tests -q",
-    "check": "npm run test && npm run test:backend && npm run build",
+    "test:deploy": "bash scripts/tests/deploy-utils.test.sh",
+    "check": "npm run test && npm run test:backend && npm run test:deploy && npm run build",
     "deploy:jdcloud": "bash scripts/deploy-jdcloud.sh",
     "perf:lhci": "npm exec --yes --package=@lhci/cli@0.15.1 -- lhci autorun --config=./lighthouserc.cjs"
   },

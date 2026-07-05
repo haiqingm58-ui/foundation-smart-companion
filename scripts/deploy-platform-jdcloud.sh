@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "${SCRIPT_DIR}/lib/deploy-utils.sh"
+
 SSH_HOST="${SSH_HOST:-jdcloud}"
 APP_NAME="foundation-smart-companion"
 SOURCE_BASE="/opt/${APP_NAME}-releases"
@@ -63,6 +66,6 @@ find "\${SOURCE_BASE}/releases" -mindepth 1 -maxdepth 1 -type d | sort -r | tail
 find "\${WEB_BASE}/releases" -mindepth 1 -maxdepth 1 -type d | sort -r | tail -n +\$((KEEP_RELEASES + 1)) | xargs -r rm -rf
 EOF
 
-curl -fsS "http://111.228.5.243/${APP_NAME}/api/health" >/dev/null
-curl -fsS "http://111.228.5.243/${APP_NAME}/login" | grep -q "《基础工程》智慧学伴"
+wait_for_http "http://111.228.5.243/${APP_NAME}/api/health" 30 1
+verify_page_contains "http://111.228.5.243/${APP_NAME}/login" "《基础工程》智慧学伴"
 echo "Deployment completed: ${RELEASE_ID}"
