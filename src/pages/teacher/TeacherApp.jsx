@@ -11,6 +11,7 @@ import {
   PortalShell, SearchField, StatGrid, StatusBadge, Toast,
 } from "../../components/portal/PortalKit.jsx";
 import { useAuth } from "../../stores/AuthContext.jsx";
+import { QuestionImportModal } from "./QuestionImportModal.jsx";
 
 
 const navItems = [
@@ -104,6 +105,7 @@ export default function TeacherApp() {
       {active === "notices" && <NoticesView {...common} />}
       {modal?.type === "resource" && <ResourceModal close={() => setModal(null)} done={() => { setModal(null); refresh(); notify("资料已上传并进入 RAG 知识库"); }} />}
       {modal?.type === "question" && <QuestionModal item={modal.item} close={() => setModal(null)} done={() => { setModal(null); refresh(); notify("题目已保存"); }} />}
+      {modal?.type === "question-import" && <QuestionImportModal close={() => setModal(null)} done={(count) => { setModal(null); refresh(); notify(`已导入 ${count} 道题目`); }} />}
       {modal?.type === "assignment" && <AssignmentModal cache={cache} setCache={setCache} close={() => setModal(null)} done={() => { setModal(null); refresh(); notify("作业已创建"); }} />}
       {modal?.type === "grade" && <GradeModal submission={modal.item} close={() => setModal(null)} done={() => { setModal(null); refresh(); notify("批改结果已保存"); }} />}
       {modal?.type === "notice" && <NoticeModal cache={cache} setCache={setCache} close={() => setModal(null)} done={() => { setModal(null); refresh(); notify("通知已发布"); }} />}
@@ -154,7 +156,7 @@ function QuestionsView({ data, loading, error, retry, open, notify, refresh }) {
   const [query, setQuery] = useState("");
   const rows = (data?.items || []).filter((item) => `${item.text}${item.chapter}${item.knowledgePoint}`.includes(query));
   const remove = (item) => open({ type: "confirm", title: "删除题目", message: "确认删除这道自建题目吗？已被作业引用的题目将由服务器拒绝删除。", confirmLabel: "确认删除", danger: true, onConfirm: async () => { await teacherApi.deleteQuestion(item.id); notify("题目已删除"); refresh(); } });
-  return <ViewState loading={loading} error={error} retry={retry}><PageHeading eyebrow="教学内容" title="题库管理" description="教材题目只读，自建题目可编辑和用于作业。" actions={<button className="portalPrimary" onClick={() => open({ type: "question" })}><Plus size={17} />新建题目</button>} /><Panel title="课程题库" description={`共 ${data?.total || 0} 道题`} actions={<SearchField value={query} onChange={setQuery} placeholder="搜索题干或知识点" />}><DataTable rows={rows} columns={[{ key: "text", label: "题目", render: (row) => <div className="portalQuestionCell"><strong>{row.text}</strong><span>{row.chapter || "未关联章节"} · {row.knowledgePoint || "未标注知识点"}</span></div> }, { key: "questionType", label: "题型" }, { key: "difficulty", label: "难度" }, { key: "points", label: "分值" }, { key: "source", label: "来源", render: (row) => row.source === "textbook" ? "教材题库" : "教师自建" }, { key: "actions", label: "操作", render: (row) => row.source === "teacher" ? <div className="portalRowActions"><button className="portalTextButton" onClick={() => open({ type: "question", item: row })}>编辑</button><button className="portalIconDanger" onClick={() => remove(row)} aria-label={`删除题目 ${row.text}`}><Trash2 size={16} /></button></div> : "只读" }]} empty="题库中暂无题目" /></Panel></ViewState>;
+  return <ViewState loading={loading} error={error} retry={retry}><PageHeading eyebrow="教学内容" title="题库管理" description="教材题目只读，自建题目可编辑和用于作业。" actions={<><button className="portalSecondary" onClick={() => open({ type: "question-import" })}><FilePlus2 size={17} />批量导入</button><button className="portalPrimary" onClick={() => open({ type: "question" })}><Plus size={17} />新建题目</button></>} /><Panel title="课程题库" description={`共 ${data?.total || 0} 道题`} actions={<SearchField value={query} onChange={setQuery} placeholder="搜索题干或知识点" />}><DataTable rows={rows} columns={[{ key: "text", label: "题目", render: (row) => <div className="portalQuestionCell"><strong>{row.text}</strong><span>{row.chapter || "未关联章节"} · {row.knowledgePoint || "未标注知识点"}</span></div> }, { key: "questionType", label: "题型" }, { key: "difficulty", label: "难度" }, { key: "points", label: "分值" }, { key: "source", label: "来源", render: (row) => row.source === "textbook" ? "教材题库" : row.source === "teacher-import" ? "批量导入" : "教师自建" }, { key: "actions", label: "操作", render: (row) => row.source !== "textbook" ? <div className="portalRowActions"><button className="portalTextButton" onClick={() => open({ type: "question", item: row })}>编辑</button><button className="portalIconDanger" onClick={() => remove(row)} aria-label={`删除题目 ${row.text}`}><Trash2 size={16} /></button></div> : "只读" }]} empty="题库中暂无题目" /></Panel></ViewState>;
 }
 
 

@@ -1,4 +1,4 @@
-import { request } from "./client.js";
+import { apiUrl, request } from "./client.js";
 
 export const teacherApi = {
   dashboard: () => request("/teacher/dashboard"),
@@ -11,6 +11,9 @@ export const teacherApi = {
   createQuestion: (body) => request("/teacher/questions", { method: "POST", body }),
   updateQuestion: (id, body) => request(`/teacher/questions/${id}`, { method: "PUT", body }),
   deleteQuestion: (id) => request(`/teacher/questions/${id}`, { method: "DELETE" }),
+  previewQuestionImport: (body) => request("/teacher/questions/import-preview", { method: "POST", body }),
+  importQuestions: (rows) => request("/teacher/questions/import", { method: "POST", body: { rows } }),
+  questionImportTemplateUrl: () => apiUrl("/teacher/question-import-template"),
   assignments: () => request("/teacher/assignments"),
   createAssignment: (body) => request("/teacher/assignments", { method: "POST", body }),
   submissions: (query = "") => request(`/teacher/submissions${query}`),
