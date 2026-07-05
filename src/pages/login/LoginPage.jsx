@@ -29,9 +29,11 @@ export default function LoginPage() {
     try {
       setCaptcha(await authApi.captcha());
       setServerError("");
+      return true;
     } catch (error) {
       setCaptcha(null);
       setServerError(error.message || "验证码加载失败，请重试");
+      return false;
     } finally {
       setCaptchaLoading(false);
     }
@@ -61,8 +63,11 @@ export default function LoginPage() {
       const loggedInUser = await login({ username: username.trim(), password, role, captchaId: captcha.captchaId, captchaCode });
       navigate(`/${loggedInUser.role}`, { replace: true });
     } catch (error) {
-      setServerError(error.message || "登录失败，请稍后重试");
-      await refreshCaptcha();
+      const message = error.code === "INVALID_CREDENTIALS"
+        ? "验证码已通过，但账号或密码错误。已自动刷新验证码，请核对账号后重试。"
+        : error.message || "登录失败，请稍后重试";
+      const refreshed = await refreshCaptcha();
+      if (refreshed) setServerError(message);
     } finally {
       setLoading(false);
     }

@@ -53,3 +53,15 @@ test("密码显示按钮和完整登录提交可用", async () => {
   fireEvent.click(screen.getByRole("button", { name: "登录平台" }));
   await waitFor(() => expect(login).toHaveBeenCalledWith({ username: "student", password: "Student-123", role: "student", captchaId: "captcha-1", captchaCode: "ABCD" }));
 });
+
+
+test("账号错误时明确说明验证码已经通过并已刷新", async () => {
+  const error = Object.assign(new Error("账号或密码错误"), { code: "INVALID_CREDENTIALS" });
+  renderLogin(vi.fn(async () => { throw error; }));
+  fireEvent.change(screen.getByLabelText("登录账号"), { target: { value: "stdent" } });
+  fireEvent.change(screen.getByLabelText("登录密码"), { target: { value: "123456" } });
+  await waitFor(() => expect(screen.getByAltText("图片验证码")).toBeInTheDocument());
+  fireEvent.change(screen.getByLabelText("验证码"), { target: { value: "ABCD" } });
+  fireEvent.click(screen.getByRole("button", { name: "登录平台" }));
+  expect(await screen.findByRole("alert")).toHaveTextContent("验证码已通过，但账号或密码错误。已自动刷新验证码，请核对账号后重试。");
+});
