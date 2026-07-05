@@ -1410,6 +1410,47 @@ textarea:focus-visible,
   line-height: 1.5;
 }
 
+.passwordField {
+  display: grid;
+  gap: 7px;
+}
+
+.passwordFieldControl {
+  display: flex;
+  align-items: stretch;
+  min-width: 0;
+}
+
+.passwordFieldControl input {
+  min-width: 0;
+  flex: 1;
+  border-radius: 6px 0 0 6px;
+}
+
+.passwordFieldControl button {
+  display: grid;
+  width: 42px;
+  min-width: 42px;
+  place-items: center;
+  border: 1px solid #d4deea;
+  border-left: 0;
+  border-radius: 0 6px 6px 0;
+  background: #f4f7fa;
+  color: #59687a;
+  cursor: pointer;
+}
+
+.passwordFieldControl button:hover {
+  background: #eaf1f8;
+  color: #075bcf;
+}
+
+.passwordFieldControl button:focus-visible {
+  position: relative;
+  outline: 3px solid rgba(7, 91, 207, 0.24);
+  outline-offset: 1px;
+}
+
 .portalChoiceGroup {
   display: grid;
   max-height: 240px;
@@ -1910,6 +1951,10 @@ textarea:focus-visible,
   border-radius: 6px;
   background: #fbfcfe;
   padding: 0 11px;
+}
+
+.passwordGate .passwordFieldControl input {
+  border-radius: 6px 0 0 6px;
 }
 
 .passwordGate form > button {

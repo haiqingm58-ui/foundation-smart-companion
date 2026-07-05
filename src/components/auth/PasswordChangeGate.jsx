@@ -2,6 +2,7 @@ import { KeyRound } from "lucide-react";
 import { useState } from "react";
 import { authApi } from "../../api/auth.js";
 import { useAuth } from "../../stores/AuthContext.jsx";
+import { PasswordField } from "./PasswordField.jsx";
 
 
 export function PasswordChangeGate({ children }) {
@@ -38,9 +39,9 @@ export function PasswordChangeGate({ children }) {
         <h1 id="password-gate-title">首次登录，请修改密码</h1>
         <p>新密码至少 8 位，并包含大写字母、小写字母和数字。修改完成后才能进入平台。</p>
         <form onSubmit={submit}>
-          <label><span>当前密码</span><input type="password" name="currentPassword" required /></label>
-          <label><span>新密码</span><input type="password" name="newPassword" minLength="8" required /></label>
-          <label><span>确认新密码</span><input type="password" name="confirmPassword" minLength="8" required /></label>
+          <PasswordField label="当前密码" name="currentPassword" autoComplete="current-password" required />
+          <PasswordField label="新密码" name="newPassword" autoComplete="new-password" minLength="8" required />
+          <PasswordField label="确认新密码" name="confirmPassword" autoComplete="new-password" minLength="8" required />
           {error && <p className="portalFormError" role="alert">{error}</p>}
           <button type="submit" disabled={busy}>{busy ? "正在保存..." : "修改密码并进入平台"}</button>
         </form>
