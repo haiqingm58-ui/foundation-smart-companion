@@ -89,3 +89,55 @@ class PasswordResetInput(StrictModel):
         if not PASSWORD_PATTERN.match(value):
             raise ValueError("密码必须包含大写字母、小写字母和数字")
         return value
+
+
+class TeacherUpdate(StrictModel):
+    name: str = Field(min_length=1, max_length=80)
+    phone: str | None = Field(default=None, max_length=32)
+    email: EmailStr | None = None
+    college: str = Field(min_length=1, max_length=120)
+    course: str = Field(default="基础工程", min_length=1, max_length=120)
+    status: str = Field(default="active", pattern="^(active|disabled)$")
+
+
+class AdminStudentInput(StrictModel):
+    name: str = Field(min_length=1, max_length=80)
+    student_no: str = Field(alias="studentNo", min_length=1, max_length=64)
+    username: str = Field(min_length=1, max_length=80)
+    password: str = Field(min_length=8, max_length=128)
+    class_id: str | None = Field(default=None, alias="classId")
+    college: str = Field(default="土木工程学院", max_length=120)
+    status: str = Field(default="active", pattern="^(active|disabled)$")
+
+    @field_validator("password")
+    @classmethod
+    def strong_password(cls, value: str) -> str:
+        if not PASSWORD_PATTERN.match(value):
+            raise ValueError("密码必须包含大写字母、小写字母和数字")
+        return value
+
+
+class AdminStudentUpdate(StrictModel):
+    name: str = Field(min_length=1, max_length=80)
+    class_id: str | None = Field(default=None, alias="classId")
+    college: str = Field(default="土木工程学院", max_length=120)
+    status: str = Field(default="active", pattern="^(active|disabled)$")
+
+
+class BatchStudentRow(StrictModel):
+    name: str = Field(min_length=1, max_length=80)
+    student_no: str = Field(alias="studentNo", min_length=1, max_length=64)
+    username: str = Field(min_length=1, max_length=80)
+    password: str = Field(min_length=8, max_length=128)
+
+    @field_validator("password")
+    @classmethod
+    def strong_password(cls, value: str) -> str:
+        if not PASSWORD_PATTERN.match(value):
+            raise ValueError("密码必须包含大写字母、小写字母和数字")
+        return value
+
+
+class BatchStudentsInput(StrictModel):
+    class_id: str = Field(alias="classId")
+    students: list[BatchStudentRow] = Field(min_length=1, max_length=1000)

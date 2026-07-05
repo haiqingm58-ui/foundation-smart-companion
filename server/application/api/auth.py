@@ -192,3 +192,25 @@ def change_password(body: ChangePasswordBody, request: Request, auth: AuthContex
         user.must_change_password = False
         session.commit()
     return request.app.state.success(request, {"mustChangePassword": False}, "密码修改成功")
+
+
+@router.post("/refresh")
+def refresh_session(request: Request, auth: AuthContext = Depends(current_auth)):
+    settings = request.app.state.settings
+    expires_at = datetime.now(timezone.utc) + timedelta(seconds=settings.session_ttl_seconds)
+    with request.app.state.database.session() as session:
+        record = session.get(SessionToken, auth.session.id)
+        if not record or record.revoked_at:
+            raise APIError(401, "会话已失效，请重新登录", "SESSION_INVALID")
+        record.expires_at = expires_at
+        session.commit()
+    response = request.app.state.success(request, {"expiresIn": settings.session_ttl_seconds})
+    response.set_cookie(
+        SESSION_COOKIE, request.cookies[SESSION_COOKIE], max_age=settings.session_ttl_seconds,
+        httponly=True, secure=settings.cookie_secure, samesite="lax", path=settings.cookie_path,
+    )
+    response.set_cookie(
+        CSRF_COOKIE, request.cookies[CSRF_COOKIE], max_age=settings.session_ttl_seconds,
+        httponly=False, secure=settings.cookie_secure, samesite="lax", path=settings.cookie_path,
+    )
+    return response

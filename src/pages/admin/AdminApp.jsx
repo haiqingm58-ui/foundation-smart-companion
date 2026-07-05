@@ -5,8 +5,9 @@ import {
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { adminApi } from "../../api/admin.js";
+import { apiUrl } from "../../api/client.js";
 import {
-  DataTable, EmptyState, ErrorState, Field, LoadingState, Modal, PageHeading, Panel,
+  ConfirmDialog, DataTable, EmptyState, ErrorState, Field, LoadingState, Modal, PageHeading, Panel,
   PortalShell, SearchField, StatGrid, StatusBadge, Toast,
 } from "../../components/portal/PortalKit.jsx";
 import { useAuth } from "../../stores/AuthContext.jsx";
@@ -92,6 +93,8 @@ export default function AdminApp() {
       {modal?.type === "class" && <ClassModal close={() => setModal(null)} done={() => { setModal(null); refresh(); notify("班级已创建"); }} />}
       {modal?.type === "binding" && <BindingModal cache={cache} setCache={setCache} close={() => setModal(null)} done={() => { setModal(null); refresh(); notify("师生绑定已保存"); }} />}
       {modal?.type === "password" && <PasswordModal item={modal.item} close={() => setModal(null)} done={() => { setModal(null); notify("密码已重置，原会话已失效"); }} />}
+      {modal?.type === "person" && <PersonModal role={modal.role} item={modal.item} cache={cache} close={() => setModal(null)} done={() => { setModal(null); setCache({}); refresh(); notify("人员信息已保存"); }} />}
+      {modal?.type === "confirm" && <ConfirmDialog {...modal} onClose={() => setModal(null)} />}
       {toast && <Toast {...toast} onClose={() => setToast(null)} />}
     </PortalShell>
   );
@@ -114,7 +117,8 @@ function PeopleView({ role, data, loading, error, retry, open }) {
   const [query, setQuery] = useState("");
   const isTeacher = role === "teacher";
   const rows = useMemo(() => (data?.items || []).filter((item) => `${item.name}${item.username}${item.number}`.includes(query)), [data, query]);
-  return <ViewState loading={loading} error={error} retry={retry}><PageHeading eyebrow="组织与账号" title={isTeacher ? "教师管理" : "学生管理"} description={isTeacher ? "教师、班级、学生和绑定关系可通过一个事务向导完整创建。" : "学生账号由管理员创建，并通过绑定关系交由指导教师管理。"} actions={isTeacher ? <button className="portalPrimary" onClick={() => open({ type: "wizard" })}><Plus size={17} />新增教师并绑定学生</button> : null} /><Panel title={isTeacher ? "教师账号" : "学生账号"} description={`共 ${data?.total || 0} 个账号`} actions={<SearchField value={query} onChange={setQuery} placeholder="搜索姓名、账号或编号" />}><DataTable rows={rows} columns={[{ key: "name", label: "姓名" }, { key: "username", label: "登录账号" }, { key: "number", label: isTeacher ? "工号" : "学号" }, { key: "college", label: "学院" }, { key: "lastLoginAt", label: "最近登录", render: (row) => formatDate(row.lastLoginAt) }, { key: "status", label: "状态", render: (row) => <StatusBadge status={row.status} /> }]} empty={`暂无${isTeacher ? "教师" : "学生"}账号`} /></Panel></ViewState>;
+  const actions = <div className="portalHeadingActions">{isTeacher && <button className="portalSecondary" onClick={() => open({ type: "person", role })}><Plus size={17} />单独新增教师</button>}<button className="portalPrimary" onClick={() => open(isTeacher ? { type: "wizard" } : { type: "person", role })}><Plus size={17} />{isTeacher ? "新增教师并绑定学生" : "新增学生"}</button></div>;
+  return <ViewState loading={loading} error={error} retry={retry}><PageHeading eyebrow="组织与账号" title={isTeacher ? "教师管理" : "学生管理"} description={isTeacher ? "教师、班级、学生和绑定关系可通过一个事务向导完整创建。" : "学生账号由管理员创建，并通过绑定关系交由指导教师管理。"} actions={actions} /><Panel title={isTeacher ? "教师账号" : "学生账号"} description={`共 ${data?.total || 0} 个账号`} actions={<SearchField value={query} onChange={setQuery} placeholder="搜索姓名、账号或编号" />}><DataTable rows={rows} columns={[{ key: "name", label: "姓名" }, { key: "username", label: "登录账号" }, { key: "number", label: isTeacher ? "工号" : "学号" }, { key: "college", label: "学院" }, { key: "lastLoginAt", label: "最近登录", render: (row) => formatDate(row.lastLoginAt) }, { key: "status", label: "状态", render: (row) => <StatusBadge status={row.status} /> }, { key: "actions", label: "操作", render: (row) => <button className="portalTextButton" onClick={() => open({ type: "person", role, item: row })}>编辑</button> }]} empty={`暂无${isTeacher ? "教师" : "学生"}账号`} /></Panel></ViewState>;
 }
 
 
@@ -129,16 +133,18 @@ function BindingsView({ data, loading, error, retry, open }) {
 
 
 function ImportView({ notify }) {
-  const [result, setResult] = useState(null); const [busy, setBusy] = useState(false); const [error, setError] = useState("");
+  const [result, setResult] = useState(null); const [busy, setBusy] = useState(false); const [error, setError] = useState(""); const [classes, setClasses] = useState([]); const [classId, setClassId] = useState(""); const [password, setPassword] = useState("Student-123");
+  useEffect(() => { adminApi.classes().then((data) => setClasses(data.items)).catch((reason) => setError(reason.message)); }, []);
   const submit = async (event) => { event.preventDefault(); setBusy(true); setError(""); try { const data = await adminApi.previewImport(new FormData(event.currentTarget)); setResult(data); notify(`预检完成：${data.valid.length} 条有效记录`); } catch (reason) { setError(reason.message); } finally { setBusy(false); } };
-  return <><PageHeading eyebrow="批量管理" title="数据导入" description="文件先在服务器端预检，不会直接写入数据库；确认数据正确后再通过事务向导创建。" /><div className="portalTwoColumn"><Panel title="学生名单预检" description="支持官方 XLSX 模板或 UTF-8 CSV"><form className="portalForm" onSubmit={submit}><Field label="选择名单文件" hint="最大 5MB，公式内容会被安全拦截。"><input type="file" name="file" accept=".xlsx,.csv" required /></Field>{error && <p className="portalFormError">{error}</p>}<button className="portalPrimary" disabled={busy}><Upload size={17} />{busy ? "正在预检..." : "上传并预检"}</button></form></Panel><Panel title="导入规则" description="正式写库前的校验项目"><ul className="portalRuleList"><li>姓名、学号、班级不能为空</li><li>文件内学号不能重复</li><li>禁止 Excel 公式注入</li><li>账号冲突时整批事务回滚</li></ul></Panel></div>{result && <Panel title="预检结果" description={`${result.valid.length} 条有效，${result.errors.length} 条需修正`}><DataTable rows={result.valid.map((item, index) => ({ id: `${item.studentNo}-${index}`, ...item }))} columns={[{ key: "name", label: "姓名" }, { key: "studentNo", label: "学号" }, { key: "className", label: "班级" }, { key: "username", label: "登录账号" }]} empty="没有可导入的有效记录" />{result.errors.length > 0 && <div className="portalImportErrors"><strong>需要修正</strong>{result.errors.map((item) => <p key={`${item.row}-${item.code}`}>第 {item.row} 行：{item.reason}</p>)}</div>}</Panel>}</>;
+  const commit = async () => { if (!classId || !result?.valid.length) { setError("请选择目标班级并确保存在有效记录"); return; } setBusy(true); setError(""); try { const data = await adminApi.createStudentsBatch({ classId, students: result.valid.map((item) => ({ name: item.name, studentNo: item.studentNo, username: item.username, password })) }); notify(`成功导入 ${data.created} 名学生`); setResult(null); } catch (reason) { setError(reason.message); } finally { setBusy(false); } };
+  return <><PageHeading eyebrow="批量管理" title="数据导入" description="名单先在服务器端预检，确认后以单个数据库事务批量写入。" actions={<a className="portalSecondary" href={apiUrl("/admin/import-template")}><Upload size={16} />下载导入模板</a>} /><div className="portalTwoColumn"><Panel title="学生名单预检" description="支持官方 XLSX 模板或 UTF-8 CSV"><form className="portalForm" onSubmit={submit}><Field label="选择名单文件" hint="最大 5MB，公式内容会被安全拦截。"><input type="file" name="file" accept=".xlsx,.csv" required /></Field>{error && <p className="portalFormError">{error}</p>}<button className="portalPrimary" disabled={busy}><Upload size={17} />{busy ? "正在预检..." : "上传并预检"}</button></form></Panel><Panel title="导入规则" description="正式写库前的校验项目"><ul className="portalRuleList"><li>姓名、学号、班级不能为空</li><li>文件内学号不能重复</li><li>禁止 Excel 公式注入</li><li>账号冲突时整批事务回滚</li></ul></Panel></div>{result && <Panel title="预检结果" description={`${result.valid.length} 条有效，${result.errors.length} 条需修正`}><DataTable rows={result.valid.map((item, index) => ({ id: `${item.studentNo}-${index}`, ...item }))} columns={[{ key: "name", label: "姓名" }, { key: "studentNo", label: "学号" }, { key: "className", label: "班级" }, { key: "username", label: "登录账号" }]} empty="没有可导入的有效记录" />{result.errors.length > 0 && <div className="portalImportErrors"><strong>需要修正</strong>{result.errors.map((item) => <p key={`${item.row}-${item.code}`}>第 {item.row} 行：{item.reason}</p>)}</div>}<div className="portalImportCommit"><Field label="写入班级"><select value={classId} onChange={(event) => setClassId(event.target.value)}><option value="">请选择班级</option>{classes.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></Field><Field label="统一初始密码"><input type="password" value={password} onChange={(event) => setPassword(event.target.value)} /></Field><button className="portalPrimary" type="button" onClick={commit} disabled={busy || Boolean(result.errors.length)}>确认批量导入</button></div></Panel>}</>;
 }
 
 
 function AccountsView({ data, loading, error, retry, open, notify, refresh }) {
   const [query, setQuery] = useState("");
   const rows = (data?.items || []).filter((item) => `${item.name}${item.username}`.includes(query));
-  const toggle = async (item) => { const status = item.status === "active" ? "disabled" : "active"; if (!window.confirm(`确认${status === "disabled" ? "停用" : "启用"}账号“${item.name}”吗？`)) return; try { await adminApi.updateAccountStatus(item.id, status); notify("账号状态已更新"); refresh(); } catch (reason) { notify(reason.message, "error"); } };
+  const toggle = (item) => { const status = item.status === "active" ? "disabled" : "active"; open({ type: "confirm", title: `${status === "disabled" ? "停用" : "启用"}账号`, message: `确认${status === "disabled" ? "停用" : "启用"}账号“${item.name}”吗？停用会立即撤销现有会话。`, confirmLabel: status === "disabled" ? "确认停用" : "确认启用", danger: status === "disabled", onConfirm: async () => { await adminApi.updateAccountStatus(item.id, status); notify("账号状态已更新"); refresh(); } }); };
   return <ViewState loading={loading} error={error} retry={retry}><PageHeading eyebrow="安全管理" title="账号安全" description="停用账号或重置密码时，服务器会立即撤销该账号的现有会话。" /><Panel title="账号列表" description={`共 ${data?.total || 0} 个教师与学生账号`} actions={<SearchField value={query} onChange={setQuery} placeholder="搜索账号" />}><DataTable rows={rows} columns={[{ key: "name", label: "姓名" }, { key: "username", label: "账号" }, { key: "number", label: "编号" }, { key: "status", label: "状态", render: (row) => <StatusBadge status={row.status} /> }, { key: "actions", label: "安全操作", render: (row) => <div className="portalRowActions"><button className="portalTextButton" onClick={() => toggle(row)}>{row.status === "active" ? "停用" : "启用"}</button><button className="portalTextButton" onClick={() => open({ type: "password", item: row })}><KeyRound size={14} />重置密码</button></div> }]} empty="暂无账号" /></Panel></ViewState>;
 }
 
@@ -175,6 +181,33 @@ function BindingModal({ cache, setCache, close, done }) {
   useEffect(() => { Promise.all([adminApi.teachers(), adminApi.students(), adminApi.classes()]).then(([t, s, c]) => { setTeachers(t.items); setStudents(s.items); setClasses(c.items); setCache((old) => ({ ...old, teachers: t, students: s, classes: c })); setBusy(false); }).catch((reason) => { setError(reason.message); setBusy(false); }); }, []);
   const submit = async (event) => { event.preventDefault(); const form = new FormData(event.currentTarget); setBusy(true); try { await adminApi.createBindings({ teacherId: form.get("teacherId"), studentIds: form.getAll("studentIds"), classId: form.get("classId") || null }); done(); } catch (reason) { setError(reason.message); setBusy(false); } };
   return <Modal title="新增师生绑定" onClose={close} wide>{busy && !teachers.length ? <LoadingState /> : <form className="portalForm" onSubmit={submit}><div className="portalFormGrid"><Field label="指导老师"><select name="teacherId" required><option value="">请选择</option>{teachers.map((item) => <option key={item.id} value={item.profileId || item.id}>{item.name}（{item.number}）</option>)}</select></Field><Field label="班级"><select name="classId"><option value="">不指定班级</option>{classes.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></Field></div><fieldset className="portalChoiceGroup"><legend>选择学生</legend>{students.map((item) => <label key={item.id}><input type="checkbox" name="studentIds" value={item.profileId || item.id} />{item.name} <span>{item.number}</span></label>)}</fieldset>{error && <p className="portalFormError">{error}</p>}<div className="portalFormActions"><button type="button" onClick={close}>取消</button><button className="portalPrimary" disabled={busy}>保存绑定</button></div></form>}</Modal>;
+}
+
+
+function PersonModal({ role, item, cache, close, done }) {
+  const isTeacher = role === "teacher";
+  const [classes, setClasses] = useState(cache.classes?.items || []);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  useEffect(() => { if (!isTeacher && !cache.classes) adminApi.classes().then((data) => setClasses(data.items)).catch((reason) => setError(reason.message)); }, []);
+  const submit = async (event) => {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    setBusy(true); setError("");
+    try {
+      if (isTeacher) {
+        const base = { name: form.get("name"), college: form.get("college"), course: form.get("course"), phone: form.get("phone") || null, email: form.get("email") || null, status: form.get("status") };
+        if (item) await adminApi.updateTeacher(item.profileId, base);
+        else await adminApi.createTeacher({ ...base, teacherNo: form.get("number"), username: form.get("username"), password: form.get("password") });
+      } else {
+        const base = { name: form.get("name"), classId: form.get("classId") || null, college: form.get("college"), status: form.get("status") };
+        if (item) await adminApi.updateStudent(item.profileId, base);
+        else await adminApi.createStudent({ ...base, studentNo: form.get("number"), username: form.get("username"), password: form.get("password") });
+      }
+      done();
+    } catch (reason) { setError(reason.message); setBusy(false); }
+  };
+  return <Modal title={`${item ? "编辑" : "新增"}${isTeacher ? "教师" : "学生"}`} onClose={close} wide><form className="portalForm" onSubmit={submit}><div className="portalFormGrid"><Field label="姓名"><input name="name" defaultValue={item?.name || ""} required /></Field><Field label={isTeacher ? "教师工号" : "学号"}><input name="number" defaultValue={item?.number || ""} disabled={Boolean(item)} required /></Field><Field label="登录账号"><input name="username" defaultValue={item?.username || ""} disabled={Boolean(item)} required /></Field>{!item && <Field label="初始密码" hint="至少 8 位，含大小写字母和数字"><input name="password" type="password" required /></Field>}<Field label="学院"><input name="college" defaultValue={item?.college || "土木工程学院"} required /></Field>{isTeacher ? <><Field label="所教课程"><input name="course" defaultValue="基础工程" required /></Field><Field label="手机号"><input name="phone" /></Field><Field label="邮箱"><input name="email" type="email" /></Field></> : <Field label="班级"><select name="classId" defaultValue=""><option value="">未分班</option>{classes.map((row) => <option key={row.id} value={row.id}>{row.name}</option>)}</select></Field>}<Field label="账号状态"><select name="status" defaultValue={item?.status || "active"}><option value="active">正常</option><option value="disabled">停用</option></select></Field></div>{error && <p className="portalFormError">{error}</p>}<div className="portalFormActions"><button type="button" onClick={close}>取消</button><button className="portalPrimary" disabled={busy}>{busy ? "正在保存..." : "保存"}</button></div></form></Modal>;
 }
 
 

@@ -882,6 +882,7 @@ textarea:focus-visible,
 }
 
 .portalPrimary,
+.portalSecondary,
 .portalTextButton,
 .portalFormActions button,
 .portalError button {
@@ -900,6 +901,17 @@ textarea:focus-visible,
 .portalPrimary {
   background: #075bcf;
   color: white;
+}
+
+.portalSecondary {
+  border: 1px solid #b9cce3;
+  background: white;
+  color: #075bcf;
+}
+
+.portalDanger {
+  background: #bd3d2a !important;
+  color: white !important;
 }
 
 .portalPrimary:hover {
@@ -1449,9 +1461,16 @@ textarea:focus-visible,
   padding-top: 15px;
 }
 
-.portalFormActions button:not(.portalPrimary) {
+.portalFormActions button:not(.portalPrimary):not(.portalDanger) {
   background: #eef2f6;
   color: #445268;
+}
+
+.portalConfirm > p:first-child {
+  margin: 0 0 18px;
+  color: #526174;
+  font-size: 13px;
+  line-height: 1.7;
 }
 
 .portalSubject {
@@ -1593,6 +1612,53 @@ textarea:focus-visible,
   padding: 7px 10px;
   font-size: 11px;
   font-weight: 800;
+}
+
+.portalDropzone {
+  display: grid;
+  min-height: 150px;
+  place-items: center;
+  align-content: center;
+  gap: 8px;
+  border: 1px dashed #9cb7d8;
+  border-radius: 7px;
+  background: #f7faff;
+  color: #075bcf;
+  cursor: pointer;
+  padding: 20px;
+  text-align: center;
+}
+
+.portalDropzone.dragging {
+  border-color: #075bcf;
+  background: #eaf3ff;
+}
+
+.portalDropzone strong {
+  color: #2a3a50;
+  font-size: 13px;
+}
+
+.portalDropzone span {
+  color: #77859a;
+  font-size: 10px;
+}
+
+.portalDropzone input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+
+.portalImportCommit {
+  display: grid;
+  grid-template-columns: minmax(180px, 1fr) minmax(180px, 1fr) auto;
+  gap: 12px;
+  align-items: end;
+  margin-top: 18px;
+  border-top: 1px solid #e4eaf1;
+  padding-top: 18px;
 }
 
 .portalScrim {
@@ -1752,6 +1818,12 @@ textarea:focus-visible,
 
   .portalSteps span {
     font-size: 9px;
+  }
+}
+
+@media (max-width: 720px) {
+  .portalImportCommit {
+    grid-template-columns: 1fr;
   }
 }
 

@@ -3,7 +3,12 @@ import { request } from "./client.js";
 export const adminApi = {
   dashboard: () => request("/admin/dashboard"),
   teachers: (query = "") => request(`/admin/teachers${query}`),
+  createTeacher: (body) => request("/admin/teachers", { method: "POST", body }),
+  updateTeacher: (id, body) => request(`/admin/teachers/${id}`, { method: "PUT", body }),
   students: (query = "") => request(`/admin/students${query}`),
+  createStudent: (body) => request("/admin/students", { method: "POST", body }),
+  updateStudent: (id, body) => request(`/admin/students/${id}`, { method: "PUT", body }),
+  createStudentsBatch: (body) => request("/admin/students/batch", { method: "POST", body }),
   classes: () => request("/admin/classes"),
   createClass: (body) => request("/admin/classes", { method: "POST", body }),
   bindings: () => request("/admin/bindings"),

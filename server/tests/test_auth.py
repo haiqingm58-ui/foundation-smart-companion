@@ -172,3 +172,13 @@ def test_authenticated_user_changes_password_and_clears_first_login_flag(auth_ap
             user = session.get(User, "student-test")
             assert user.must_change_password is False
             assert verify_password("Changed-456", user.password_hash, user.password_algorithm)[0]
+
+
+def test_authenticated_user_refreshes_session(auth_app) -> None:
+    app, _database = auth_app
+    with TestClient(app) as client:
+        assert login(client, captcha(client)).status_code == 200
+        csrf = client.cookies.get("foundation_csrf")
+        response = client.post("/api/auth/refresh", headers={"X-CSRF-Token": csrf})
+        assert response.status_code == 200
+        assert response.json()["data"]["expiresIn"] == 3600

@@ -11,7 +11,10 @@ from sqlalchemy.orm import aliased
 
 from ..errors import APIError
 from ..models import ClassRoom, OperationLog, SessionToken, Student, Teacher, TeacherStudentBinding, User
-from ..schemas.admin import AccountStatusInput, BindingInput, ClassInput, PasswordResetInput, TeacherStudentWizard
+from ..schemas.admin import (
+    AccountStatusInput, AdminStudentInput, AdminStudentUpdate, BatchStudentsInput,
+    BindingInput, ClassInput, PasswordResetInput, TeacherInput, TeacherStudentWizard, TeacherUpdate,
+)
 from ..security import hash_password
 from ..services.audit import add_log
 from ..services.imports import build_import_template, parse_student_file
@@ -82,9 +85,121 @@ def teachers(request: Request, page: int = Query(1, ge=1), pageSize: int = Query
     return list_role_users(request, "teacher", page, pageSize, search, status)
 
 
+@router.post("/teachers")
+def create_teacher(body: TeacherInput, request: Request, auth: AuthContext = Depends(require_admin)):
+    try:
+        with request.app.state.database.session() as session:
+            user = User(
+                id=str(uuid4()), username=body.username, password_hash=hash_password(body.password),
+                password_algorithm="argon2", role="teacher", role_label="指导老师", name=body.name,
+                student_no=body.teacher_no, college=body.college, school="湖南大学",
+                status=body.status, must_change_password=True,
+            )
+            session.add(user)
+            session.flush()
+            teacher = Teacher(
+                id=str(uuid4()), user_id=user.id, teacher_no=body.teacher_no, college=body.college,
+                course=body.course, phone=body.phone, email=str(body.email) if body.email else None,
+            )
+            session.add(teacher)
+            add_log(session, auth.user.id, "teacher.create", "teacher", teacher.id, {"teacherNo": teacher.teacher_no}, client_ip(request))
+            session.commit()
+            teacher_id = teacher.id
+    except IntegrityError as exc:
+        raise APIError(409, "教师工号或登录账号已存在", "TEACHER_EXISTS") from exc
+    return request.app.state.success(request, {"id": teacher_id}, "教师创建成功")
+
+
+@router.put("/teachers/{teacher_id}")
+def update_teacher(teacher_id: str, body: TeacherUpdate, request: Request, auth: AuthContext = Depends(require_admin)):
+    with request.app.state.database.session() as session:
+        teacher = session.get(Teacher, teacher_id)
+        if not teacher:
+            raise APIError(404, "教师不存在", "TEACHER_NOT_FOUND")
+        user = session.get(User, teacher.user_id)
+        user.name, user.college, user.status = body.name, body.college, body.status
+        teacher.college, teacher.course, teacher.phone = body.college, body.course, body.phone
+        teacher.email = str(body.email) if body.email else None
+        if body.status == "disabled":
+            session.execute(delete(SessionToken).where(SessionToken.user_id == user.id))
+        add_log(session, auth.user.id, "teacher.update", "teacher", teacher.id, {"status": body.status}, client_ip(request))
+        session.commit()
+    return request.app.state.success(request, {"id": teacher_id}, "教师信息已更新")
+
+
 @router.get("/students")
 def students(request: Request, page: int = Query(1, ge=1), pageSize: int = Query(20, ge=1, le=100), search: str = "", status: str | None = None, _auth: AuthContext = Depends(require_admin)):
     return list_role_users(request, "student", page, pageSize, search, status)
+
+
+def ensure_class(session, class_id: str | None) -> None:
+    if class_id and not session.get(ClassRoom, class_id):
+        raise APIError(404, "班级不存在", "CLASS_NOT_FOUND")
+
+
+@router.post("/students")
+def create_student(body: AdminStudentInput, request: Request, auth: AuthContext = Depends(require_admin)):
+    try:
+        with request.app.state.database.session() as session:
+            ensure_class(session, body.class_id)
+            user = User(
+                id=str(uuid4()), username=body.username, password_hash=hash_password(body.password),
+                password_algorithm="argon2", role="student", role_label="学生", name=body.name,
+                student_no=body.student_no, college=body.college, school="湖南大学",
+                status=body.status, must_change_password=True,
+            )
+            session.add(user)
+            session.flush()
+            student = Student(id=str(uuid4()), user_id=user.id, student_no=body.student_no, class_id=body.class_id)
+            session.add(student)
+            add_log(session, auth.user.id, "student.create", "student", student.id, {"studentNo": student.student_no}, client_ip(request))
+            session.commit()
+            student_id = student.id
+    except IntegrityError as exc:
+        raise APIError(409, "学生学号或登录账号已存在", "STUDENT_EXISTS") from exc
+    return request.app.state.success(request, {"id": student_id}, "学生创建成功")
+
+
+@router.put("/students/{student_id}")
+def update_student(student_id: str, body: AdminStudentUpdate, request: Request, auth: AuthContext = Depends(require_admin)):
+    with request.app.state.database.session() as session:
+        student = session.get(Student, student_id)
+        if not student:
+            raise APIError(404, "学生不存在", "STUDENT_NOT_FOUND")
+        ensure_class(session, body.class_id)
+        user = session.get(User, student.user_id)
+        user.name, user.college, user.status = body.name, body.college, body.status
+        student.class_id = body.class_id
+        if body.status == "disabled":
+            session.execute(delete(SessionToken).where(SessionToken.user_id == user.id))
+        add_log(session, auth.user.id, "student.update", "student", student.id, {"status": body.status}, client_ip(request))
+        session.commit()
+    return request.app.state.success(request, {"id": student_id}, "学生信息已更新")
+
+
+@router.post("/students/batch")
+def create_students_batch(body: BatchStudentsInput, request: Request, auth: AuthContext = Depends(require_admin)):
+    created = []
+    try:
+        with request.app.state.database.session() as session:
+            ensure_class(session, body.class_id)
+            for item in body.students:
+                user = User(
+                    id=str(uuid4()), username=item.username, password_hash=hash_password(item.password),
+                    password_algorithm="argon2", role="student", role_label="学生", name=item.name,
+                    student_no=item.student_no, college="土木工程学院", school="湖南大学",
+                    status="active", must_change_password=True,
+                )
+                session.add(user)
+                session.flush()
+                student = Student(id=str(uuid4()), user_id=user.id, student_no=item.student_no, class_id=body.class_id)
+                session.add(student)
+                created.append(student.id)
+            add_log(session, auth.user.id, "student.batch_create", "student", None, {"count": len(created)}, client_ip(request))
+            session.commit()
+    except IntegrityError as exc:
+        raise APIError(409, "批量创建失败：存在重复学号或登录账号，已全部回滚", "STUDENT_BATCH_CONFLICT") from exc
+    return request.app.state.success(request, {"created": len(created), "ids": created}, "学生批量创建成功")
 
 
 @router.patch("/accounts/{user_id}/status")

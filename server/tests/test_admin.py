@@ -159,3 +159,60 @@ def test_admin_previews_student_file_without_writing_database(admin_context) -> 
     assert response.json()["data"]["valid"][0]["studentNo"] == "20260002"
     with database.session() as session:
         assert session.scalar(select(func.count(Student.id))) == 0
+
+
+def test_admin_creates_and_updates_individual_teacher_and_student(admin_context) -> None:
+    client, _database = admin_context
+    teacher = client.post(
+        "/api/admin/teachers",
+        json={"name": "李老师", "teacherNo": "T2026002", "username": "teacher-li", "password": "Teacher-123", "college": "土木工程学院", "course": "基础工程", "status": "active"},
+        headers={"X-CSRF-Token": "admin-csrf"},
+    )
+    assert teacher.status_code == 200
+    teacher_id = teacher.json()["data"]["id"]
+    updated = client.put(
+        f"/api/admin/teachers/{teacher_id}",
+        json={"name": "李教授", "college": "土木工程学院", "course": "基础工程", "status": "active"},
+        headers={"X-CSRF-Token": "admin-csrf"},
+    )
+    assert updated.status_code == 200
+
+    classroom = client.post(
+        "/api/admin/classes",
+        json={"name": "土木工程2402班", "grade": "2024", "major": "土木工程", "college": "土木工程学院"},
+        headers={"X-CSRF-Token": "admin-csrf"},
+    ).json()["data"]["id"]
+    student = client.post(
+        "/api/admin/students",
+        json={"name": "赵同学", "studentNo": "20260003", "username": "20260003", "password": "Student-123", "classId": classroom, "college": "土木工程学院", "status": "active"},
+        headers={"X-CSRF-Token": "admin-csrf"},
+    )
+    assert student.status_code == 200
+    student_id = student.json()["data"]["id"]
+    assert client.put(
+        f"/api/admin/students/{student_id}",
+        json={"name": "赵同学", "classId": classroom, "college": "土木工程学院", "status": "disabled"},
+        headers={"X-CSRF-Token": "admin-csrf"},
+    ).status_code == 200
+
+
+def test_admin_batch_student_creation_rolls_back_on_duplicate(admin_context) -> None:
+    from server.application.models import Student
+
+    client, database = admin_context
+    classroom = client.post(
+        "/api/admin/classes",
+        json={"name": "土木工程2403班", "grade": "2024", "major": "土木工程", "college": "土木工程学院"},
+        headers={"X-CSRF-Token": "admin-csrf"},
+    ).json()["data"]["id"]
+    response = client.post(
+        "/api/admin/students/batch",
+        json={"classId": classroom, "students": [
+            {"name": "学生甲", "studentNo": "20260010", "username": "20260010", "password": "Student-123"},
+            {"name": "重复学生", "studentNo": "20260099", "username": "20260099", "password": "Student-123"}
+        ]},
+        headers={"X-CSRF-Token": "admin-csrf"},
+    )
+    assert response.status_code == 409
+    with database.session() as session:
+        assert session.scalar(select(Student).where(Student.student_no == "20260010")) is None

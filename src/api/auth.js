@@ -6,4 +6,5 @@ export const authApi = {
   me: () => request("/auth/me"),
   logout: () => request("/auth/logout", { method: "POST" }),
   changePassword: (body) => request("/auth/change-password", { method: "POST", body }),
+  refresh: () => request("/auth/refresh", { method: "POST" }),
 };

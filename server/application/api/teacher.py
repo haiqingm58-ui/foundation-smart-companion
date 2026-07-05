@@ -74,12 +74,18 @@ def dashboard(request: Request, auth: AuthContext = Depends(require_teacher)):
                 Assignment.teacher_id == teacher.id, Submission.status == "submitted"
             )
         ) or 0
+        assignment_ids = session.scalars(select(Assignment.id).where(Assignment.teacher_id == teacher.id)).all()
+        target_total = session.scalar(select(func.count(AssignmentTarget.id)).where(AssignmentTarget.assignment_id.in_(assignment_ids))) if assignment_ids else 0
+        submitted_total = session.scalar(
+            select(func.count(func.distinct(Submission.student_id))).where(Submission.assignment_id.in_(assignment_ids))
+        ) if assignment_ids else 0
+        completion_rate = round((submitted_total or 0) / target_total * 100, 1) if target_total else 0
     return request.app.state.success(
         request,
         {
             "classTotal": class_total, "studentTotal": student_total, "resourceTotal": resource_total,
             "questionTotal": question_total, "assignmentTotal": assignment_total, "pendingGrading": pending_grading,
-            "averageScore": round(float(average_score or 0), 1), "completionRate": 0,
+            "averageScore": round(float(average_score or 0), 1), "completionRate": completion_rate,
         },
     )
 
@@ -217,6 +223,19 @@ def download_resource(resource_id: str, request: Request, auth: AuthContext = De
     return FileResponse(path, filename=name, media_type=mime)
 
 
+@router.get("/resources/{resource_id}/preview")
+def preview_resource(resource_id: str, request: Request, auth: AuthContext = Depends(require_teacher)):
+    with request.app.state.database.session() as session:
+        resource = session.get(Resource, resource_id)
+        if not resource or resource.uploaded_by != auth.user.id:
+            raise APIError(404, "资料不存在", "RESOURCE_NOT_FOUND")
+        path = Path(resource.storage_path)
+        if not path.is_file():
+            raise APIError(404, "资料文件已丢失", "RESOURCE_FILE_MISSING")
+        mime = resource.mime_type
+    return FileResponse(path, media_type=mime, headers={"Content-Disposition": "inline"})
+
+
 @router.delete("/resources/{resource_id}")
 def delete_resource(resource_id: str, request: Request, auth: AuthContext = Depends(require_teacher)):
     with request.app.state.database.session() as session:
@@ -303,7 +322,20 @@ def assignments(request: Request, auth: AuthContext = Depends(require_teacher)):
     with request.app.state.database.session() as session:
         teacher = teacher_for(session, auth.user.id)
         records = session.scalars(select(Assignment).where(Assignment.teacher_id == teacher.id).order_by(Assignment.created_at.desc())).all()
-        items = [{"id": item.id, "title": item.title, "description": item.description, "startsAt": item.starts_at, "dueAt": item.due_at, "totalPoints": item.total_points, "status": item.status} for item in records]
+        items = []
+        for item in records:
+            target_count = session.scalar(select(func.count(AssignmentTarget.id)).where(AssignmentTarget.assignment_id == item.id)) or 0
+            submitted_count = session.scalar(
+                select(func.count(func.distinct(Submission.student_id))).where(Submission.assignment_id == item.id)
+            ) or 0
+            average_score = session.scalar(select(func.avg(Submission.score)).where(Submission.assignment_id == item.id, Submission.score.is_not(None)))
+            items.append({
+                "id": item.id, "title": item.title, "description": item.description,
+                "startsAt": item.starts_at, "dueAt": item.due_at, "totalPoints": item.total_points,
+                "status": item.status, "targetCount": target_count, "submittedCount": submitted_count,
+                "completionRate": round(submitted_count / target_count * 100, 1) if target_count else 0,
+                "averageScore": round(float(average_score), 1) if average_score is not None else None,
+            })
     return request.app.state.success(request, {"items": items, "total": len(items)})
 
 

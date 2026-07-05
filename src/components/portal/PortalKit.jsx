@@ -91,6 +91,18 @@ export function Modal({ title, children, onClose, footer, wide = false }) {
 }
 
 
+export function ConfirmDialog({ title, message, confirmLabel = "确认", danger = false, onConfirm, onClose }) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const confirm = async () => {
+    setBusy(true);
+    setError("");
+    try { await onConfirm(); onClose(); } catch (reason) { setError(reason.message || "操作失败"); setBusy(false); }
+  };
+  return <Modal title={title} onClose={busy ? () => {} : onClose}><div className="portalConfirm"><p>{message}</p>{error && <p className="portalFormError">{error}</p>}<div className="portalFormActions"><button type="button" onClick={onClose} disabled={busy}>取消</button><button type="button" className={danger ? "portalDanger" : "portalPrimary"} onClick={confirm} disabled={busy}>{busy ? "正在处理..." : confirmLabel}</button></div></div></Modal>;
+}
+
+
 export function Toast({ message, tone = "success", onClose }) {
   useEffect(() => { const timer = setTimeout(onClose, 3200); return () => clearTimeout(timer); }, [onClose]);
   return <div className={`portalToast ${tone}`} role="status"><span>{message}</span><button type="button" onClick={onClose} aria-label="关闭提示"><X size={16} /></button></div>;

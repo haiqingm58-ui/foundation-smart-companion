@@ -6,6 +6,7 @@ APP_NAME="foundation-smart-companion"
 SOURCE_BASE="/opt/${APP_NAME}-releases"
 WEB_BASE="/var/www/releases/${APP_NAME}"
 KEEP_RELEASES="${KEEP_RELEASES:-5}"
+PIP_INDEX_URL="${PIP_INDEX_URL:-https://mirrors.jdcloudcs.com/pypi/simple}"
 GIT_SHA="$(git rev-parse --short HEAD 2>/dev/null || echo manual)"
 RELEASE_ID="$(date +%Y%m%d%H%M%S)-${GIT_SHA}"
 SOURCE_RELEASE="${SOURCE_BASE}/releases/${RELEASE_ID}"
@@ -30,7 +31,7 @@ WEB_BASE='${WEB_BASE}'
 KEEP_RELEASES='${KEEP_RELEASES}'
 
 python3 -m venv "\${SOURCE_RELEASE}/server/.venv"
-"\${SOURCE_RELEASE}/server/.venv/bin/pip" install --disable-pip-version-check -q -r "\${SOURCE_RELEASE}/server/requirements.txt"
+"\${SOURCE_RELEASE}/server/.venv/bin/pip" install --disable-pip-version-check -q --timeout 60 -i '${PIP_INDEX_URL}' -r "\${SOURCE_RELEASE}/server/requirements.txt"
 
 set -a
 source /etc/foundation-smart-companion.env

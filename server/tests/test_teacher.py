@@ -84,6 +84,7 @@ def test_teacher_uploads_real_markdown_resource(teacher_context) -> None:
     )
     assert response.status_code == 200
     resource_id = response.json()["data"]["id"]
+    assert client.get(f"/api/teacher/resources/{resource_id}/preview").status_code == 200
     with database.session() as session:
         resource = session.get(Resource, resource_id)
         assert Path(resource.storage_path).is_file()
@@ -106,6 +107,9 @@ def test_teacher_manages_question_and_assignment_for_own_student(teacher_context
         headers={"X-CSRF-Token": "teacher-csrf"},
     )
     assert assignment.status_code == 200
+    assignment_list = client.get("/api/teacher/assignments")
+    assert assignment_list.json()["data"]["items"][0]["targetCount"] == 1
+    assert assignment_list.json()["data"]["items"][0]["completionRate"] == 0
     forbidden_target = client.post(
         "/api/teacher/assignments",
         json={"title": "越权作业", "studentIds": ["student-2"], "questionIds": [question_id], "totalPoints": 10, "status": "published"},
