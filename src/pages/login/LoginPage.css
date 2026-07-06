@@ -17,13 +17,15 @@
 
 .authBrand { text-align: center; }
 .collegeLogo {
-  width: 96px;
-  height: 96px;
-  margin: 0 auto 14px;
+  box-sizing: border-box;
+  width: 120px;
+  height: 120px;
+  margin: 0 auto 12px;
   border: 1px solid #bcd3e8;
   border-radius: 50%;
   background: #fff;
   box-shadow: 0 8px 22px rgba(26, 67, 108, .14);
+  padding: 6px;
   overflow: hidden;
 }
 .collegeLogo img {
@@ -119,7 +121,7 @@ button:focus-visible, input:focus-visible, [tabindex]:focus-visible { outline: 3
 }
 
 @media (max-width: 560px) {
-  .collegeLogo { width: 88px; height: 88px; }
+  .collegeLogo { width: 78px; height: 78px; padding: 5px; }
   .authBrand p { font-size: 13px; }
   .authColumns { border-radius: 6px; }
   .loginCarousel { min-height: 255px; }
