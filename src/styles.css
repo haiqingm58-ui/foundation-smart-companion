@@ -651,14 +651,21 @@ textarea:focus-visible,
   padding: 0 6px 16px;
 }
 
-.portalBrand img {
+.portalBrandLogo {
   width: 42px;
   height: 42px;
   flex: 0 0 auto;
   border: 1px solid #cddbed;
   border-radius: 50%;
   background: white;
-  object-fit: contain;
+  overflow: hidden;
+}
+
+.portalBrandLogo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform: scale(1.35);
 }
 
 .portalBrand div {
@@ -2045,14 +2052,21 @@ textarea:focus-visible,
   padding: 32px;
 }
 
-.passwordGate img {
+.passwordGateLogo {
   display: block;
   width: 74px;
   height: 74px;
   margin: 0 auto 18px;
   border: 1px solid #cbd9ea;
   border-radius: 50%;
-  object-fit: contain;
+  overflow: hidden;
+}
+
+.passwordGateLogo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform: scale(1.35);
 }
 
 .passwordGate > section > span {

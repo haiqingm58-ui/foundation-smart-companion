@@ -34,7 +34,9 @@ export function PasswordChangeGate({ children }) {
   return (
     <main className="passwordGate">
       <section aria-labelledby="password-gate-title">
-        <img src={`${import.meta.env.BASE_URL}college-logo.jpg`} alt="湖南大学土木工程学院院徽" />
+        <span className="passwordGateLogo">
+          <img src={`${import.meta.env.BASE_URL}college-logo.jpg`} alt="湖南大学土木工程学院院徽" />
+        </span>
         <span><KeyRound size={18} />账号安全</span>
         <h1 id="password-gate-title">首次登录，请修改密码</h1>
         <p>新密码至少 8 位，并包含大写字母、小写字母和数字。修改完成后才能进入平台。</p>

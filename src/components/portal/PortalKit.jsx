@@ -9,7 +9,9 @@ export function PortalShell({ roleLabel, navItems, active, onNavigate, user, onL
     <div className="portalShell">
       <aside className={`portalSidebar ${open ? "open" : ""}`} aria-label={`${roleLabel}导航`}>
         <div className="portalBrand">
-          <img src={`${import.meta.env.BASE_URL}college-logo.jpg`} alt="湖南大学土木工程学院院徽" />
+          <span className="portalBrandLogo">
+            <img src={`${import.meta.env.BASE_URL}college-logo.jpg`} alt="湖南大学土木工程学院院徽" />
+          </span>
           <div><strong>《基础工程》智慧学伴</strong><span>{roleLabel}</span></div>
           <button className="portalMobileClose" type="button" onClick={() => setOpen(false)} aria-label="关闭导航"><X size={20} /></button>
         </div>
