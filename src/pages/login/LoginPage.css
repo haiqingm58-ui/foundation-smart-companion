@@ -17,9 +17,9 @@
 
 .authBrand { text-align: center; }
 .collegeLogo {
-  width: 80px;
-  height: 80px;
-  margin: 0 auto 12px;
+  width: 96px;
+  height: 96px;
+  margin: 0 auto 14px;
   border: 1px solid #bcd3e8;
   border-radius: 50%;
   background: #fff;
@@ -119,6 +119,7 @@ button:focus-visible, input:focus-visible, [tabindex]:focus-visible { outline: 3
 }
 
 @media (max-width: 560px) {
+  .collegeLogo { width: 88px; height: 88px; }
   .authBrand p { font-size: 13px; }
   .authColumns { border-radius: 6px; }
   .loginCarousel { min-height: 255px; }
