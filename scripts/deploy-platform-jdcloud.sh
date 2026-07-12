@@ -5,6 +5,8 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "${SCRIPT_DIR}/lib/deploy-utils.sh"
 
 SSH_HOST="${SSH_HOST:-jdcloud}"
+SSH_OPTIONS=(-o ServerAliveInterval=10 -o ServerAliveCountMax=12)
+RSYNC_RSH="ssh -o ServerAliveInterval=10 -o ServerAliveCountMax=12"
 APP_NAME="foundation-smart-companion"
 SOURCE_BASE="/opt/${APP_NAME}-releases"
 WEB_BASE="/var/www/releases/${APP_NAME}"
@@ -19,13 +21,13 @@ npm run build
 npm test
 server/.venv/bin/pytest server/tests -q
 
-ssh "${SSH_HOST}" "mkdir -p '${SOURCE_RELEASE}' '${WEB_RELEASE}' '${SOURCE_BASE}/releases' '${WEB_BASE}/releases'"
-rsync -az --delete \
+ssh "${SSH_OPTIONS[@]}" "${SSH_HOST}" "mkdir -p '${SOURCE_RELEASE}' '${WEB_RELEASE}' '${SOURCE_BASE}/releases' '${WEB_BASE}/releases'"
+rsync -az --delete -e "${RSYNC_RSH}" \
   --exclude '.git' --exclude 'node_modules' --exclude 'dist' --exclude 'server/.venv' \
   ./ "${SSH_HOST}:${SOURCE_RELEASE}/"
-rsync -az --delete dist/ "${SSH_HOST}:${WEB_RELEASE}/"
+rsync -az --delete -e "${RSYNC_RSH}" dist/ "${SSH_HOST}:${WEB_RELEASE}/"
 
-ssh "${SSH_HOST}" "bash -s" <<EOF
+ssh "${SSH_OPTIONS[@]}" "${SSH_HOST}" "bash -s" <<EOF
 set -Eeuo pipefail
 SOURCE_RELEASE='${SOURCE_RELEASE}'
 SOURCE_BASE='${SOURCE_BASE}'
