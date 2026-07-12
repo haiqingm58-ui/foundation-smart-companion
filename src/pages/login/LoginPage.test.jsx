@@ -29,6 +29,8 @@ test("登录页展示院徽、三种 Emoji 角色和后端验证码", async () =
   expect(screen.getByText("🧑‍🎓")).toBeInTheDocument();
   expect(screen.getByText("🧑‍🏫")).toBeInTheDocument();
   expect(screen.getByText("🛡️")).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "查看城市深基坑工程" })).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "查看基础工程数值分析" })).toBeInTheDocument();
   await waitFor(() => expect(screen.getByAltText("图片验证码")).toHaveAttribute("src", "data:image/png;base64,AAA"));
 });
 

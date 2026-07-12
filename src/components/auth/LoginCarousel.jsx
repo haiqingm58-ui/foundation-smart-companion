@@ -1,16 +1,20 @@
 import { useEffect, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import foundationSection from "../../assets/foundation-section-compact.png";
+import foundationNumericalAnalysis from "../../assets/foundation-numerical-analysis.jpg";
+import urbanFoundationPit from "../../assets/urban-foundation-pit.jpg";
 
 
 const base = import.meta.env.BASE_URL || "/";
 const slides = [
-  { image: foundationSection, title: "基础工程教材学习", desc: "围绕教材章节、公式和工程图表开展系统学习" },
-  { image: `${base}knowledge/images/ca562cdd3e6d23207f61bf14ef8cf027a2f36c44c771c2b22af7452de9a80c9a.jpg`, title: "地基与基础结构", desc: "从基础平面布置理解荷载路径与结构选型" },
-  { image: `${base}knowledge/images/289641f4f88311e553daed7bff6a20643ff350053dccfda9591dd2b74349c41c.jpg`, title: "桩基础工程", desc: "结合土层剖面分析桩侧阻力与桩端阻力" },
-  { image: `${base}knowledge/images/ac092940807daffb9ede0f4f970f11f385e28d64ceec9d57b22499b7e94c33f5.jpg`, title: "工程知识图谱", desc: "串联章节、知识点、公式、案例与规范依据" },
-  { image: `${base}knowledge/images/d9adeef00a756850a98e45a2d4b9b2f5de6f5b977c61f61a62f2fc8d14adf22b.jpg`, title: "AI 智能问答", desc: "基于教材与教师资料检索，回答有出处可追溯" },
-  { image: `${base}knowledge/images/aec2e30f92bd6e26f668fcb09f143a8f28bb3c090a4394d6c4cd3d6f46fb5cff.jpg`, title: "教师教学管理", desc: "管理班级、题库、作业与学生学习进展" },
+  { image: urbanFoundationPit, title: "城市深基坑工程", desc: "结合大型施工场景理解支护、开挖与现场监测", fit: "cover" },
+  { image: foundationNumericalAnalysis, title: "基础工程数值分析", desc: "联动结构、土体与围护体系分析变形和受力响应", fit: "cover" },
+  { image: foundationSection, title: "基础工程教材学习", desc: "围绕教材章节、公式和工程图表开展系统学习", fit: "cover" },
+  { image: `${base}knowledge/images/ca562cdd3e6d23207f61bf14ef8cf027a2f36c44c771c2b22af7452de9a80c9a.jpg`, title: "地基与基础结构", desc: "从基础平面布置理解荷载路径与结构选型", fit: "contain" },
+  { image: `${base}knowledge/images/289641f4f88311e553daed7bff6a20643ff350053dccfda9591dd2b74349c41c.jpg`, title: "桩基础工程", desc: "结合土层剖面分析桩侧阻力与桩端阻力", fit: "contain" },
+  { image: `${base}knowledge/images/ac092940807daffb9ede0f4f970f11f385e28d64ceec9d57b22499b7e94c33f5.jpg`, title: "工程知识图谱", desc: "串联章节、知识点、公式、案例与规范依据", fit: "contain" },
+  { image: `${base}knowledge/images/d9adeef00a756850a98e45a2d4b9b2f5de6f5b977c61f61a62f2fc8d14adf22b.jpg`, title: "AI 智能问答", desc: "基于教材与教师资料检索，回答有出处可追溯", fit: "contain" },
+  { image: `${base}knowledge/images/aec2e30f92bd6e26f668fcb09f143a8f28bb3c090a4394d6c4cd3d6f46fb5cff.jpg`, title: "教师教学管理", desc: "管理班级、题库、作业与学生学习进展", fit: "contain" },
 ];
 
 
@@ -50,7 +54,7 @@ export function LoginCarousel() {
     >
       <div className="carouselTrack">
         {slides.map((slide, index) => (
-          <article className={index === active ? "carouselSlide active" : "carouselSlide"} aria-hidden={index !== active} key={slide.title}>
+          <article className={`carouselSlide ${slide.fit} ${index === active ? "active" : ""}`} aria-hidden={index !== active} key={slide.title}>
             {!failed[index] && <img src={slide.image} alt="" onError={() => setFailed((value) => ({ ...value, [index]: true }))} />}
             <div className="carouselTint" />
             <div className="carouselCopy">
