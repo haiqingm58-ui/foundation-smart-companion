@@ -62,7 +62,7 @@ def ensure_question_columns(bind) -> None:
         ("attachments", sa.Column("attachments", sa.JSON(), nullable=False, server_default=sa.text("'[]'"))),
         ("answer_word_limit", sa.Column("answer_word_limit", sa.Integer(), nullable=True)),
         ("grading_mode", sa.Column("grading_mode", sa.String(length=24), nullable=False, server_default="auto")),
-        ("status", sa.Column("status", sa.String(length=24), nullable=False, server_default="active")),
+        ("status", sa.Column("status", sa.String(length=24), nullable=False, server_default="review_required")),
         ("source_metadata", sa.Column("source_metadata", sa.JSON(), nullable=False, server_default=sa.text("'{}'"))),
         ("content_fingerprint", sa.Column("content_fingerprint", sa.String(length=96), nullable=True)),
     )
@@ -114,44 +114,53 @@ def backfill_legacy_questions(bind) -> None:
     }
     rows = bind.execute(sa.select(questions.c.id, questions.c.chapter, questions.c.knowledge_point, questions.c.subject_id)).mappings()
     for row in rows:
-        if row["subject_id"] is None:
-            bind.execute(
-                questions.update().where(questions.c.id == row["id"]).values(subject_id=FOUNDATION_SUBJECT_ID)
-            )
+        status = "review_required"
         if not row["knowledge_point"]:
+            bind.execute(
+                questions.update().where(questions.c.id == row["id"]).values(
+                    subject_id=FOUNDATION_SUBJECT_ID,
+                    status=status,
+                )
+            )
             continue
         name = row["knowledge_point"].strip()
         normalized_name = normalize_knowledge_point_name(name)
-        if not normalized_name:
-            continue
-        point_id = existing_points.get(normalized_name)
-        if point_id is None:
-            point_id = knowledge_point_id(FOUNDATION_SUBJECT_ID, normalized_name)
-            bind.execute(
-                knowledge_points.insert().values(
-                    id=point_id,
-                    subject_id=FOUNDATION_SUBJECT_ID,
-                    chapter=row["chapter"] or "",
-                    name=name,
-                    normalized_name=normalized_name,
-                    description="",
-                    status="active",
-                    sort_order=0,
-                    created_by=None,
+        if normalized_name:
+            point_id = existing_points.get(normalized_name)
+            if point_id is None:
+                point_id = knowledge_point_id(FOUNDATION_SUBJECT_ID, normalized_name)
+                bind.execute(
+                    knowledge_points.insert().values(
+                        id=point_id,
+                        subject_id=FOUNDATION_SUBJECT_ID,
+                        chapter=row["chapter"] or "",
+                        name=name,
+                        normalized_name=normalized_name,
+                        description="",
+                        status="active",
+                        sort_order=0,
+                        created_by=None,
+                    )
                 )
-            )
-            existing_points[normalized_name] = point_id
-        link_key = (row["id"], point_id)
-        if link_key not in existing_links:
-            bind.execute(
-                links.insert().values(
-                    id=question_knowledge_point_id(*link_key),
-                    question_id=row["id"],
-                    knowledge_point_id=point_id,
-                    weight=1.0,
+                existing_points[normalized_name] = point_id
+            link_key = (row["id"], point_id)
+            if link_key not in existing_links:
+                bind.execute(
+                    links.insert().values(
+                        id=question_knowledge_point_id(*link_key),
+                        question_id=row["id"],
+                        knowledge_point_id=point_id,
+                        weight=1.0,
+                    )
                 )
+                existing_links.add(link_key)
+            status = "active"
+        bind.execute(
+            questions.update().where(questions.c.id == row["id"]).values(
+                subject_id=FOUNDATION_SUBJECT_ID,
+                status=status,
             )
-            existing_links.add(link_key)
+        )
 
 
 def upgrade() -> None:

@@ -3,12 +3,16 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Any
 
-from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Integer, JSON, String, Text, UniqueConstraint
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
+from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Integer, JSON, String, Text, UniqueConstraint, event
+from sqlalchemy.ext.associationproxy import association_proxy
+from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column, relationship
 
 
 def utcnow() -> datetime:
     return datetime.now(timezone.utc)
+
+
+REVIEW_REQUIRED_STATUS = "review_required"
 
 
 class Base(DeclarativeBase):
@@ -192,6 +196,8 @@ class Subject(Base):
     slug: Mapped[str] = mapped_column(String(120), nullable=False, unique=True)
     status: Mapped[str] = mapped_column(String(24), nullable=False, default="active")
     sort_order: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    knowledge_points: Mapped[list[KnowledgePoint]] = relationship(back_populates="subject")
+    questions: Mapped[list[Question]] = relationship(back_populates="subject")
 
 
 class KnowledgePoint(Base):
@@ -207,7 +213,9 @@ class KnowledgePoint(Base):
     status: Mapped[str] = mapped_column(String(24), nullable=False, default="active")
     sort_order: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     created_by: Mapped[str | None] = mapped_column(ForeignKey("users.id"), nullable=True, index=True)
+    subject: Mapped[Subject] = relationship(back_populates="knowledge_points")
     question_links: Mapped[list[QuestionKnowledgePoint]] = relationship(back_populates="knowledge_point")
+    questions = association_proxy("question_links", "question")
 
 
 class Question(Base):
@@ -228,14 +236,16 @@ class Question(Base):
     attachments: Mapped[list[dict[str, Any]]] = mapped_column(JSON, default=list, nullable=False)
     answer_word_limit: Mapped[int | None] = mapped_column(Integer)
     grading_mode: Mapped[str] = mapped_column(String(24), default="auto", nullable=False)
-    status: Mapped[str] = mapped_column(String(24), default="active", nullable=False)
+    status: Mapped[str] = mapped_column(String(24), default=REVIEW_REQUIRED_STATUS, nullable=False)
     source_metadata: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
     content_fingerprint: Mapped[str | None] = mapped_column(String(96), index=True)
     source: Mapped[str] = mapped_column(String(32), default="teacher", nullable=False)
     created_by: Mapped[str | None] = mapped_column(ForeignKey("users.id"), index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow, nullable=False)
-    knowledge_points: Mapped[list[QuestionKnowledgePoint]] = relationship(back_populates="question", cascade="all, delete-orphan")
+    subject: Mapped[Subject | None] = relationship(back_populates="questions")
+    knowledge_point_links: Mapped[list[QuestionKnowledgePoint]] = relationship(back_populates="question", cascade="all, delete-orphan")
+    knowledge_points = association_proxy("knowledge_point_links", "knowledge_point")
 
 
 class QuestionKnowledgePoint(Base):
@@ -246,8 +256,44 @@ class QuestionKnowledgePoint(Base):
     question_id: Mapped[str] = mapped_column(ForeignKey("questions.id", ondelete="CASCADE"), nullable=False, index=True)
     knowledge_point_id: Mapped[str] = mapped_column(ForeignKey("knowledge_points.id", ondelete="RESTRICT"), nullable=False, index=True)
     weight: Mapped[float] = mapped_column(Float, nullable=False, default=1.0)
-    question: Mapped[Question] = relationship(back_populates="knowledge_points")
+    question: Mapped[Question] = relationship(back_populates="knowledge_point_links")
     knowledge_point: Mapped[KnowledgePoint] = relationship(back_populates="question_links")
+
+
+def question_can_be_active(session: Session, question: Question) -> bool:
+    links = list(question.knowledge_point_links)
+    for candidate in session.new.union(session.dirty):
+        if (
+            isinstance(candidate, QuestionKnowledgePoint)
+            and candidate not in links
+            and (candidate.question is question or candidate.question_id == question.id)
+        ):
+            links.append(candidate)
+    links = [link for link in links if link not in session.deleted]
+    if not question.subject_id or not 1 <= len(links) <= 3:
+        return False
+    for link in links:
+        knowledge_point = link.knowledge_point
+        if knowledge_point is None and link.knowledge_point_id:
+            knowledge_point = session.get(KnowledgePoint, link.knowledge_point_id)
+        if knowledge_point is None or knowledge_point.subject_id != question.subject_id:
+            return False
+    return True
+
+
+@event.listens_for(Session, "before_flush")
+def mark_incomplete_active_questions_for_review(session: Session, flush_context, instances) -> None:
+    questions = {item for item in session.new.union(session.dirty) if isinstance(item, Question)}
+    for item in session.new.union(session.dirty).union(session.deleted):
+        if isinstance(item, QuestionKnowledgePoint):
+            question = item.question or session.get(Question, item.question_id)
+            if question is not None:
+                questions.add(question)
+        elif isinstance(item, KnowledgePoint):
+            questions.update(link.question for link in item.question_links if link.question is not None)
+    for question in questions:
+        if question.status == "active" and not question_can_be_active(session, question):
+            question.status = REVIEW_REQUIRED_STATUS
 
 
 class Assignment(Base):

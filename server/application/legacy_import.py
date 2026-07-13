@@ -57,13 +57,13 @@ def ensure_foundation_subject(session) -> Subject:
     return subject
 
 
-def add_legacy_question_knowledge_point(session, question: Question) -> None:
+def add_legacy_question_knowledge_point(session, question: Question) -> bool:
     if not question.knowledge_point:
-        return
+        return False
     name = question.knowledge_point.strip()
     normalized_name = normalize_knowledge_point_name(name)
     if not normalized_name:
-        return
+        return False
     knowledge_point = session.scalar(
         select(KnowledgePoint).where(
             KnowledgePoint.subject_id == question.subject_id,
@@ -89,6 +89,7 @@ def add_legacy_question_knowledge_point(session, question: Question) -> None:
                 knowledge_point_id=knowledge_point.id,
             )
         )
+    return True
 
 
 def parse_datetime(value: str | None) -> datetime:
@@ -184,10 +185,11 @@ def import_legacy_sqlite(path: Path, database: Database) -> dict[str, int]:
                         points=float(payload.get("points") or 10), chapter=payload.get("chapter"),
                         knowledge_point=(payload.get("tags") or [None])[0], source=row["source"],
                         subject_id=foundation_subject.id, created_by=None, created_at=created_at, updated_at=created_at,
-                    )
+                )
                 session.add(question)
                 session.flush()
-                add_legacy_question_knowledge_point(session, question)
+                if add_legacy_question_knowledge_point(session, question):
+                    question.status = "active"
                 counts["questions"] += 1
 
             for row in source.execute("SELECT * FROM settings"):
