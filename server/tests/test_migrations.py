@@ -26,6 +26,13 @@ def make_legacy_database(path: Path) -> None:
           id TEXT PRIMARY KEY, payload TEXT NOT NULL, source TEXT NOT NULL,
           created_by TEXT, created_at TEXT NOT NULL
         );
+        CREATE TABLE questions (
+          id TEXT PRIMARY KEY, text TEXT NOT NULL, question_type TEXT NOT NULL,
+          options TEXT NOT NULL, correct_answer TEXT, explanation TEXT,
+          rubric TEXT NOT NULL, difficulty TEXT NOT NULL, points REAL NOT NULL,
+          chapter TEXT, knowledge_point TEXT, source TEXT NOT NULL,
+          created_by TEXT, created_at TEXT NOT NULL, updated_at TEXT NOT NULL
+        );
         CREATE TABLE settings (
           key TEXT PRIMARY KEY, value TEXT NOT NULL, updated_at TEXT NOT NULL
         );
@@ -53,11 +60,51 @@ def make_legacy_database(path: Path) -> None:
         ),
     )
     connection.execute(
+        "INSERT INTO questions VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+        (
+            "exercise-old",
+            "说明桩侧阻力。",
+            "简答题",
+            "[]",
+            None,
+            None,
+            "[]",
+            "基础",
+            10,
+            "第3章 桩基础",
+            "桩侧阻力",
+            "textbook",
+            None,
+            "2026-01-01T00:00:00+00:00",
+            "2026-01-01T00:00:00+00:00",
+        ),
+    )
+    connection.execute(
         "INSERT INTO settings VALUES (?,?,?)",
         ("qa.answerStyle", "先给结论", "2026-01-01T00:00:00+00:00"),
     )
     connection.commit()
     connection.close()
+
+
+def test_assessment_catalog_migration_backfills_legacy_questions(tmp_path: Path, database_url: str) -> None:
+    from server.application.database import create_database
+    from server.application.migrations import upgrade_database
+    from server.application.models import Question, QuestionKnowledgePoint, Subject
+
+    make_legacy_database(tmp_path / "test.db")
+    upgrade_database(database_url)
+    database = create_database(database_url)
+    with database.session() as session:
+        foundation = session.get(Subject, "foundation-engineering")
+        question = session.get(Question, "exercise-old")
+        links = session.scalars(
+            select(QuestionKnowledgePoint).where(QuestionKnowledgePoint.question_id == question.id)
+        ).all()
+        assert foundation.title == "基础工程"
+        assert question.subject_id == foundation.id
+        assert question.knowledge_point == "桩侧阻力"
+        assert len(links) == 1
 
 
 def test_schema_upgrade_and_legacy_import_preserve_data(tmp_path: Path, database_url: str) -> None:

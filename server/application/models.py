@@ -4,7 +4,7 @@ from datetime import datetime, timezone
 from typing import Any
 
 from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Integer, JSON, String, Text, UniqueConstraint
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 
 def utcnow() -> datetime:
@@ -184,6 +184,32 @@ class KnowledgeChunk(Base):
     sequence: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
 
 
+class Subject(Base):
+    __tablename__ = "subjects"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    title: Mapped[str] = mapped_column(String(120), nullable=False, unique=True)
+    slug: Mapped[str] = mapped_column(String(120), nullable=False, unique=True)
+    status: Mapped[str] = mapped_column(String(24), nullable=False, default="active")
+    sort_order: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+
+
+class KnowledgePoint(Base):
+    __tablename__ = "knowledge_points"
+    __table_args__ = (UniqueConstraint("subject_id", "normalized_name", name="uq_subject_knowledge_name"),)
+
+    id: Mapped[str] = mapped_column(String(96), primary_key=True)
+    subject_id: Mapped[str] = mapped_column(ForeignKey("subjects.id", ondelete="CASCADE"), nullable=False, index=True)
+    chapter: Mapped[str] = mapped_column(String(160), nullable=False, index=True)
+    name: Mapped[str] = mapped_column(String(160), nullable=False)
+    normalized_name: Mapped[str] = mapped_column(String(160), nullable=False)
+    description: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    status: Mapped[str] = mapped_column(String(24), nullable=False, default="active")
+    sort_order: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    created_by: Mapped[str | None] = mapped_column(ForeignKey("users.id"), nullable=True, index=True)
+    question_links: Mapped[list[QuestionKnowledgePoint]] = relationship(back_populates="knowledge_point")
+
+
 class Question(Base):
     __tablename__ = "questions"
 
@@ -198,10 +224,30 @@ class Question(Base):
     points: Mapped[float] = mapped_column(Float, default=10, nullable=False)
     chapter: Mapped[str | None] = mapped_column(String(120), index=True)
     knowledge_point: Mapped[str | None] = mapped_column(String(160), index=True)
+    subject_id: Mapped[str | None] = mapped_column(ForeignKey("subjects.id"), index=True)
+    attachments: Mapped[list[dict[str, Any]]] = mapped_column(JSON, default=list, nullable=False)
+    answer_word_limit: Mapped[int | None] = mapped_column(Integer)
+    grading_mode: Mapped[str] = mapped_column(String(24), default="auto", nullable=False)
+    status: Mapped[str] = mapped_column(String(24), default="active", nullable=False)
+    source_metadata: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
+    content_fingerprint: Mapped[str | None] = mapped_column(String(96), index=True)
     source: Mapped[str] = mapped_column(String(32), default="teacher", nullable=False)
     created_by: Mapped[str | None] = mapped_column(ForeignKey("users.id"), index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow, nullable=False)
+    knowledge_points: Mapped[list[QuestionKnowledgePoint]] = relationship(back_populates="question", cascade="all, delete-orphan")
+
+
+class QuestionKnowledgePoint(Base):
+    __tablename__ = "question_knowledge_points"
+    __table_args__ = (UniqueConstraint("question_id", "knowledge_point_id", name="uq_question_knowledge_point"),)
+
+    id: Mapped[str] = mapped_column(String(96), primary_key=True)
+    question_id: Mapped[str] = mapped_column(ForeignKey("questions.id", ondelete="CASCADE"), nullable=False, index=True)
+    knowledge_point_id: Mapped[str] = mapped_column(ForeignKey("knowledge_points.id", ondelete="RESTRICT"), nullable=False, index=True)
+    weight: Mapped[float] = mapped_column(Float, nullable=False, default=1.0)
+    question: Mapped[Question] = relationship(back_populates="knowledge_points")
+    knowledge_point: Mapped[KnowledgePoint] = relationship(back_populates="question_links")
 
 
 class Assignment(Base):
