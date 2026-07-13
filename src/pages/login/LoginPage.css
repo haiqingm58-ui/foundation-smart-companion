@@ -31,9 +31,8 @@
 .collegeLogo img {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
   border-radius: 50%;
-  transform: scale(1.35);
 }
 .authBrand h1 { margin: 0; font-size: clamp(25px, 3vw, 34px); line-height: 1.25; letter-spacing: 0; }
 .authBrand p { margin: 8px 0 0; color: var(--auth-muted); font-size: 15px; }

@@ -6,7 +6,7 @@
 
 **Architecture:** Keep the shared public asset path unchanged so login, portal, and password-change views update together. Add a focused asset/style regression test, then replace only the raster asset and the login logo rendering rule.
 
-**Tech Stack:** React 19, Vite 6, Vitest 4, CSS, JPEG asset, built-in image edit tooling
+**Tech Stack:** React 19, Vite 6, Vitest 4, CSS, JPEG asset, FFmpeg crop detection, jpegtran lossless crop
 
 ## Global Constraints
 
@@ -82,16 +82,14 @@ Expected: FAIL because the current JPEG is `1429x1465`, uses `object-fit: cover`
 
 - [ ] **Step 1: Create the cropped image**
 
-Use the current `public/college-logo.jpg` as the edit target with this exact invariant-focused request:
+Detect the red crest bounds independently of the source image's white background and black edge artifact. The measured visible crest bounds are approximately `x=196..1196`, `y=254..1258`. Add about 3% safety space and align the crop to JPEG MCU boundaries:
 
-```text
-Use case: precise-object-edit
-Asset type: shared college logo for a web application
-Primary request: crop away only the excessive uniform white margins around the existing crest and output a centered square image with approximately 3% white safety space around the complete crest.
-Constraints: preserve every existing pixel of the crest as faithfully as possible; keep the full top border pattern, both side ornaments, all Chinese and English text, the central symbol, and the 1903 ribbon visible; do not redraw, recolor, sharpen, repair, replace, or invent any part of the logo; no added text; no watermark.
+```bash
+jpegtran -copy all -perfect -crop 1088x1088+160+208 \
+  -outfile /tmp/college-logo-cropped.jpg public/college-logo.jpg
 ```
 
-Inspect the result at original detail. Reject it if any crest text or geometry changes. Save the accepted result as `public/college-logo.jpg`.
+Inspect the result at original detail. Reject it if any crest text or geometry is clipped. Replace `public/college-logo.jpg` only after the visual check passes.
 
 - [ ] **Step 2: Update the rendering rule**
 
