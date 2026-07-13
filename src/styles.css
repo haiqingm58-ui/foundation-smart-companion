@@ -733,7 +733,7 @@ textarea:focus-visible,
 .portalIdentity {
   display: grid;
   min-width: 0;
-  grid-template-columns: 36px minmax(0, 1fr) 32px;
+  grid-template-columns: 36px minmax(0, 1fr) auto;
   align-items: center;
   gap: 8px;
   margin-top: auto;
@@ -782,6 +782,24 @@ textarea:focus-visible,
 .portalMenu:hover {
   background: #edf2f7;
   color: #075bcf;
+}
+
+.portalIdentity .portalIdentityLogout {
+  display: inline-flex;
+  width: auto;
+  min-width: 34px;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 0 8px;
+  white-space: nowrap;
+  font: inherit;
+  font-size: 11px;
+}
+
+.portalIdentityLogout span {
+  display: inline;
+  overflow: visible;
 }
 
 .portalAvatar {
@@ -836,6 +854,35 @@ textarea:focus-visible,
   gap: 9px;
   color: #435167;
   font-size: 13px;
+}
+
+.portalTopLogout {
+  display: inline-flex;
+  height: 34px;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  border: 1px solid #d8e1ec;
+  border-radius: 6px;
+  background: #fff;
+  color: #435167;
+  padding: 0 10px;
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.portalTopLogout:hover:not(:disabled) {
+  border-color: #a9bdd5;
+  background: #edf4fb;
+  color: #075bcf;
+}
+
+.portalIdentityLogout:disabled,
+.portalTopLogout:disabled {
+  cursor: wait;
+  opacity: 0.62;
 }
 
 .portalMenu,

@@ -23,9 +23,9 @@ vi.mock("../../api/teacher.js", () => ({
 }));
 
 
-function renderTeacher() {
+function renderTeacher(logout = vi.fn()) {
   return render(
-    <AuthContext.Provider value={{ user: { name: "周老师", role: "teacher", college: "土木工程学院" }, logout: vi.fn() }}>
+    <AuthContext.Provider value={{ user: { name: "周老师", role: "teacher", college: "土木工程学院" }, logout }}>
       <MemoryRouter initialEntries={["/teacher"]}><TeacherApp /></MemoryRouter>
     </AuthContext.Provider>,
   );
@@ -38,6 +38,15 @@ test("教师工作台展示真实统计和完整导航", async () => {
   expect(screen.getByText("2")).toBeInTheDocument();
   expect(screen.getByRole("button", { name: /资料与 RAG/ })).toBeInTheDocument();
   expect(screen.getByRole("button", { name: /作业批改/ })).toBeInTheDocument();
+});
+
+
+test("教师工作台顶部提供明确可用的退出按钮", async () => {
+  const logout = vi.fn(async () => {});
+  renderTeacher(logout);
+  await screen.findByRole("heading", { name: "教学工作台" });
+  fireEvent.click(screen.getByRole("button", { name: "从顶部退出登录" }));
+  await waitFor(() => expect(logout).toHaveBeenCalledTimes(1));
 });
 
 

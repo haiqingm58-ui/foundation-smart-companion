@@ -4,7 +4,17 @@ import { useEffect, useState } from "react";
 
 export function PortalShell({ roleLabel, navItems, active, onNavigate, user, onLogout, children }) {
   const [open, setOpen] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
   const activeItem = navItems.find((item) => item.key === active) || navItems[0];
+  const handleLogout = async () => {
+    if (loggingOut) return;
+    setLoggingOut(true);
+    try {
+      await onLogout?.();
+    } catch {
+      setLoggingOut(false);
+    }
+  };
   return (
     <div className="portalShell">
       <aside className={`portalSidebar ${open ? "open" : ""}`} aria-label={`${roleLabel}导航`}>
@@ -25,7 +35,7 @@ export function PortalShell({ roleLabel, navItems, active, onNavigate, user, onL
         <div className="portalIdentity">
           <span className="portalAvatar">{user?.name?.slice(0, 1) || "用"}</span>
           <div><strong>{user?.name || "用户"}</strong><span>{user?.college || "土木工程学院"}</span></div>
-          <button type="button" onClick={onLogout} aria-label="退出登录" title="退出登录"><LogOut size={18} /></button>
+          <button className="portalIdentityLogout" type="button" onClick={handleLogout} aria-label="退出登录" disabled={loggingOut}><LogOut size={17} /><span>{loggingOut ? "正在退出" : "退出登录"}</span></button>
         </div>
       </aside>
       {open && <button type="button" className="portalScrim" aria-label="关闭导航" onClick={() => setOpen(false)} />}
@@ -33,7 +43,11 @@ export function PortalShell({ roleLabel, navItems, active, onNavigate, user, onL
         <header className="portalTopbar">
           <button className="portalMenu" type="button" onClick={() => setOpen(true)} aria-label="打开导航"><Menu size={21} /></button>
           <div><span>{roleLabel}</span><strong>{activeItem?.label}</strong></div>
-          <div className="portalTopUser"><span>{user?.name}</span><span className="portalAvatar">{user?.name?.slice(0, 1) || "用"}</span></div>
+          <div className="portalTopUser">
+            <span>{user?.name}</span>
+            <span className="portalAvatar">{user?.name?.slice(0, 1) || "用"}</span>
+            <button className="portalTopLogout" type="button" onClick={handleLogout} aria-label="从顶部退出登录" disabled={loggingOut}><LogOut size={16} /><span>{loggingOut ? "正在退出" : "退出登录"}</span></button>
+          </div>
         </header>
         <div className="portalContent">{children}</div>
       </main>
