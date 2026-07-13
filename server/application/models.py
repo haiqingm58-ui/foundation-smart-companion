@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Any
 
-from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Integer, JSON, String, Text, UniqueConstraint, event
+from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Integer, JSON, String, Text, UniqueConstraint, event, inspect
 from sqlalchemy.ext.associationproxy import association_proxy
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column, relationship
 
@@ -261,12 +261,16 @@ class QuestionKnowledgePoint(Base):
 
 
 def question_can_be_active(session: Session, question: Question) -> bool:
-    links = list(question.knowledge_point_links)
+    links = [
+        link
+        for link in question.knowledge_point_links
+        if link.question_id == question.id or (link.question_id is None and link.question is question)
+    ]
     for candidate in session.new.union(session.dirty):
         if (
             isinstance(candidate, QuestionKnowledgePoint)
             and candidate not in links
-            and (candidate.question is question or candidate.question_id == question.id)
+            and (candidate.question_id == question.id or (candidate.question_id is None and candidate.question is question))
         ):
             links.append(candidate)
     links = [link for link in links if link not in session.deleted]
@@ -274,7 +278,9 @@ def question_can_be_active(session: Session, question: Question) -> bool:
         return False
     for link in links:
         knowledge_point = link.knowledge_point
-        if knowledge_point is None and link.knowledge_point_id:
+        if knowledge_point is None or (
+            link.knowledge_point_id is not None and knowledge_point.id != link.knowledge_point_id
+        ):
             knowledge_point = session.get(KnowledgePoint, link.knowledge_point_id)
         if knowledge_point is None or knowledge_point.subject_id != question.subject_id:
             return False
@@ -286,9 +292,15 @@ def mark_incomplete_active_questions_for_review(session: Session, flush_context,
     questions = {item for item in session.new.union(session.dirty) if isinstance(item, Question)}
     for item in session.new.union(session.dirty).union(session.deleted):
         if isinstance(item, QuestionKnowledgePoint):
-            question = item.question or session.get(Question, item.question_id)
-            if question is not None:
-                questions.add(question)
+            question_ids = {item.question_id}
+            question_ids.update(inspect(item).attrs.question_id.history.deleted)
+            for question_id in question_ids:
+                if question_id:
+                    question = session.get(Question, question_id)
+                    if question is not None:
+                        questions.add(question)
+            if item.question_id is None and item.question is not None:
+                questions.add(item.question)
         elif isinstance(item, KnowledgePoint):
             questions.update(link.question for link in item.question_links if link.question is not None)
     for question in questions:

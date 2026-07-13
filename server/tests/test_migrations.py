@@ -245,6 +245,95 @@ def test_question_knowledge_points_proxy_exposes_multiple_matching_points(databa
         assert mismatched_question.status == "review_required"
 
 
+def test_loaded_link_point_id_reassignment_marks_question_for_review(database_url: str) -> None:
+    from server.application.database import create_database
+    from server.application.migrations import upgrade_database
+    from server.application.models import KnowledgePoint, Question, QuestionKnowledgePoint, Subject
+
+    upgrade_database(database_url)
+    database = create_database(database_url)
+    with database.session() as session:
+        foundation = session.get(Subject, "foundation-engineering")
+        soil = session.get(Subject, "soil-mechanics")
+        foundation_point = KnowledgePoint(
+            id="loaded-foundation-point",
+            subject_id=foundation.id,
+            chapter="第1章",
+            name="地基变形",
+            normalized_name="地基变形",
+        )
+        soil_point = KnowledgePoint(
+            id="loaded-soil-point",
+            subject_id=soil.id,
+            chapter="第1章",
+            name="土的压缩性",
+            normalized_name="土的压缩性",
+        )
+        question = Question(
+            id="loaded-link-question",
+            text="说明地基变形。",
+            question_type="简答题",
+            subject_id=foundation.id,
+            status="active",
+            knowledge_point_links=[
+                QuestionKnowledgePoint(id="loaded-link", knowledge_point=foundation_point),
+            ],
+        )
+        session.add_all([question, soil_point])
+        session.commit()
+
+    with database.session() as session:
+        question = session.get(Question, "loaded-link-question")
+        link = question.knowledge_point_links[0]
+        assert link.knowledge_point.id == "loaded-foundation-point"
+        link.knowledge_point_id = "loaded-soil-point"
+        session.commit()
+        assert question.status == "review_required"
+
+
+def test_loaded_link_question_id_reassignment_marks_previous_question_for_review(database_url: str) -> None:
+    from server.application.database import create_database
+    from server.application.migrations import upgrade_database
+    from server.application.models import KnowledgePoint, Question, QuestionKnowledgePoint, Subject
+
+    upgrade_database(database_url)
+    database = create_database(database_url)
+    with database.session() as session:
+        foundation = session.get(Subject, "foundation-engineering")
+        point = KnowledgePoint(
+            id="reassigned-foundation-point",
+            subject_id=foundation.id,
+            chapter="第1章",
+            name="地基承载力",
+            normalized_name="地基承载力",
+        )
+        source = Question(
+            id="reassignment-source-question",
+            text="说明地基承载力。",
+            question_type="简答题",
+            subject_id=foundation.id,
+            status="active",
+            knowledge_point_links=[
+                QuestionKnowledgePoint(id="reassigned-link", knowledge_point=point),
+            ],
+        )
+        target = Question(
+            id="reassignment-target-question",
+            text="说明地基承载力的影响因素。",
+            question_type="简答题",
+            subject_id=foundation.id,
+        )
+        session.add_all([source, target])
+        session.commit()
+
+    with database.session() as session:
+        source = session.get(Question, "reassignment-source-question")
+        link = source.knowledge_point_links[0]
+        link.question_id = "reassignment-target-question"
+        session.commit()
+        assert source.status == "review_required"
+
+
 def test_schema_upgrade_and_legacy_import_preserve_data(tmp_path: Path, database_url: str) -> None:
     from server.application.database import create_database
     from server.application.legacy_import import import_legacy_sqlite
