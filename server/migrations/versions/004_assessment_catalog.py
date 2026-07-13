@@ -10,8 +10,6 @@ from alembic import op
 import sqlalchemy as sa
 from sqlalchemy import inspect
 
-from server.application.models import KnowledgePoint, QuestionKnowledgePoint, Subject
-
 
 revision = "004_assessment_catalog"
 down_revision = "003_submission_feedback"
@@ -38,12 +36,48 @@ def question_knowledge_point_id(question_id: str, knowledge_point_id: str) -> st
 
 def ensure_catalog_tables(bind) -> None:
     inspector = inspect(bind)
-    if not inspector.has_table(Subject.__tablename__):
-        Subject.__table__.create(bind=bind)
-    if not inspector.has_table(KnowledgePoint.__tablename__):
-        KnowledgePoint.__table__.create(bind=bind)
-    if not inspector.has_table(QuestionKnowledgePoint.__tablename__):
-        QuestionKnowledgePoint.__table__.create(bind=bind)
+    if not inspector.has_table("subjects"):
+        op.create_table(
+            "subjects",
+            sa.Column("id", sa.String(length=64), primary_key=True),
+            sa.Column("title", sa.String(length=120), nullable=False, unique=True),
+            sa.Column("slug", sa.String(length=120), nullable=False, unique=True),
+            sa.Column("status", sa.String(length=24), nullable=False, server_default="active"),
+            sa.Column("sort_order", sa.Integer(), nullable=False, server_default="0"),
+        )
+    if not inspector.has_table("knowledge_points"):
+        op.create_table(
+            "knowledge_points",
+            sa.Column("id", sa.String(length=96), primary_key=True),
+            sa.Column("subject_id", sa.String(length=64), sa.ForeignKey("subjects.id", ondelete="CASCADE"), nullable=False),
+            sa.Column("chapter", sa.String(length=160), nullable=False),
+            sa.Column("name", sa.String(length=160), nullable=False),
+            sa.Column("normalized_name", sa.String(length=160), nullable=False),
+            sa.Column("description", sa.Text(), nullable=False, server_default=""),
+            sa.Column("status", sa.String(length=24), nullable=False, server_default="active"),
+            sa.Column("sort_order", sa.Integer(), nullable=False, server_default="0"),
+            sa.Column("created_by", sa.String(length=64), sa.ForeignKey("users.id"), nullable=True),
+            sa.UniqueConstraint("subject_id", "normalized_name", name="uq_subject_knowledge_name"),
+        )
+    if not inspector.has_table("question_knowledge_points"):
+        op.create_table(
+            "question_knowledge_points",
+            sa.Column("id", sa.String(length=96), primary_key=True),
+            sa.Column("question_id", sa.String(length=96), sa.ForeignKey("questions.id", ondelete="CASCADE"), nullable=False),
+            sa.Column("knowledge_point_id", sa.String(length=96), sa.ForeignKey("knowledge_points.id", ondelete="RESTRICT"), nullable=False),
+            sa.Column("weight", sa.Float(), nullable=False, server_default="1.0"),
+            sa.UniqueConstraint("question_id", "knowledge_point_id", name="uq_question_knowledge_point"),
+        )
+    for table_name, index_name, columns in (
+        ("knowledge_points", "ix_knowledge_points_subject_id", ["subject_id"]),
+        ("knowledge_points", "ix_knowledge_points_chapter", ["chapter"]),
+        ("knowledge_points", "ix_knowledge_points_created_by", ["created_by"]),
+        ("question_knowledge_points", "ix_question_knowledge_points_question_id", ["question_id"]),
+        ("question_knowledge_points", "ix_question_knowledge_points_knowledge_point_id", ["knowledge_point_id"]),
+    ):
+        indexes = {index["name"] for index in inspect(bind).get_indexes(table_name)}
+        if index_name not in indexes:
+            op.create_index(index_name, table_name, columns)
 
 
 def ensure_question_columns(bind) -> None:

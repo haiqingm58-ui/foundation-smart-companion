@@ -3,8 +3,9 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Any
 
-from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Integer, JSON, String, Text, UniqueConstraint, event, inspect, select
+from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Integer, JSON, String, Text, UniqueConstraint, event, inspect, select, update
 from sqlalchemy.ext.associationproxy import association_proxy
+from sqlalchemy.orm.attributes import set_committed_value
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column, relationship
 
 
@@ -281,7 +282,8 @@ def collect_link_question_ids(link: QuestionKnowledgePoint, question_ids: set[st
     if link.question is not None:
         add_id(question_ids, link.question.id)
     for question in (*state.attrs.question.history.added, *state.attrs.question.history.deleted):
-        add_id(question_ids, question.id)
+        if question is not None:
+            add_id(question_ids, question.id)
 
 
 @event.listens_for(Session, "before_flush")
@@ -328,15 +330,25 @@ def mark_invalid_active_questions_for_review(session: Session, flush_context) ->
         question_subject_id, knowledge_point_subject_ids = states.setdefault(question_id, (subject_id, []))
         if knowledge_point_id is not None:
             knowledge_point_subject_ids.append(knowledge_point_subject_id)
+    invalid_question_ids = set()
     for question_id, (subject_id, knowledge_point_subject_ids) in states.items():
         if (
             subject_id is None
             or not 1 <= len(knowledge_point_subject_ids) <= 3
             or any(point_subject_id != subject_id for point_subject_id in knowledge_point_subject_ids)
         ):
+            invalid_question_ids.add(question_id)
+    if invalid_question_ids:
+        session.execute(
+            update(Question)
+            .where(Question.id.in_(invalid_question_ids))
+            .values(status=REVIEW_REQUIRED_STATUS)
+            .execution_options(synchronize_session=False)
+        )
+        for question_id in invalid_question_ids:
             question = session.get(Question, question_id)
             if question is not None:
-                question.status = REVIEW_REQUIRED_STATUS
+                set_committed_value(question, "status", REVIEW_REQUIRED_STATUS)
 
 
 class Assignment(Base):

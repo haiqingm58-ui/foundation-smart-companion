@@ -145,6 +145,113 @@ def test_direct_active_question_without_subject_or_links_is_marked_for_review(da
         assert question.status == "review_required"
 
 
+def test_flush_persists_incomplete_active_question_review_status(database_url: str) -> None:
+    from server.application.database import create_database
+    from server.application.migrations import upgrade_database
+    from server.application.models import Question
+
+    upgrade_database(database_url)
+    database = create_database(database_url)
+    with database.session() as session:
+        question = Question(
+            id="flush-incomplete-question",
+            text="说明桩侧阻力。",
+            question_type="简答题",
+            status="active",
+        )
+        session.add(question)
+        session.flush()
+        persisted_status = session.connection().execute(
+            select(Question.status).where(Question.id == question.id)
+        ).scalar_one()
+        assert question.status == "review_required"
+        assert persisted_status == "review_required"
+        assert question not in session.dirty
+        session.rollback()
+
+
+def test_collection_removal_marks_active_question_for_review_within_flush(database_url: str) -> None:
+    from server.application.database import create_database
+    from server.application.migrations import upgrade_database
+    from server.application.models import KnowledgePoint, Question, QuestionKnowledgePoint, Subject
+
+    upgrade_database(database_url)
+    database = create_database(database_url)
+    with database.session() as session:
+        foundation = session.get(Subject, "foundation-engineering")
+        point = KnowledgePoint(
+            id="collection-removal-point",
+            subject_id=foundation.id,
+            chapter="第1章",
+            name="桩基础",
+            normalized_name="桩基础",
+        )
+        question = Question(
+            id="collection-removal-question",
+            text="说明桩基础。",
+            question_type="简答题",
+            subject_id=foundation.id,
+            status="active",
+            knowledge_point_links=[
+                QuestionKnowledgePoint(id="collection-removal-link", knowledge_point=point),
+            ],
+        )
+        session.add(question)
+        session.commit()
+
+    with database.session() as session:
+        question = session.get(Question, "collection-removal-question")
+        question.knowledge_point_links.remove(question.knowledge_point_links[0])
+        session.flush()
+        persisted_status = session.connection().execute(
+            select(Question.status).where(Question.id == question.id)
+        ).scalar_one()
+        assert question.status == "review_required"
+        assert persisted_status == "review_required"
+        session.rollback()
+
+
+def test_deleted_link_marks_active_question_for_review_within_flush(database_url: str) -> None:
+    from server.application.database import create_database
+    from server.application.migrations import upgrade_database
+    from server.application.models import KnowledgePoint, Question, QuestionKnowledgePoint, Subject
+
+    upgrade_database(database_url)
+    database = create_database(database_url)
+    with database.session() as session:
+        foundation = session.get(Subject, "foundation-engineering")
+        point = KnowledgePoint(
+            id="deleted-link-point",
+            subject_id=foundation.id,
+            chapter="第1章",
+            name="地基基础",
+            normalized_name="地基基础",
+        )
+        question = Question(
+            id="deleted-link-question",
+            text="说明地基基础。",
+            question_type="简答题",
+            subject_id=foundation.id,
+            status="active",
+            knowledge_point_links=[
+                QuestionKnowledgePoint(id="deleted-link", knowledge_point=point),
+            ],
+        )
+        session.add(question)
+        session.commit()
+
+    with database.session() as session:
+        question = session.get(Question, "deleted-link-question")
+        session.delete(question.knowledge_point_links[0])
+        session.flush()
+        persisted_status = session.connection().execute(
+            select(Question.status).where(Question.id == question.id)
+        ).scalar_one()
+        assert question.status == "review_required"
+        assert persisted_status == "review_required"
+        session.rollback()
+
+
 def test_question_knowledge_points_proxy_exposes_multiple_matching_points(database_url: str) -> None:
     from server.application.database import create_database
     from server.application.migrations import upgrade_database
