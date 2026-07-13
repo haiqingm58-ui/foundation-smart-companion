@@ -1,5 +1,7 @@
 node_modules/
+node_modules
 .worktrees/
+.superpowers/
 dist/
 .DS_Store
 .npm-cache/
@@ -14,6 +16,7 @@ output/playwright/
 __pycache__/
 *.pyc
 server/.venv/
+server/.venv
 server/data/*
 !server/data/knowledge/
 server/data/knowledge/*
