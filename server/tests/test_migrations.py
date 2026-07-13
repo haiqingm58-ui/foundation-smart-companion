@@ -4,7 +4,7 @@ import json
 import sqlite3
 from pathlib import Path
 
-from sqlalchemy import select
+from sqlalchemy import inspect, select
 
 
 def make_legacy_database(path: Path, knowledge_point: str = "桩侧阻力") -> None:
@@ -85,6 +85,65 @@ def make_legacy_database(path: Path, knowledge_point: str = "桩侧阻力") -> N
     )
     connection.commit()
     connection.close()
+
+
+def task1_schema_signature(database) -> dict:
+    inspector = inspect(database.engine)
+    tables = tuple(sorted(inspector.get_table_names()))
+    catalog_tables = ("subjects", "knowledge_points", "question_knowledge_points", "questions")
+    table_details = {}
+    for table_name in catalog_tables:
+        table_details[table_name] = {
+            "columns": tuple(
+                sorted(
+                    (column["name"], str(column["type"]), column["nullable"], str(column["default"]))
+                    for column in inspector.get_columns(table_name)
+                )
+            ),
+            "unique_constraints": tuple(
+                sorted(
+                    (constraint["name"], tuple(constraint["column_names"]))
+                    for constraint in inspector.get_unique_constraints(table_name)
+                )
+            ),
+            "foreign_keys": tuple(
+                sorted(
+                    (
+                        tuple(foreign_key["constrained_columns"]),
+                        foreign_key["referred_table"],
+                        tuple(foreign_key["referred_columns"]),
+                        foreign_key["options"].get("ondelete"),
+                    )
+                    for foreign_key in inspector.get_foreign_keys(table_name)
+                )
+            ),
+            "indexes": tuple(
+                sorted((index["name"], tuple(index["column_names"]), index["unique"]) for index in inspector.get_indexes(table_name))
+            ),
+        }
+    return {"tables": tables, "catalog": table_details}
+
+
+def test_fresh_and_historical_migrations_have_task1_schema_parity(tmp_path: Path, database_url: str) -> None:
+    from server.application.database import create_database
+    from server.application.migrations import upgrade_database
+
+    historical_url = f"sqlite:///{tmp_path / 'historical.db'}"
+    upgrade_database(database_url)
+    upgrade_database(historical_url, "003_submission_feedback")
+
+    historical_database = create_database(historical_url)
+    historical_inspector = inspect(historical_database.engine)
+    assert {"subjects", "knowledge_points", "question_knowledge_points"}.isdisjoint(historical_inspector.get_table_names())
+    assert "practice_attempts" in historical_inspector.get_table_names()
+    assert "feedback" in {column["name"] for column in historical_inspector.get_columns("submissions")}
+    historical_question_columns = {column["name"] for column in historical_inspector.get_columns("questions")}
+    assert {"subject_id", "attachments", "answer_word_limit", "grading_mode", "status", "source_metadata", "content_fingerprint"}.isdisjoint(historical_question_columns)
+
+    upgrade_database(historical_url)
+    fresh_signature = task1_schema_signature(create_database(database_url))
+    historical_signature = task1_schema_signature(create_database(historical_url))
+    assert fresh_signature == historical_signature
 
 
 def test_assessment_catalog_migration_backfills_legacy_questions(tmp_path: Path, database_url: str) -> None:
@@ -591,6 +650,43 @@ def test_question_subject_relationship_reassignment_marks_question_for_review(da
         assert question.status == "review_required"
 
 
+def test_question_subject_id_reassignment_marks_question_for_review(database_url: str) -> None:
+    from server.application.database import create_database
+    from server.application.migrations import upgrade_database
+    from server.application.models import KnowledgePoint, Question, QuestionKnowledgePoint, Subject
+
+    upgrade_database(database_url)
+    database = create_database(database_url)
+    with database.session() as session:
+        foundation = session.get(Subject, "foundation-engineering")
+        point = KnowledgePoint(
+            id="scalar-question-subject-point",
+            subject_id=foundation.id,
+            chapter="第1章",
+            name="地基承载力",
+            normalized_name="地基承载力",
+        )
+        question = Question(
+            id="scalar-question-subject-question",
+            text="说明地基承载力。",
+            question_type="简答题",
+            subject_id=foundation.id,
+            status="active",
+            knowledge_point_links=[
+                QuestionKnowledgePoint(id="scalar-question-subject-link", knowledge_point=point),
+            ],
+        )
+        session.add(question)
+        session.commit()
+
+    with database.session() as session:
+        question = session.get(Question, "scalar-question-subject-question")
+        question.subject_id = "soil-mechanics"
+        session.flush()
+        assert question.status == "review_required"
+        session.rollback()
+
+
 def test_knowledge_point_subject_relationship_reassignment_marks_linked_questions_for_review(database_url: str) -> None:
     from server.application.database import create_database
     from server.application.migrations import upgrade_database
@@ -628,6 +724,44 @@ def test_knowledge_point_subject_relationship_reassignment_marks_linked_question
         session.commit()
         question = session.get(Question, "relationship-point-subject-question")
         assert question.status == "review_required"
+
+
+def test_knowledge_point_subject_id_reassignment_marks_linked_questions_for_review(database_url: str) -> None:
+    from server.application.database import create_database
+    from server.application.migrations import upgrade_database
+    from server.application.models import KnowledgePoint, Question, QuestionKnowledgePoint, Subject
+
+    upgrade_database(database_url)
+    database = create_database(database_url)
+    with database.session() as session:
+        foundation = session.get(Subject, "foundation-engineering")
+        point = KnowledgePoint(
+            id="scalar-point-subject-point",
+            subject_id=foundation.id,
+            chapter="第1章",
+            name="地基基础",
+            normalized_name="地基基础",
+        )
+        question = Question(
+            id="scalar-point-subject-question",
+            text="说明地基基础。",
+            question_type="简答题",
+            subject_id=foundation.id,
+            status="active",
+            knowledge_point_links=[
+                QuestionKnowledgePoint(id="scalar-point-subject-link", knowledge_point=point),
+            ],
+        )
+        session.add(question)
+        session.commit()
+
+    with database.session() as session:
+        point = session.get(KnowledgePoint, "scalar-point-subject-point")
+        point.subject_id = "soil-mechanics"
+        session.flush()
+        question = session.get(Question, "scalar-point-subject-question")
+        assert question.status == "review_required"
+        session.rollback()
 
 
 def test_schema_upgrade_and_legacy_import_preserve_data(tmp_path: Path, database_url: str) -> None:
