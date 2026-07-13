@@ -9,6 +9,7 @@ AGENTS.md
 design-shots/
 scripts/*.py
 .playwright-cli/
+output/playwright/
 .lighthouseci/
 __pycache__/
 *.pyc
