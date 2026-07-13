@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Any
 
-from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Integer, JSON, String, Text, UniqueConstraint, event, inspect
+from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Integer, JSON, String, Text, UniqueConstraint, event, inspect, select
 from sqlalchemy.ext.associationproxy import association_proxy
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column, relationship
 
@@ -260,52 +260,83 @@ class QuestionKnowledgePoint(Base):
     knowledge_point: Mapped[KnowledgePoint] = relationship(back_populates="question_links")
 
 
-def question_can_be_active(session: Session, question: Question) -> bool:
-    links = [
-        link
-        for link in question.knowledge_point_links
-        if link.question_id == question.id or (link.question_id is None and link.question is question)
-    ]
-    for candidate in session.new.union(session.dirty):
-        if (
-            isinstance(candidate, QuestionKnowledgePoint)
-            and candidate not in links
-            and (candidate.question_id == question.id or (candidate.question_id is None and candidate.question is question))
-        ):
-            links.append(candidate)
-    links = [link for link in links if link not in session.deleted]
-    if not question.subject_id or not 1 <= len(links) <= 3:
-        return False
-    for link in links:
-        knowledge_point = link.knowledge_point
-        if knowledge_point is None or (
-            link.knowledge_point_id is not None and knowledge_point.id != link.knowledge_point_id
-        ):
-            knowledge_point = session.get(KnowledgePoint, link.knowledge_point_id)
-        if knowledge_point is None or knowledge_point.subject_id != question.subject_id:
-            return False
-    return True
+_AFFECTED_QUESTION_IDS = "assessment_catalog_affected_question_ids"
+_AFFECTED_KNOWLEDGE_POINT_IDS = "assessment_catalog_affected_knowledge_point_ids"
+
+
+def add_id(ids: set[str], value: object) -> None:
+    if isinstance(value, str) and value:
+        ids.add(value)
+
+
+def add_history_ids(ids: set[str], history) -> None:
+    for value in (*history.added, *history.deleted):
+        add_id(ids, value)
+
+
+def collect_link_question_ids(link: QuestionKnowledgePoint, question_ids: set[str]) -> None:
+    state = inspect(link)
+    add_id(question_ids, link.question_id)
+    add_history_ids(question_ids, state.attrs.question_id.history)
+    if link.question is not None:
+        add_id(question_ids, link.question.id)
+    for question in (*state.attrs.question.history.added, *state.attrs.question.history.deleted):
+        add_id(question_ids, question.id)
 
 
 @event.listens_for(Session, "before_flush")
-def mark_incomplete_active_questions_for_review(session: Session, flush_context, instances) -> None:
-    questions = {item for item in session.new.union(session.dirty) if isinstance(item, Question)}
+def collect_assessment_catalog_changes(session: Session, flush_context, instances) -> None:
+    question_ids = session.info.setdefault(_AFFECTED_QUESTION_IDS, set())
+    knowledge_point_ids = session.info.setdefault(_AFFECTED_KNOWLEDGE_POINT_IDS, set())
     for item in session.new.union(session.dirty).union(session.deleted):
-        if isinstance(item, QuestionKnowledgePoint):
-            question_ids = {item.question_id}
-            question_ids.update(inspect(item).attrs.question_id.history.deleted)
-            for question_id in question_ids:
-                if question_id:
-                    question = session.get(Question, question_id)
-                    if question is not None:
-                        questions.add(question)
-            if item.question_id is None and item.question is not None:
-                questions.add(item.question)
+        if isinstance(item, Question):
+            add_id(question_ids, item.id)
+        elif isinstance(item, QuestionKnowledgePoint):
+            collect_link_question_ids(item, question_ids)
         elif isinstance(item, KnowledgePoint):
-            questions.update(link.question for link in item.question_links if link.question is not None)
-    for question in questions:
-        if question.status == "active" and not question_can_be_active(session, question):
-            question.status = REVIEW_REQUIRED_STATUS
+            add_id(knowledge_point_ids, item.id)
+
+
+@event.listens_for(Session, "after_flush_postexec")
+def mark_invalid_active_questions_for_review(session: Session, flush_context) -> None:
+    question_ids = session.info.pop(_AFFECTED_QUESTION_IDS, set())
+    knowledge_point_ids = session.info.pop(_AFFECTED_KNOWLEDGE_POINT_IDS, set())
+    if knowledge_point_ids:
+        question_ids.update(
+            session.scalars(
+                select(QuestionKnowledgePoint.question_id).where(
+                    QuestionKnowledgePoint.knowledge_point_id.in_(knowledge_point_ids)
+                )
+            )
+        )
+    if not question_ids:
+        return
+
+    rows = session.execute(
+        select(
+            Question.id,
+            Question.subject_id,
+            QuestionKnowledgePoint.knowledge_point_id,
+            KnowledgePoint.subject_id,
+        )
+        .outerjoin(QuestionKnowledgePoint, QuestionKnowledgePoint.question_id == Question.id)
+        .outerjoin(KnowledgePoint, KnowledgePoint.id == QuestionKnowledgePoint.knowledge_point_id)
+        .where(Question.id.in_(question_ids), Question.status == "active")
+    ).all()
+    states: dict[str, tuple[str | None, list[str | None]]] = {}
+    for question_id, subject_id, knowledge_point_id, knowledge_point_subject_id in rows:
+        question_subject_id, knowledge_point_subject_ids = states.setdefault(question_id, (subject_id, []))
+        if knowledge_point_id is not None:
+            knowledge_point_subject_ids.append(knowledge_point_subject_id)
+    for question_id, (subject_id, knowledge_point_subject_ids) in states.items():
+        if (
+            subject_id is None
+            or not 1 <= len(knowledge_point_subject_ids) <= 3
+            or any(point_subject_id != subject_id for point_subject_id in knowledge_point_subject_ids)
+        ):
+            question = session.get(Question, question_id)
+            if question is not None:
+                question.status = REVIEW_REQUIRED_STATUS
 
 
 class Assignment(Base):

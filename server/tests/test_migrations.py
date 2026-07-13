@@ -334,6 +334,195 @@ def test_loaded_link_question_id_reassignment_marks_previous_question_for_review
         assert source.status == "review_required"
 
 
+def test_link_question_relationship_reassignment_marks_source_and_overfull_target_for_review(database_url: str) -> None:
+    from server.application.database import create_database
+    from server.application.migrations import upgrade_database
+    from server.application.models import KnowledgePoint, Question, QuestionKnowledgePoint, Subject
+
+    upgrade_database(database_url)
+    database = create_database(database_url)
+    with database.session() as session:
+        foundation = session.get(Subject, "foundation-engineering")
+        points = [
+            KnowledgePoint(
+                id=f"relationship-question-point-{index}",
+                subject_id=foundation.id,
+                chapter="第1章",
+                name=f"知识点{index}",
+                normalized_name=f"知识点{index}",
+            )
+            for index in range(1, 5)
+        ]
+        source = Question(
+            id="relationship-source-question",
+            text="说明知识点 4。",
+            question_type="简答题",
+            subject_id=foundation.id,
+            status="active",
+            knowledge_point_links=[
+                QuestionKnowledgePoint(id="relationship-source-link", knowledge_point=points[3]),
+            ],
+        )
+        target = Question(
+            id="relationship-target-question",
+            text="说明知识点 1 到 3。",
+            question_type="简答题",
+            subject_id=foundation.id,
+            status="active",
+            knowledge_point_links=[
+                QuestionKnowledgePoint(id=f"relationship-target-link-{index}", knowledge_point=point)
+                for index, point in enumerate(points[:3], start=1)
+            ],
+        )
+        session.add_all([source, target])
+        session.commit()
+
+    with database.session() as session:
+        source = session.get(Question, "relationship-source-question")
+        target = session.get(Question, "relationship-target-question")
+        link = source.knowledge_point_links[0]
+        assert link.question is source
+        link.question = target
+        session.commit()
+        assert source.status == "review_required"
+        assert target.status == "review_required"
+
+
+def test_link_knowledge_point_relationship_reassignment_marks_question_for_review(database_url: str) -> None:
+    from server.application.database import create_database
+    from server.application.migrations import upgrade_database
+    from server.application.models import KnowledgePoint, Question, QuestionKnowledgePoint, Subject
+
+    upgrade_database(database_url)
+    database = create_database(database_url)
+    with database.session() as session:
+        foundation = session.get(Subject, "foundation-engineering")
+        soil = session.get(Subject, "soil-mechanics")
+        foundation_point = KnowledgePoint(
+            id="relationship-foundation-point",
+            subject_id=foundation.id,
+            chapter="第1章",
+            name="地基变形",
+            normalized_name="地基变形",
+        )
+        alternate_foundation_point = KnowledgePoint(
+            id="relationship-alternate-foundation-point",
+            subject_id=foundation.id,
+            chapter="第1章",
+            name="地基承载力",
+            normalized_name="地基承载力",
+        )
+        soil_point = KnowledgePoint(
+            id="relationship-soil-point",
+            subject_id=soil.id,
+            chapter="第1章",
+            name="土的压缩性",
+            normalized_name="土的压缩性",
+        )
+        question = Question(
+            id="relationship-point-question",
+            text="说明地基变形。",
+            question_type="简答题",
+            subject_id=foundation.id,
+            status="active",
+            knowledge_point_links=[
+                QuestionKnowledgePoint(id="relationship-point-link", knowledge_point=foundation_point),
+            ],
+        )
+        session.add_all([question, alternate_foundation_point, soil_point])
+        session.commit()
+
+    with database.session() as session:
+        question = session.get(Question, "relationship-point-question")
+        link = question.knowledge_point_links[0]
+        alternate_foundation_point = session.get(KnowledgePoint, "relationship-alternate-foundation-point")
+        soil_point = session.get(KnowledgePoint, "relationship-soil-point")
+        assert link.knowledge_point.id == "relationship-foundation-point"
+        link.knowledge_point = alternate_foundation_point
+        session.commit()
+        assert question.status == "active"
+        link.knowledge_point = soil_point
+        session.commit()
+        assert question.status == "review_required"
+
+
+def test_question_subject_relationship_reassignment_marks_question_for_review(database_url: str) -> None:
+    from server.application.database import create_database
+    from server.application.migrations import upgrade_database
+    from server.application.models import KnowledgePoint, Question, QuestionKnowledgePoint, Subject
+
+    upgrade_database(database_url)
+    database = create_database(database_url)
+    with database.session() as session:
+        foundation = session.get(Subject, "foundation-engineering")
+        foundation_point = KnowledgePoint(
+            id="relationship-subject-point",
+            subject_id=foundation.id,
+            chapter="第1章",
+            name="地基承载力",
+            normalized_name="地基承载力",
+        )
+        question = Question(
+            id="relationship-subject-question",
+            text="说明地基承载力。",
+            question_type="简答题",
+            subject_id=foundation.id,
+            status="active",
+            knowledge_point_links=[
+                QuestionKnowledgePoint(id="relationship-subject-link", knowledge_point=foundation_point),
+            ],
+        )
+        session.add(question)
+        session.commit()
+
+    with database.session() as session:
+        question = session.get(Question, "relationship-subject-question")
+        soil = session.get(Subject, "soil-mechanics")
+        assert question.subject.id == "foundation-engineering"
+        question.subject = soil
+        session.commit()
+        assert question.status == "review_required"
+
+
+def test_knowledge_point_subject_relationship_reassignment_marks_linked_questions_for_review(database_url: str) -> None:
+    from server.application.database import create_database
+    from server.application.migrations import upgrade_database
+    from server.application.models import KnowledgePoint, Question, QuestionKnowledgePoint, Subject
+
+    upgrade_database(database_url)
+    database = create_database(database_url)
+    with database.session() as session:
+        foundation = session.get(Subject, "foundation-engineering")
+        point = KnowledgePoint(
+            id="relationship-point-subject-point",
+            subject_id=foundation.id,
+            chapter="第1章",
+            name="地基基础",
+            normalized_name="地基基础",
+        )
+        question = Question(
+            id="relationship-point-subject-question",
+            text="说明地基基础。",
+            question_type="简答题",
+            subject_id=foundation.id,
+            status="active",
+            knowledge_point_links=[
+                QuestionKnowledgePoint(id="relationship-point-subject-link", knowledge_point=point),
+            ],
+        )
+        session.add(question)
+        session.commit()
+
+    with database.session() as session:
+        point = session.get(KnowledgePoint, "relationship-point-subject-point")
+        soil = session.get(Subject, "soil-mechanics")
+        assert point.subject.id == "foundation-engineering"
+        point.subject = soil
+        session.commit()
+        question = session.get(Question, "relationship-point-subject-question")
+        assert question.status == "review_required"
+
+
 def test_schema_upgrade_and_legacy_import_preserve_data(tmp_path: Path, database_url: str) -> None:
     from server.application.database import create_database
     from server.application.legacy_import import import_legacy_sqlite
