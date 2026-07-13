@@ -208,23 +208,29 @@ def upgrade() -> None:
 def downgrade() -> None:
     bind = op.get_bind()
     inspector = inspect(bind)
+    if inspector.has_table("question_knowledge_points"):
+        op.drop_table("question_knowledge_points")
     if inspector.has_table("questions"):
         indexes = {index["name"] for index in inspector.get_indexes("questions")}
-        for index_name in ("ix_questions_content_fingerprint", "ix_questions_subject_id"):
-            if index_name in indexes:
-                op.drop_index(index_name, table_name="questions")
+        foreign_keys = {foreign_key["name"] for foreign_key in inspector.get_foreign_keys("questions")}
         columns = {column["name"] for column in inspector.get_columns("questions")}
-        for column_name in (
-            "content_fingerprint",
-            "source_metadata",
-            "status",
-            "grading_mode",
-            "answer_word_limit",
-            "attachments",
-            "subject_id",
-        ):
-            if column_name in columns:
-                op.drop_column("questions", column_name)
-    for table_name in ("question_knowledge_points", "knowledge_points", "subjects"):
+        with op.batch_alter_table("questions") as batch_op:
+            if "fk_questions_subject_id_subjects" in foreign_keys:
+                batch_op.drop_constraint("fk_questions_subject_id_subjects", type_="foreignkey")
+            for index_name in ("ix_questions_content_fingerprint", "ix_questions_subject_id"):
+                if index_name in indexes:
+                    batch_op.drop_index(index_name)
+            for column_name in (
+                "content_fingerprint",
+                "source_metadata",
+                "status",
+                "grading_mode",
+                "answer_word_limit",
+                "attachments",
+                "subject_id",
+            ):
+                if column_name in columns:
+                    batch_op.drop_column(column_name)
+    for table_name in ("knowledge_points", "subjects"):
         if inspect(bind).has_table(table_name):
             op.drop_table(table_name)

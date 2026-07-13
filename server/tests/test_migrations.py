@@ -4,7 +4,76 @@ import json
 import sqlite3
 from pathlib import Path
 
-from sqlalchemy import inspect, select
+from sqlalchemy import inspect, select, text
+
+
+REVISION_003_TABLE_COLUMNS = {
+    "users": {"id", "username", "password_hash", "password_salt", "password_algorithm", "role", "role_label", "name", "avatar", "status", "student_no", "college", "school", "mentor", "must_change_password", "last_login_at", "created_at", "updated_at"},
+    "classes": {"id", "name", "grade", "major", "college", "created_at"},
+    "teachers": {"id", "user_id", "teacher_no", "college", "course", "phone", "email", "created_at"},
+    "students": {"id", "user_id", "student_no", "class_id", "progress", "average_score", "last_study_at", "created_at"},
+    "teacher_student_bindings": {"id", "teacher_id", "student_id", "class_id", "status", "created_by", "created_at"},
+    "sessions": {"id", "user_id", "token_hash", "csrf_hash", "expires_at", "revoked_at", "created_at"},
+    "captcha_records": {"id", "answer_hash", "client_ip", "expires_at", "used_at", "created_at"},
+    "login_attempts": {"id", "username", "client_ip", "success", "reason", "created_at"},
+    "documents": {"id", "title", "text", "source_type", "uploaded_by", "uploaded_at"},
+    "exercises": {"id", "payload", "source", "created_by", "created_at"},
+    "settings": {"key", "value", "updated_at"},
+    "resources": {"id", "name", "title", "storage_path", "file_size", "mime_type", "source_type", "uploaded_by", "chapter", "knowledge_point", "visibility", "class_scope", "extracted_text", "created_at", "updated_at"},
+    "knowledge_chunks": {"id", "resource_id", "source_type", "heading", "text", "chapter", "page", "sequence"},
+    "questions": {"id", "text", "question_type", "options", "correct_answer", "explanation", "rubric", "difficulty", "points", "chapter", "knowledge_point", "source", "created_by", "created_at", "updated_at"},
+    "assignments": {"id", "title", "description", "teacher_id", "starts_at", "due_at", "total_points", "allow_resubmit", "auto_grade", "status", "created_at"},
+    "assignment_questions": {"id", "assignment_id", "question_id", "sequence", "points"},
+    "assignment_targets": {"id", "assignment_id", "class_id", "student_id"},
+    "submissions": {"id", "assignment_id", "student_id", "attempt_number", "status", "score", "feedback", "submitted_at", "graded_at", "graded_by"},
+    "submission_answers": {"id", "submission_id", "question_id", "answer", "score", "criteria_scores", "confidence", "feedback"},
+    "practice_attempts": {"id", "student_id", "question_id", "answer", "score", "max_score", "criteria_scores", "confidence", "feedback", "attempt_number", "submitted_at"},
+    "learning_progress": {"id", "student_id", "chapter_id", "percent", "last_section", "updated_at"},
+    "knowledge_mastery": {"id", "student_id", "knowledge_point", "mastery", "attempts", "updated_at"},
+    "notices": {"id", "title", "content", "publisher_id", "audience", "class_scope", "published_at"},
+    "operation_logs": {"id", "actor_id", "action", "target_type", "target_id", "detail", "client_ip", "created_at"},
+}
+REVISION_003_PRIMARY_KEYS = {
+    table_name: ("key",) if table_name == "settings" else ("id",)
+    for table_name in REVISION_003_TABLE_COLUMNS
+}
+REVISION_003_NAMED_UNIQUES = {
+    ("teacher_student_bindings", "uq_teacher_student_class", ("teacher_id", "student_id", "class_id")),
+    ("assignment_questions", "uq_assignment_question", ("assignment_id", "question_id")),
+    ("assignment_targets", "uq_assignment_student", ("assignment_id", "student_id")),
+    ("learning_progress", "uq_student_chapter_progress", ("student_id", "chapter_id")),
+    ("knowledge_mastery", "uq_student_knowledge", ("student_id", "knowledge_point")),
+}
+
+
+def assert_revision_003_schema(database) -> None:
+    inspector = inspect(database.engine)
+    actual_tables = set(inspector.get_table_names()) - {"alembic_version"}
+    assert actual_tables == set(REVISION_003_TABLE_COLUMNS)
+    actual_named_uniques = set()
+    actual_named_foreign_keys = set()
+    actual_named_checks = set()
+    for table_name, expected_columns in REVISION_003_TABLE_COLUMNS.items():
+        assert {column["name"] for column in inspector.get_columns(table_name)} == expected_columns
+        assert tuple(inspector.get_pk_constraint(table_name)["constrained_columns"]) == REVISION_003_PRIMARY_KEYS[table_name]
+        actual_named_uniques.update(
+            (table_name, constraint["name"], tuple(constraint["column_names"]))
+            for constraint in inspector.get_unique_constraints(table_name)
+            if constraint["name"]
+        )
+        actual_named_foreign_keys.update(
+            (table_name, foreign_key["name"], tuple(foreign_key["constrained_columns"]))
+            for foreign_key in inspector.get_foreign_keys(table_name)
+            if foreign_key["name"]
+        )
+        actual_named_checks.update(
+            (table_name, check["name"], check["sqltext"])
+            for check in inspector.get_check_constraints(table_name)
+            if check["name"]
+        )
+    assert actual_named_uniques == REVISION_003_NAMED_UNIQUES
+    assert actual_named_foreign_keys == set()
+    assert actual_named_checks == set()
 
 
 def make_legacy_database(path: Path, knowledge_point: str = "桩侧阻力") -> None:
@@ -134,6 +203,7 @@ def test_fresh_and_historical_migrations_have_task1_schema_parity(tmp_path: Path
 
     historical_database = create_database(historical_url)
     historical_inspector = inspect(historical_database.engine)
+    assert_revision_003_schema(historical_database)
     assert {"subjects", "knowledge_points", "question_knowledge_points"}.isdisjoint(historical_inspector.get_table_names())
     assert "practice_attempts" in historical_inspector.get_table_names()
     assert "feedback" in {column["name"] for column in historical_inspector.get_columns("submissions")}
@@ -144,6 +214,78 @@ def test_fresh_and_historical_migrations_have_task1_schema_parity(tmp_path: Path
     fresh_signature = task1_schema_signature(create_database(database_url))
     historical_signature = task1_schema_signature(create_database(historical_url))
     assert fresh_signature == historical_signature
+
+
+def test_fresh_revision_003_schema_matches_frozen_signature(tmp_path: Path) -> None:
+    from server.application.database import create_database
+    from server.application.migrations import upgrade_database
+
+    database_url = f"sqlite:///{tmp_path / 'revision-three.db'}"
+    upgrade_database(database_url, "003_submission_feedback")
+    assert_revision_003_schema(create_database(database_url))
+
+
+def test_assessment_catalog_downgrade_restores_revision_003_schema_and_rows(tmp_path: Path, database_url: str) -> None:
+    from server.application.database import create_database
+    from server.application.migrations import downgrade_database, upgrade_database
+
+    upgrade_database(database_url, "003_submission_feedback")
+    database = create_database(database_url)
+    with database.engine.begin() as connection:
+        connection.execute(
+            text(
+                """
+                INSERT INTO questions (
+                    id, text, question_type, options, correct_answer, explanation, rubric,
+                    difficulty, points, chapter, knowledge_point, source, created_by,
+                    created_at, updated_at
+                ) VALUES (
+                    :id, :text, :question_type, :options, :correct_answer, :explanation, :rubric,
+                    :difficulty, :points, :chapter, :knowledge_point, :source, :created_by,
+                    :created_at, :updated_at
+                )
+                """
+            ),
+            {
+                "id": "exercise-old",
+                "text": "说明桩侧阻力。",
+                "question_type": "简答题",
+                "options": "[]",
+                "correct_answer": None,
+                "explanation": None,
+                "rubric": "[]",
+                "difficulty": "基础",
+                "points": 10,
+                "chapter": "第3章 桩基础",
+                "knowledge_point": "桩侧阻力",
+                "source": "textbook",
+                "created_by": None,
+                "created_at": "2026-01-01 00:00:00",
+                "updated_at": "2026-01-01 00:00:00",
+            },
+    )
+    upgrade_database(database_url)
+    head_inspector = inspect(database.engine)
+    assert {"subjects", "knowledge_points", "question_knowledge_points"}.issubset(head_inspector.get_table_names())
+    assert any(
+        foreign_key["name"] == "fk_questions_subject_id_subjects"
+        for foreign_key in head_inspector.get_foreign_keys("questions")
+    )
+    downgrade_database(database_url, "003_submission_feedback")
+
+    database = create_database(database_url)
+    assert_revision_003_schema(database)
+    inspector = inspect(database.engine)
+    assert {"subjects", "knowledge_points", "question_knowledge_points"}.isdisjoint(inspector.get_table_names())
+    question_columns = {column["name"] for column in inspector.get_columns("questions")}
+    assert {"subject_id", "attachments", "answer_word_limit", "grading_mode", "status", "source_metadata", "content_fingerprint"}.isdisjoint(question_columns)
+    assert all("subject_id" not in foreign_key["constrained_columns"] for foreign_key in inspector.get_foreign_keys("questions"))
+    with database.engine.connect() as connection:
+        legacy_question = connection.execute(
+            text("SELECT id, text, knowledge_point FROM questions WHERE id = :id"),
+            {"id": "exercise-old"},
+        ).one()
+    assert legacy_question == ("exercise-old", "说明桩侧阻力。", "桩侧阻力")
 
 
 def test_assessment_catalog_migration_backfills_legacy_questions(tmp_path: Path, database_url: str) -> None:

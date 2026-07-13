@@ -14,3 +14,10 @@ def upgrade_database(database_url: str, revision: str = "head") -> None:
     config.set_main_option("script_location", str(ROOT_DIR / "server" / "migrations"))
     config.set_main_option("sqlalchemy.url", database_url.replace("%", "%%"))
     command.upgrade(config, revision)
+
+
+def downgrade_database(database_url: str, revision: str) -> None:
+    config = Config(str(ROOT_DIR / "alembic.ini"))
+    config.set_main_option("script_location", str(ROOT_DIR / "server" / "migrations"))
+    config.set_main_option("sqlalchemy.url", database_url.replace("%", "%%"))
+    command.downgrade(config, revision)
