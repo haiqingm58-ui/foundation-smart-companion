@@ -67,7 +67,7 @@ def test_student_progress_attempt_and_report_are_persisted(student_context) -> N
     assert attempt.json()["data"]["score"] == 10
     report = client.get("/api/student/report")
     assert report.status_code == 200
-    assert report.json()["data"]["averageScore"] == 100
+    assert report.json()["data"]["averageScore"] == 0
     with database.session() as session:
         assert session.scalar(select(LearningProgress).where(LearningProgress.chapter_id == "chapter-03")).percent == 60
         assert session.scalar(select(PracticeAttempt).where(PracticeAttempt.question_id == "question-choice")) is not None

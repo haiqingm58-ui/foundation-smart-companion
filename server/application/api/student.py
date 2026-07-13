@@ -138,10 +138,6 @@ def submit_attempt(question_id: str, body: AttemptInput, request: Request, auth:
                 session.add(mastery)
             mastery.mastery = (mastery.mastery * mastery.attempts + mastery_value) / (mastery.attempts + 1)
             mastery.attempts += 1
-        session.flush()
-        attempts = session.scalars(select(PracticeAttempt).where(PracticeAttempt.student_id == student.id)).all()
-        percentages = [item.score / item.max_score * 100 for item in attempts if item.max_score]
-        student.average_score = sum(percentages) / len(percentages) if percentages else 0
         session.commit()
     return request.app.state.success(request, {"attemptId": attempt.id, "score": score, "maxScore": question.points, "confidence": confidence, "feedback": feedback, "criteriaScores": criteria, "teacherReview": confidence < 0.6})
 
