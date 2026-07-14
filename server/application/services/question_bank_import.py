@@ -1,8 +1,6 @@
 from __future__ import annotations
 
 import hashlib
-import json
-import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -11,13 +9,13 @@ from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 
 from ..database import Database
+from ..importers.report import ReportValidationError, validate_manifest
 from ..models import KnowledgePoint, Question, QuestionKnowledgePoint, Subject
-from .assessment_validation import AssessmentValidationError, normalize_text, validate_question
+from .assessment_validation import normalize_text
 from .audit import add_log
 
 
 QUESTION_BANK_SOURCE = "soil-mechanics-bank"
-_FINGERPRINT = re.compile(r"[0-9a-f]{64}")
 
 
 class QuestionBankImportError(ValueError):
@@ -47,92 +45,11 @@ def _require(condition: bool, message: str) -> None:
         raise QuestionBankImportError(message)
 
 
-def _string(value: object, label: str) -> str:
-    _require(isinstance(value, str) and value.strip(), f"{label} 必须是非空字符串")
-    return value.strip()
-
-
-def _integer(value: object, label: str) -> int:
-    _require(isinstance(value, int) and not isinstance(value, bool), f"{label} 必须是整数")
-    return value
-
-
-def _load_manifest(manifest_path: Path) -> dict[str, Any]:
-    try:
-        payload = json.loads(manifest_path.read_text(encoding="utf-8"))
-    except (OSError, UnicodeDecodeError, json.JSONDecodeError) as error:
-        raise QuestionBankImportError(f"无法读取题库清单：{manifest_path}") from error
-    _require(isinstance(payload, dict), "题库清单根节点必须是对象")
-    return payload
-
-
 def _validate_manifest(manifest_path: Path) -> dict[str, Any]:
-    manifest = _load_manifest(manifest_path)
-    _require(manifest.get("schemaVersion") == 1, "题库清单 schemaVersion 必须为 1")
-
-    subject = manifest.get("subject")
-    _require(isinstance(subject, dict), "subject 必须是对象")
-    subject_id = _string(subject.get("id"), "subject.id")
-    _string(subject.get("title"), "subject.title")
-    _string(subject.get("slug"), "subject.slug")
-    _require(subject.get("status") in {"active", "inactive"}, "subject.status 无效")
-    _integer(subject.get("sortOrder"), "subject.sortOrder")
-
-    points = manifest.get("knowledgePoints")
-    _require(isinstance(points, list), "knowledgePoints 必须是数组")
-    point_ids: set[str] = set()
-    normalized_names: set[str] = set()
-    for point in points:
-        _require(isinstance(point, dict), "知识点必须是对象")
-        point_id = _string(point.get("id"), "knowledgePoint.id")
-        _require(point_id not in point_ids, f"知识点 ID 重复：{point_id}")
-        point_ids.add(point_id)
-        _require(point.get("subjectId") == subject_id, f"{point_id}: 知识点课程无效")
-        _string(point.get("chapter"), f"{point_id}.chapter")
-        name = _string(point.get("name"), f"{point_id}.name")
-        _string(point.get("description"), f"{point_id}.description")
-        _require(point.get("status") in {"active", "inactive"}, f"{point_id}: 知识点状态无效")
-        _integer(point.get("sortOrder"), f"{point_id}.sortOrder")
-        normalized_name = normalize_text(name)
-        _require(normalized_name and normalized_name not in normalized_names, f"{point_id}: 知识点名称重复")
-        normalized_names.add(normalized_name)
-
-    questions = manifest.get("questions")
-    _require(isinstance(questions, list), "questions 必须是数组")
-    question_ids: set[str] = set()
-    fingerprints: set[str] = set()
-    payload_keys = {
-        "subjectId", "knowledgePointIds", "text", "questionType", "chapter", "difficulty",
-        "options", "correctAnswer", "points", "answerWordLimit", "gradingMode",
-    }
-    for question in questions:
-        _require(isinstance(question, dict), "题目必须是对象")
-        question_id = _string(question.get("id"), "question.id")
-        _require(question_id not in question_ids, f"题目 ID 重复：{question_id}")
-        question_ids.add(question_id)
-        fingerprint = question.get("contentFingerprint")
-        _require(isinstance(fingerprint, str) and _FINGERPRINT.fullmatch(fingerprint) is not None, f"{question_id}: 内容指纹无效")
-        _require(fingerprint not in fingerprints, f"{question_id}: 内容指纹重复")
-        fingerprints.add(fingerprint)
-        _require(question.get("subjectId") == subject_id, f"{question_id}: 题目课程无效")
-        _require(question.get("status") == "active", f"{question_id}: 题库只能导入 active 题目")
-        linked_point_ids = question.get("knowledgePointIds")
-        _require(
-            isinstance(linked_point_ids, list)
-            and 1 <= len(linked_point_ids) <= 3
-            and len(set(linked_point_ids)) == len(linked_point_ids)
-            and all(point_id in point_ids for point_id in linked_point_ids),
-            f"{question_id}: 题目引用了未编目知识点",
-        )
-        _require(question.get("explanation") is None or isinstance(question.get("explanation"), str), f"{question_id}: explanation 无效")
-        _require(isinstance(question.get("rubric"), list) and all(isinstance(item, dict) for item in question["rubric"]), f"{question_id}: rubric 无效")
-        _require(isinstance(question.get("attachments"), list) and all(isinstance(item, dict) for item in question["attachments"]), f"{question_id}: attachments 无效")
-        _require(isinstance(question.get("sourceMetadata"), dict), f"{question_id}: sourceMetadata 无效")
-        try:
-            validate_question({key: question.get(key) for key in payload_keys})
-        except AssessmentValidationError as error:
-            raise QuestionBankImportError(f"{question_id}: {error.code}: {error}") from error
-    return manifest
+    try:
+        return validate_manifest(manifest_path)
+    except ReportValidationError as error:
+        raise QuestionBankImportError(str(error)) from error
 
 
 def _link_id(question_id: str, knowledge_point_id: str) -> str:
@@ -192,7 +109,7 @@ def _upsert_subject(session, payload: dict[str, Any]) -> None:
     _set_value(subject, "sort_order", payload["sortOrder"])
 
 
-def _upsert_points(session, payloads: list[dict[str, Any]], subject_id: str) -> None:
+def _prepare_existing_points(session, payloads: list[dict[str, Any]], subject_id: str) -> dict[str, KnowledgePoint]:
     existing = {
         point.id: point
         for point in session.scalars(select(KnowledgePoint).where(KnowledgePoint.id.in_([payload["id"] for payload in payloads])))
@@ -206,22 +123,27 @@ def _upsert_points(session, payloads: list[dict[str, Any]], subject_id: str) -> 
         normalized_name = normalize_text(payload["name"])
         _require(point is None or point.subject_id == subject_id, f"{payload['id']}: 稳定知识点 ID 已由其他课程占用")
         _require(occupied_names.get(normalized_name) in {None, payload["id"]}, f"{payload['id']}: 知识点名称已由其他记录占用")
-        if point is None:
-            session.add(
-                KnowledgePoint(
-                    id=payload["id"], subject_id=subject_id, chapter=payload["chapter"], name=payload["name"],
-                    normalized_name=normalized_name, description=payload["description"], status=payload["status"],
-                    sort_order=payload["sortOrder"], created_by=None,
-                )
+        if point is not None:
+            _require(
+                point.created_by is None
+                and (point.chapter, point.name, point.normalized_name, point.description, point.status, point.sort_order)
+                == (payload["chapter"], payload["name"], normalize_text(payload["name"]), payload["description"], payload["status"], payload["sortOrder"]),
+                f"{payload['id']}: 无法确认属于共享题库，拒绝覆盖现有知识点",
             )
+    return existing
+
+
+def _upsert_points(session, payloads: list[dict[str, Any]], subject_id: str, existing: dict[str, KnowledgePoint]) -> None:
+    for payload in payloads:
+        if payload["id"] in existing:
             continue
-        _set_value(point, "chapter", payload["chapter"])
-        _set_value(point, "name", payload["name"])
-        _set_value(point, "normalized_name", normalized_name)
-        _set_value(point, "description", payload["description"])
-        _set_value(point, "status", payload["status"])
-        _set_value(point, "sort_order", payload["sortOrder"])
-        _set_value(point, "created_by", None)
+        session.add(
+            KnowledgePoint(
+                id=payload["id"], subject_id=subject_id, chapter=payload["chapter"], name=payload["name"],
+                normalized_name=normalize_text(payload["name"]), description=payload["description"], status=payload["status"],
+                sort_order=payload["sortOrder"], created_by=None,
+            )
+        )
 
 
 def _apply_question(question: Question, payload: dict[str, Any]) -> bool:
@@ -266,8 +188,9 @@ def import_question_bank(database: Database, manifest_path: Path, actor_id: str 
     with database.session() as session:
         with session.begin():
             existing_by_id, existing_by_fingerprint = _prepare_existing_records(session, manifest)
+            existing_points = _prepare_existing_points(session, manifest["knowledgePoints"], subject_id)
             _upsert_subject(session, manifest["subject"])
-            _upsert_points(session, manifest["knowledgePoints"], subject_id)
+            _upsert_points(session, manifest["knowledgePoints"], subject_id, existing_points)
             for payload in manifest["questions"]:
                 question = existing_by_id.get(payload["id"]) or existing_by_fingerprint.get(payload["contentFingerprint"])
                 if question is None:
@@ -281,5 +204,4 @@ def import_question_bank(database: Database, manifest_path: Path, actor_id: str 
                     unchanged += 1
             summary = ImportSummary(created=created, updated=updated, unchanged=unchanged, subject_id=subject_id)
             add_log(session, actor_id, "question_bank.import", "question_bank", subject_id, summary.to_dict())
-        session.commit()
     return summary

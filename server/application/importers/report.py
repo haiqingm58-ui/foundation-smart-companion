@@ -138,15 +138,17 @@ def _validate_source_blocks(source_blocks: Any, attachments: list[dict[str, Any]
         ), f"{item_id}: 附件行内位置未保留")
 
 
-def validate_generated_files(manifest_path: Path, report_path: Path) -> dict[str, Any]:
+def validate_manifest(manifest_path: Path) -> dict[str, Any]:
     manifest_path = Path(manifest_path)
-    report_path = Path(report_path)
     manifest = _load_json(manifest_path)
-    report = _load_json(report_path)
     _require(manifest.get("schemaVersion") == 1, "manifest schemaVersion 必须为 1")
-    _require(report.get("schemaVersion") == 1, "report schemaVersion 必须为 1")
     subject = manifest.get("subject")
     _require(isinstance(subject, dict) and subject.get("id") == SUBJECT_ID, "manifest 课程必须为 soil-mechanics")
+    _require(all(isinstance(subject.get(key), str) and subject[key].strip() for key in ("title", "slug")), "subject.title 和 subject.slug 必须是非空字符串")
+    _require(subject.get("status") in {"active", "inactive"}, "subject.status 无效")
+    _require(isinstance(subject.get("sortOrder"), int) and not isinstance(subject["sortOrder"], bool), "subject.sortOrder 必须是整数")
+    archive_digest = manifest.get("sourceArchiveSha256")
+    _require(archive_digest is None or (isinstance(archive_digest, str) and re.fullmatch(r"[0-9a-f]{64}", archive_digest) is not None), "sourceArchiveSha256 无效")
 
     catalog = manifest.get("knowledgePoints")
     _require(isinstance(catalog, list), "knowledgePoints 必须是数组")
@@ -154,12 +156,12 @@ def validate_generated_files(manifest_path: Path, report_path: Path) -> dict[str
     for point in catalog:
         _require(isinstance(point, dict), "知识点必须是对象")
         identifier = point.get("id")
-        _require(isinstance(identifier, str) and identifier not in catalog_ids, "知识点 ID 必须唯一")
+        _require(isinstance(identifier, str) and identifier.strip() and identifier not in catalog_ids, "知识点 ID 必须唯一")
         catalog_ids.add(identifier)
         _require(point.get("subjectId") == SUBJECT_ID, f"{identifier}: 知识点课程无效")
         _require(point.get("status") in {"active", "inactive"}, f"{identifier}: 知识点状态无效")
         _require(all(isinstance(point.get(key), str) and point[key].strip() for key in ("chapter", "name", "description")), f"{identifier}: 知识点字段不完整")
-        _require(isinstance(point.get("sortOrder"), int), f"{identifier}: sortOrder 必须是整数")
+        _require(isinstance(point.get("sortOrder"), int) and not isinstance(point["sortOrder"], bool), f"{identifier}: sortOrder 必须是整数")
 
     questions = manifest.get("questions")
     _require(isinstance(questions, list), "questions 必须是数组")
@@ -173,25 +175,39 @@ def validate_generated_files(manifest_path: Path, report_path: Path) -> dict[str
         _require(isinstance(question, dict), "题目必须是对象")
         identifier = question.get("id")
         fingerprint = question.get("contentFingerprint")
-        _require(isinstance(identifier, str) and identifier not in question_ids, "题目 ID 必须唯一")
+        _require(isinstance(identifier, str) and identifier.strip() and identifier not in question_ids, "题目 ID 必须唯一")
         _require(isinstance(fingerprint, str) and re.fullmatch(r"[0-9a-f]{64}", fingerprint) is not None and fingerprint not in fingerprints, f"{identifier}: 内容指纹无效或重复")
         question_ids.add(identifier)
         fingerprints.add(fingerprint)
+        _require(question.get("subjectId") == SUBJECT_ID, f"{identifier}: 题目课程无效")
         _require(question.get("status") == "active", f"{identifier}: manifest 只能包含 active 题目")
         point_ids = question.get("knowledgePointIds")
         _require(isinstance(point_ids, list) and 1 <= len(point_ids) <= 3 and len(set(point_ids)) == len(point_ids), f"{identifier}: 知识点数量无效")
         _require(all(point_id in catalog_ids for point_id in point_ids), f"{identifier}: 题目引用了未编目知识点")
         _require(content_fingerprint(question.get("text", ""), question.get("options", []), question.get("attachments", [])) == fingerprint, f"{identifier}: 内容指纹不匹配")
         metadata = question.get("sourceMetadata")
-        _require(isinstance(metadata, dict) and isinstance(metadata.get("file"), str), f"{identifier}: 缺少源文件")
+        _require(isinstance(metadata, dict) and isinstance(metadata.get("file"), str) and metadata["file"].strip(), f"{identifier}: 缺少源文件")
         _require(isinstance(metadata.get("position"), dict) and isinstance(metadata["position"].get("blockIndex"), int), f"{identifier}: 缺少源位置")
         _require(isinstance(metadata.get("sequence"), int), f"{identifier}: 缺少源顺序")
+        _require(question.get("explanation") is None or isinstance(question.get("explanation"), str), f"{identifier}: explanation 无效")
+        _require(isinstance(question.get("rubric"), list) and all(isinstance(item, dict) for item in question["rubric"]), f"{identifier}: rubric 无效")
         _validate_attachments(manifest_path, question.get("attachments"), identifier)
         _validate_source_blocks(question.get("sourceBlocks"), question["attachments"], identifier)
         try:
             validate_question({key: question.get(key) for key in payload_keys})
         except AssessmentValidationError as error:
             raise ReportValidationError(f"{identifier}: {error.code}: {error}") from error
+    return manifest
+
+
+def validate_generated_files(manifest_path: Path, report_path: Path) -> dict[str, Any]:
+    manifest_path = Path(manifest_path)
+    report_path = Path(report_path)
+    manifest = validate_manifest(manifest_path)
+    report = _load_json(report_path)
+    _require(report.get("schemaVersion") == 1, "report schemaVersion 必须为 1")
+    questions = manifest["questions"]
+    question_ids = {question["id"] for question in questions}
 
     review_items = report.get("reviewItems")
     _require(isinstance(review_items, list), "reviewItems 必须是数组")
