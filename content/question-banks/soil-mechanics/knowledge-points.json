@@ -1,0 +1,452 @@
+[
+  {
+    "chapter": "绪论",
+    "description": "土体的工程性质、研究内容与学科任务。",
+    "id": "sm-00-scope",
+    "name": "土力学研究对象",
+    "sortOrder": 1,
+    "status": "active",
+    "subjectId": "soil-mechanics"
+  },
+  {
+    "chapter": "绪论",
+    "description": "变形、强度和渗透三类基本工程问题。",
+    "id": "sm-00-engineering-problems",
+    "name": "土力学工程问题",
+    "sortOrder": 2,
+    "status": "active",
+    "subjectId": "soil-mechanics"
+  },
+  {
+    "chapter": "绪论",
+    "description": "土的碎散性、三相性、自然变异性和多相耦合。",
+    "id": "sm-00-soil-characteristics",
+    "name": "土的工程特性",
+    "sortOrder": 3,
+    "status": "active",
+    "subjectId": "soil-mechanics"
+  },
+  {
+    "chapter": "第一章 土的性质及工程分类",
+    "description": "岩石风化、搬运沉积及各类成因土的特征。",
+    "id": "sm-01-origin-weathering",
+    "name": "土的成因与风化",
+    "sortOrder": 101,
+    "status": "active",
+    "subjectId": "soil-mechanics"
+  },
+  {
+    "chapter": "第一章 土的性质及工程分类",
+    "description": "土颗粒、土中水和土中气体的组成及关系。",
+    "id": "sm-01-three-phase",
+    "name": "土的三相组成",
+    "sortOrder": 102,
+    "status": "active",
+    "subjectId": "soil-mechanics"
+  },
+  {
+    "chapter": "第一章 土的性质及工程分类",
+    "description": "粒组划分、级配曲线、不均匀系数与曲率系数。",
+    "id": "sm-01-particle-gradation",
+    "name": "颗粒粒径与级配",
+    "sortOrder": 103,
+    "status": "active",
+    "subjectId": "soil-mechanics"
+  },
+  {
+    "chapter": "第一章 土的性质及工程分类",
+    "description": "粘土矿物、结合水、自由水及其对土性的影响。",
+    "id": "sm-01-mineral-water",
+    "name": "土粒矿物与土中水",
+    "sortOrder": 104,
+    "status": "active",
+    "subjectId": "soil-mechanics"
+  },
+  {
+    "chapter": "第一章 土的性质及工程分类",
+    "description": "含水率、密度、孔隙比、孔隙率和饱和度的换算。",
+    "id": "sm-01-phase-indices",
+    "name": "三相比例指标",
+    "sortOrder": 105,
+    "status": "active",
+    "subjectId": "soil-mechanics"
+  },
+  {
+    "chapter": "第一章 土的性质及工程分类",
+    "description": "液限、塑限、塑性指数、液性指数与粘性土状态。",
+    "id": "sm-01-consistency-limits",
+    "name": "界限含水率与稠度",
+    "sortOrder": 106,
+    "status": "active",
+    "subjectId": "soil-mechanics"
+  },
+  {
+    "chapter": "第一章 土的性质及工程分类",
+    "description": "粗粒土、细粒土和特殊土的命名与分类依据。",
+    "id": "sm-01-classification",
+    "name": "土的工程分类",
+    "sortOrder": 107,
+    "status": "active",
+    "subjectId": "soil-mechanics"
+  },
+  {
+    "chapter": "第一章 土的性质及工程分类",
+    "description": "单粒、蜂窝、絮状结构及土的构造特征。",
+    "id": "sm-01-structure",
+    "name": "土的结构与构造",
+    "sortOrder": 108,
+    "status": "active",
+    "subjectId": "soil-mechanics"
+  },
+  {
+    "chapter": "第一章 土的性质及工程分类",
+    "description": "毛细水上升、毛细压力及假粘聚力。",
+    "id": "sm-01-capillarity",
+    "name": "毛细现象",
+    "sortOrder": 109,
+    "status": "active",
+    "subjectId": "soil-mechanics"
+  },
+  {
+    "chapter": "第一章 土的性质及工程分类",
+    "description": "击实曲线、最优含水率、最大干密度与压实度。",
+    "id": "sm-01-compaction",
+    "name": "土的压实性",
+    "sortOrder": 110,
+    "status": "active",
+    "subjectId": "soil-mechanics"
+  },
+  {
+    "chapter": "第二章 土的渗流",
+    "description": "达西定律的适用条件、水力坡降与渗流量计算。",
+    "id": "sm-02-darcy-law",
+    "name": "达西定律",
+    "sortOrder": 201,
+    "status": "active",
+    "subjectId": "soil-mechanics"
+  },
+  {
+    "chapter": "第二章 土的渗流",
+    "description": "渗透系数的影响因素、量纲及室内外测定方法。",
+    "id": "sm-02-permeability",
+    "name": "渗透系数",
+    "sortOrder": 202,
+    "status": "active",
+    "subjectId": "soil-mechanics"
+  },
+  {
+    "chapter": "第二章 土的渗流",
+    "description": "等势线、流线、流网性质和平面渗流量计算。",
+    "id": "sm-02-flow-net",
+    "name": "流网及渗流计算",
+    "sortOrder": 203,
+    "status": "active",
+    "subjectId": "soil-mechanics"
+  },
+  {
+    "chapter": "第二章 土的渗流",
+    "description": "渗透力的方向、大小及其对有效重度的影响。",
+    "id": "sm-02-seepage-force",
+    "name": "渗透力",
+    "sortOrder": 204,
+    "status": "active",
+    "subjectId": "soil-mechanics"
+  },
+  {
+    "chapter": "第二章 土的渗流",
+    "description": "流土和沸腾发生时的临界水力条件。",
+    "id": "sm-02-critical-gradient",
+    "name": "临界水力坡降",
+    "sortOrder": 205,
+    "status": "active",
+    "subjectId": "soil-mechanics"
+  },
+  {
+    "chapter": "第二章 土的渗流",
+    "description": "管涌、流土、接触冲刷的判别和反滤防治。",
+    "id": "sm-02-seepage-failure",
+    "name": "渗透破坏与防治",
+    "sortOrder": 206,
+    "status": "active",
+    "subjectId": "soil-mechanics"
+  },
+  {
+    "chapter": "第三章 土中应力",
+    "description": "分层土、地下水位和毛细带条件下的自重应力。",
+    "id": "sm-03-geostatic-stress",
+    "name": "土中自重应力",
+    "sortOrder": 301,
+    "status": "active",
+    "subjectId": "soil-mechanics"
+  },
+  {
+    "chapter": "第三章 土中应力",
+    "description": "总应力、孔隙水压力与有效应力之间的关系。",
+    "id": "sm-03-effective-stress",
+    "name": "有效应力原理",
+    "sortOrder": 302,
+    "status": "active",
+    "subjectId": "soil-mechanics"
+  },
+  {
+    "chapter": "第三章 土中应力",
+    "description": "偏心和中心荷载下的基底压力分布及扣除自重。",
+    "id": "sm-03-base-pressure",
+    "name": "基底压力与基底附加压力",
+    "sortOrder": 303,
+    "status": "active",
+    "subjectId": "soil-mechanics"
+  },
+  {
+    "chapter": "第三章 土中应力",
+    "description": "集中荷载和分布荷载引起的竖向附加应力计算。",
+    "id": "sm-03-vertical-stress",
+    "name": "竖向附加应力",
+    "sortOrder": 304,
+    "status": "active",
+    "subjectId": "soil-mechanics"
+  },
+  {
+    "chapter": "第三章 土中应力",
+    "description": "矩形、条形和圆形基础下的应力系数与角点法。",
+    "id": "sm-03-stress-coefficient",
+    "name": "附加应力系数",
+    "sortOrder": 305,
+    "status": "active",
+    "subjectId": "soil-mechanics"
+  },
+  {
+    "chapter": "第三章 土中应力",
+    "description": "附加应力的深度衰减、扩散和应力泡特征。",
+    "id": "sm-03-stress-distribution",
+    "name": "土中应力分布",
+    "sortOrder": 306,
+    "status": "active",
+    "subjectId": "soil-mechanics"
+  },
+  {
+    "chapter": "第四章 土的压缩性与地基沉降",
+    "description": "压缩系数、压缩模量、压缩指数和体积压缩系数。",
+    "id": "sm-04-compressibility-indices",
+    "name": "土的压缩性指标",
+    "sortOrder": 401,
+    "status": "active",
+    "subjectId": "soil-mechanics"
+  },
+  {
+    "chapter": "第四章 土的压缩性与地基沉降",
+    "description": "侧限压缩试验、e-p与 e-lgp 曲线的绘制和应用。",
+    "id": "sm-04-consolidation-test",
+    "name": "固结试验与压缩曲线",
+    "sortOrder": 402,
+    "status": "active",
+    "subjectId": "soil-mechanics"
+  },
+  {
+    "chapter": "第四章 土的压缩性与地基沉降",
+    "description": "正常固结、欠固结、超固结状态及超固结比。",
+    "id": "sm-04-preconsolidation",
+    "name": "先期固结压力与OCR",
+    "sortOrder": 403,
+    "status": "active",
+    "subjectId": "soil-mechanics"
+  },
+  {
+    "chapter": "第四章 土的压缩性与地基沉降",
+    "description": "地基最终沉降量的分层、应力取值和逐层汇总。",
+    "id": "sm-04-layer-summation",
+    "name": "分层总和法",
+    "sortOrder": 404,
+    "status": "active",
+    "subjectId": "soil-mechanics"
+  },
+  {
+    "chapter": "第四章 土的压缩性与地基沉降",
+    "description": "一维固结微分方程、排水边界、时间因数与固结系数。",
+    "id": "sm-04-one-dimensional-consolidation",
+    "name": "一维固结理论",
+    "sortOrder": 405,
+    "status": "active",
+    "subjectId": "soil-mechanics"
+  },
+  {
+    "chapter": "第四章 土的压缩性与地基沉降",
+    "description": "平均固结度、孔压消散、排水距离和固结时间计算。",
+    "id": "sm-04-consolidation-degree",
+    "name": "固结度与沉降历时",
+    "sortOrder": 406,
+    "status": "active",
+    "subjectId": "soil-mechanics"
+  },
+  {
+    "chapter": "第四章 土的压缩性与地基沉降",
+    "description": "瞬时沉降、主固结沉降、次固结沉降及不均匀沉降。",
+    "id": "sm-04-settlement-components",
+    "name": "地基沉降组成",
+    "sortOrder": 407,
+    "status": "active",
+    "subjectId": "soil-mechanics"
+  },
+  {
+    "chapter": "第五章 土的抗剪强度",
+    "description": "平面应力转换、主应力和摩尔应力圆。",
+    "id": "sm-05-mohr-circle",
+    "name": "土中一点应力状态",
+    "sortOrder": 501,
+    "status": "active",
+    "subjectId": "soil-mechanics"
+  },
+  {
+    "chapter": "第五章 土的抗剪强度",
+    "description": "粘聚力、内摩擦角、强度包线与极限平衡条件。",
+    "id": "sm-05-mohr-coulomb",
+    "name": "摩尔-库仑强度理论",
+    "sortOrder": 502,
+    "status": "active",
+    "subjectId": "soil-mechanics"
+  },
+  {
+    "chapter": "第五章 土的抗剪强度",
+    "description": "快剪、固结快剪、慢剪的条件、成果和局限。",
+    "id": "sm-05-direct-shear",
+    "name": "直接剪切试验",
+    "sortOrder": 503,
+    "status": "active",
+    "subjectId": "soil-mechanics"
+  },
+  {
+    "chapter": "第五章 土的抗剪强度",
+    "description": "UU、CU、CD 三轴试验的排水固结条件与强度参数。",
+    "id": "sm-05-triaxial",
+    "name": "三轴剪切试验",
+    "sortOrder": 504,
+    "status": "active",
+    "subjectId": "soil-mechanics"
+  },
+  {
+    "chapter": "第五章 土的抗剪强度",
+    "description": "孔隙水压力对抗剪强度的影响及两类强度指标。",
+    "id": "sm-05-effective-strength",
+    "name": "总应力与有效应力强度",
+    "sortOrder": 505,
+    "status": "active",
+    "subjectId": "soil-mechanics"
+  },
+  {
+    "chapter": "第五章 土的抗剪强度",
+    "description": "p-q 应力平面中的总应力路径、有效应力路径与破坏线。",
+    "id": "sm-05-stress-path",
+    "name": "应力路径",
+    "sortOrder": 506,
+    "status": "active",
+    "subjectId": "soil-mechanics"
+  },
+  {
+    "chapter": "第五章 土的抗剪强度",
+    "description": "剪胀剪缩、峰值与残余强度、正常固结与超固结行为。",
+    "id": "sm-05-soil-strength-behavior",
+    "name": "砂土与粘性土强度特性",
+    "sortOrder": 507,
+    "status": "active",
+    "subjectId": "soil-mechanics"
+  },
+  {
+    "chapter": "第六章 土压力",
+    "description": "挡土墙位移方向和大小与三种土压力状态的关系。",
+    "id": "sm-06-pressure-states",
+    "name": "静止、主动与被动土压力",
+    "sortOrder": 601,
+    "status": "active",
+    "subjectId": "soil-mechanics"
+  },
+  {
+    "chapter": "第六章 土压力",
+    "description": "朗肯理论假定、主被动土压力系数、分布和合力。",
+    "id": "sm-06-rankine",
+    "name": "朗肯土压力理论",
+    "sortOrder": 602,
+    "status": "active",
+    "subjectId": "soil-mechanics"
+  },
+  {
+    "chapter": "第六章 土压力",
+    "description": "滑动土楔、墙背摩擦、填土坡角与极值土压力。",
+    "id": "sm-06-coulomb",
+    "name": "库仑土压力理论",
+    "sortOrder": 603,
+    "status": "active",
+    "subjectId": "soil-mechanics"
+  },
+  {
+    "chapter": "第六章 土压力",
+    "description": "成层土、地下水和均布荷载作用下的土压力分布。",
+    "id": "sm-06-layered-backfill",
+    "name": "成层填土与地面荷载",
+    "sortOrder": 604,
+    "status": "active",
+    "subjectId": "soil-mechanics"
+  },
+  {
+    "chapter": "第六章 土压力",
+    "description": "重力式挡土墙的抗滑、抗倾覆和基底承载力验算。",
+    "id": "sm-06-retaining-wall",
+    "name": "挡土墙稳定验算",
+    "sortOrder": 605,
+    "status": "active",
+    "subjectId": "soil-mechanics"
+  },
+  {
+    "chapter": "第七章 土坡稳定性",
+    "description": "滑坡类型、滑动面形态及降雨、地下水和荷载影响。",
+    "id": "sm-07-slope-failure",
+    "name": "土坡失稳形式与因素",
+    "sortOrder": 701,
+    "status": "active",
+    "subjectId": "soil-mechanics"
+  },
+  {
+    "chapter": "第七章 土坡稳定性",
+    "description": "瑞典条分法、毕肖普法和稳定安全系数。",
+    "id": "sm-07-circular-slip",
+    "name": "圆弧滑动面稳定分析",
+    "sortOrder": 702,
+    "status": "active",
+    "subjectId": "soil-mechanics"
+  },
+  {
+    "chapter": "第七章 土坡稳定性",
+    "description": "减载、反压、排水、支挡和土体加固的稳定措施。",
+    "id": "sm-07-stabilization",
+    "name": "土坡加固与排水",
+    "sortOrder": 703,
+    "status": "active",
+    "subjectId": "soil-mechanics"
+  },
+  {
+    "chapter": "第八章 地基承载力",
+    "description": "整体剪切、局部剪切和冲切破坏的条件与特征。",
+    "id": "sm-08-failure-modes",
+    "name": "地基破坏模式",
+    "sortOrder": 801,
+    "status": "active",
+    "subjectId": "soil-mechanics"
+  },
+  {
+    "chapter": "第八章 地基承载力",
+    "description": "普朗德尔、太沙基等极限承载力公式的构成和适用条件。",
+    "id": "sm-08-ultimate-capacity",
+    "name": "地基极限承载力",
+    "sortOrder": 802,
+    "status": "active",
+    "subjectId": "soil-mechanics"
+  },
+  {
+    "chapter": "第八章 地基承载力",
+    "description": "基础宽度、埋深、荷载偏心倾斜和地下水对承载力的影响。",
+    "id": "sm-08-capacity-factors",
+    "name": "承载力影响因素与修正",
+    "sortOrder": 803,
+    "status": "active",
+    "subjectId": "soil-mechanics"
+  }
+]
