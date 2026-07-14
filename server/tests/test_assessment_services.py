@@ -38,6 +38,39 @@ def test_single_choice_requires_exactly_one_known_option():
     assert error.value.code == "SINGLE_CHOICE_ANSWER"
 
 
+def test_question_draft_accepts_strict_shared_metadata_and_real_integer_points():
+    validated = validate_question(
+        valid_choice_payload(chapter="第二章 土的渗透性", difficulty="中等", points=12)
+    )
+    assert validated.chapter == "第二章 土的渗透性"
+    assert validated.difficulty == "中等"
+    assert validated.points == 12
+
+
+@pytest.mark.parametrize(
+    "field,value",
+    [
+        ("points", "10"),
+        ("points", True),
+        ("answerWordLimit", "200"),
+        ("answerWordLimit", True),
+        ("answerWordLimit", 200.0),
+        ("subjectId", 1),
+        ("knowledgePointIds", ["soil-permeability", True]),
+        ("text", 1),
+        ("chapter", True),
+        ("difficulty", 1),
+    ],
+)
+def test_question_draft_rejects_coerced_shared_json_types(field, value):
+    payload = valid_choice_payload(**{field: value})
+    if field == "answerWordLimit":
+        payload.update({"questionType": "简答题", "options": [], "correctAnswer": None})
+    with pytest.raises(AssessmentValidationError) as error:
+        validate_question(payload)
+    assert error.value.code == "QUESTION_PAYLOAD_INVALID"
+
+
 def test_multiple_choice_normalizes_answer_set_and_grades_without_order():
     validated = validate_question(
         valid_choice_payload(
@@ -369,3 +402,42 @@ def test_subject_mastery_downgrade_consolidates_same_name_cross_subject_rows(tmp
     legacy_rows = database.engine.connect().execute(select(table("knowledge_mastery", column("id"), column("mastery"), column("attempts")))).all()
     assert legacy_rows == [("downgrade-a", 70.0, 4)]
     assert "uq_student_knowledge" in {item["name"] for item in inspect(database.engine).get_unique_constraints("knowledge_mastery")}
+
+
+def test_pending_practice_attempt_survives_downgrade_and_reupgrade(tmp_path):
+    from server.application.database import create_database
+    from server.application.migrations import downgrade_database, upgrade_database
+    from server.application.models import PracticeAttempt, Question, Student, User
+
+    database_url = f"sqlite:///{tmp_path / 'pending-practice-roundtrip.db'}"
+    upgrade_database(database_url)
+    database = create_database(database_url)
+    with database.session() as session:
+        user = User(id="pending-user", username="pending", password_hash="hash", role="student", role_label="学生", name="学生", student_no="20260009")
+        session.add(user)
+        session.flush()
+        session.add_all([
+            Student(id="pending-student", user_id=user.id, student_no="20260009"),
+            Question(id="pending-question", text="计算单桩承载力。", question_type="计算题", options=[], correct_answer=None, difficulty="中等", points=20, source="textbook"),
+        ])
+        session.flush()
+        session.add(
+            PracticeAttempt(
+                id="pending-attempt", student_id="pending-student", question_id="pending-question",
+                answer="过程", status="pending_review", score=None, max_score=20,
+                criteria_scores={}, confidence=0, feedback="待复核", attempt_number=1,
+            )
+        )
+        session.commit()
+
+    downgrade_database(database_url, "004_assessment_catalog")
+    legacy_practice = table("practice_attempts", column("id"), column("score"))
+    with database.engine.connect() as connection:
+        assert "status" not in {column["name"] for column in inspect(connection).get_columns("practice_attempts")}
+        assert connection.execute(select(legacy_practice)).all() == [("pending-attempt", 0.0)]
+
+    upgrade_database(database_url)
+    with database.session() as session:
+        attempt = session.get(PracticeAttempt, "pending-attempt")
+        assert attempt.status == "graded"
+        assert attempt.score == 0

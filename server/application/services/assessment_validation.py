@@ -3,7 +3,7 @@ from __future__ import annotations
 import unicodedata
 from typing import Annotated, Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, StrictBool, StrictStr, TypeAdapter, ValidationError, field_validator
+from pydantic import BaseModel, ConfigDict, Field, StrictBool, StrictFloat, StrictInt, StrictStr, TypeAdapter, ValidationError, field_validator
 
 
 class AssessmentValidationError(ValueError):
@@ -27,16 +27,18 @@ class ChoiceOption(BaseModel):
 
 
 class QuestionDraftBase(BaseModel):
-    model_config = ConfigDict(populate_by_name=True, extra="forbid")
+    model_config = ConfigDict(populate_by_name=True, extra="forbid", strict=True)
 
     subject_id: StrictStr = Field(alias="subjectId", min_length=1, max_length=64)
     knowledge_point_ids: list[StrictStr] = Field(alias="knowledgePointIds")
     text: StrictStr = Field(min_length=2, max_length=12000)
     question_type: str = Field(alias="questionType")
+    chapter: StrictStr | None = Field(default=None, max_length=160)
+    difficulty: StrictStr = Field(default="基础", max_length=24)
     options: list[ChoiceOption] = Field(default_factory=list)
     correct_answer: Any | None = Field(default=None, alias="correctAnswer")
-    points: float = Field(default=10, gt=0)
-    answer_word_limit: int | None = Field(default=None, alias="answerWordLimit")
+    points: StrictInt | StrictFloat = Field(default=10, gt=0)
+    answer_word_limit: StrictInt | None = Field(default=None, alias="answerWordLimit")
     grading_mode: Literal["auto", "manual"] = Field(default="auto", alias="gradingMode")
 
 
@@ -84,6 +86,8 @@ class ValidatedQuestion(BaseModel):
     knowledge_point_ids: list[str]
     text: str
     question_type: Literal["单项选择题", "多项选择题", "判断题", "填空题", "简答题", "计算题"]
+    chapter: str | None
+    difficulty: str
     options: list[dict[str, Any]]
     correct_answer: Any | None
     points: float
@@ -189,9 +193,11 @@ def validate_question(payload: QuestionDraft | dict[str, Any]) -> ValidatedQuest
         knowledge_point_ids=knowledge_point_ids,
         text=draft.text.strip(),
         question_type=draft.question_type,
+        chapter=draft.chapter.strip() if draft.chapter is not None else None,
+        difficulty=draft.difficulty.strip(),
         options=[option.model_dump() for option in draft.options],
         correct_answer=correct_answer,
-        points=draft.points,
+        points=float(draft.points),
         answer_word_limit=draft.answer_word_limit,
         grading_mode=grading_mode,
     )
