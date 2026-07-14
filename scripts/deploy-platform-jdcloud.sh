@@ -43,6 +43,7 @@ source /etc/foundation-smart-companion.env
 set +a
 cd "\${SOURCE_RELEASE}"
 "\${SOURCE_RELEASE}/server/.venv/bin/python" -m server.manage migrate
+"\${SOURCE_RELEASE}/server/.venv/bin/python" -m server.manage import-question-bank "\${SOURCE_RELEASE}/content/question-banks/soil-mechanics/manifest.json"
 if [[ -f /var/lib/foundation-smart-companion/app.db ]]; then
   "\${SOURCE_RELEASE}/server/.venv/bin/python" -m server.manage import-legacy /var/lib/foundation-smart-companion/app.db
 fi

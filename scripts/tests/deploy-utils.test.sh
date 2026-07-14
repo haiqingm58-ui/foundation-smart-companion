@@ -32,4 +32,14 @@ curl() {
 
 verify_page_contains "http://example.test/login" "《基础工程》智慧学伴"
 
+deploy_script="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/deploy-platform-jdcloud.sh"
+migration_line=$(rg -n 'server\.manage migrate' "${deploy_script}" | head -n 1 | cut -d: -f1)
+import_line=$(rg -n 'server\.manage import-question-bank' "${deploy_script}" | head -n 1 | cut -d: -f1)
+source_switch_line=$(rg -n 'mv -Tf /opt/foundation-smart-companion\.next /opt/foundation-smart-companion' "${deploy_script}" | head -n 1 | cut -d: -f1)
+restart_line=$(rg -n 'systemctl restart foundation-smart-companion-api\.service' "${deploy_script}" | head -n 1 | cut -d: -f1)
+[[ -n "${migration_line}" && -n "${import_line}" && -n "${source_switch_line}" && -n "${restart_line}" ]]
+[[ "${migration_line}" -lt "${import_line}" ]]
+[[ "${import_line}" -lt "${source_switch_line}" ]]
+[[ "${import_line}" -lt "${restart_line}" ]]
+
 echo "deploy-utils tests passed"
