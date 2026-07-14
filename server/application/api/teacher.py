@@ -287,7 +287,7 @@ def import_questions(body: QuestionImportInput, request: Request, auth: AuthCont
         if existing:
             raise APIError(409, f"已有相同题目：{existing[0]}", "QUESTION_ALREADY_EXISTS")
         for item in body.rows:
-            question = create_question(item.model_dump(by_alias=True), session, auth.user.id, source="teacher-import")
+            question = create_question(item.model_dump(by_alias=True, exclude_none=True), session, auth.user.id, source="teacher-import")
             created_ids.append(question.id)
         add_log(session, auth.user.id, "question.import", "question", None, {"count": len(created_ids)}, client_ip(request))
         session.commit()

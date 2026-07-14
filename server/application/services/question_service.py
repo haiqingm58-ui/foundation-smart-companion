@@ -72,14 +72,22 @@ def prepare_question(payload: dict[str, Any], session: Session, actor_id: str) -
     explanation = raw.pop("explanation", None)
     rubric = raw.pop("rubric", [])
     attachments = raw.pop("attachments", [])
-    if "knowledgePointIds" not in raw and "knowledgePoint" in raw:
-        raw = _legacy_payload({**raw, "knowledgePoint": raw["knowledgePoint"]}, session, actor_id)
+    if "knowledgePointIds" not in raw:
+        knowledge_point_name = raw.pop("knowledgePoint", None)
+        if knowledge_point_name is None:
+            raise APIError(422, "题目必须关联知识点", "KNOWLEDGE_POINT_REQUIRED")
+        raw = _legacy_payload({**raw, "knowledgePoint": knowledge_point_name}, session, actor_id)
     elif "knowledgePoint" in raw:
         raw.pop("knowledgePoint")
     if not isinstance(explanation, str | type(None)):
         raise APIError(422, "题目解析格式无效", "QUESTION_PAYLOAD_INVALID")
-    if not isinstance(rubric, list) or not isinstance(attachments, list):
+    if not isinstance(rubric, list) or not all(isinstance(item, dict) for item in rubric):
+        raise APIError(422, "评分细则必须是对象数组", "QUESTION_PAYLOAD_INVALID")
+    if not isinstance(attachments, list) or not all(isinstance(item, dict) for item in attachments):
         raise APIError(422, "题目扩展字段格式无效", "QUESTION_PAYLOAD_INVALID")
+    for attachment in attachments:
+        if "kind" in attachment and (not isinstance(attachment["kind"], str) or not attachment["kind"].strip()):
+            raise APIError(422, "附件类型无效", "QUESTION_PAYLOAD_INVALID")
     try:
         validated = validate_question(raw)
     except AssessmentValidationError as exc:
@@ -141,14 +149,7 @@ def create_question(payload: dict[str, Any], session: Session, actor_id: str, so
     return question
 
 
-def normalize_question_link_weights(session: Session, question_ids: set[str]) -> None:
-    if not question_ids:
-        return
-    links = session.scalars(
-        select(QuestionKnowledgePoint)
-        .where(QuestionKnowledgePoint.question_id.in_(question_ids))
-        .order_by(QuestionKnowledgePoint.question_id, QuestionKnowledgePoint.id)
-    ).all()
+def normalize_link_weights(links: list[QuestionKnowledgePoint]) -> None:
     by_question: dict[str, list[QuestionKnowledgePoint]] = {}
     for link in links:
         by_question.setdefault(link.question_id, []).append(link)
@@ -158,6 +159,18 @@ def normalize_question_link_weights(session: Session, question_ids: set[str]) ->
         normalized = [1.0 / len(records)] * len(records) if total <= 0 else [weight / total for weight in weights]
         for record, weight in zip(records, normalized):
             record.weight = weight
+
+
+def normalize_question_link_weights(session: Session, question_ids: set[str]) -> None:
+    if not question_ids:
+        return
+    normalize_link_weights(
+        session.scalars(
+            select(QuestionKnowledgePoint)
+            .where(QuestionKnowledgePoint.question_id.in_(question_ids))
+            .order_by(QuestionKnowledgePoint.question_id, QuestionKnowledgePoint.id)
+        ).all()
+    )
 
 
 def question_payload(question: Question, actor_id: str) -> dict[str, Any]:

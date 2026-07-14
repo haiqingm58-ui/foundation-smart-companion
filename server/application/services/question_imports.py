@@ -12,7 +12,7 @@ from openpyxl.styles import Font, PatternFill
 
 QUESTION_IMPORT_HEADERS = ["章节", "题型", "题干", "选项A", "选项B", "选项C", "选项D", "正确答案", "解析", "知识点", "难度", "分值"]
 QUESTION_TYPES = {"单项选择题", "多项选择题", "判断题", "填空题", "简答题", "计算题"}
-DIFFICULTIES = {"基础", "中等", "提高"}
+DIFFICULTIES = {"基础", "中等", "困难"}
 FORMULA_PREFIXES = ("=", "+", "-", "@")
 
 
@@ -113,7 +113,7 @@ def parse_question_import(filename: str, content: bytes) -> dict:
         if not answer:
             row_errors.append(_error(row_number, "正确答案", "ANSWER_REQUIRED", "正确答案不能为空"))
         if difficulty not in DIFFICULTIES:
-            row_errors.append(_error(row_number, "难度", "INVALID_DIFFICULTY", "难度必须为基础、中等或提高"))
+            row_errors.append(_error(row_number, "难度", "INVALID_DIFFICULTY", "难度必须为基础、中等或困难"))
         try:
             points = float(values["分值"] or 10)
             if points <= 0 or points > 1000:

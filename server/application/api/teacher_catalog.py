@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-from collections import Counter
 from uuid import uuid4
 
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, Query, Request
 from sqlalchemy import func, or_, select
+from sqlalchemy.orm import selectinload
 
 from ..errors import APIError
 from ..models import KnowledgePoint, Question, QuestionKnowledgePoint, Subject
@@ -14,6 +14,7 @@ from ..services.audit import add_log
 from ..services.question_service import (
     apply_prepared_question,
     create_question,
+    normalize_link_weights,
     normalize_question_link_weights,
     prepare_question,
     question_payload,
@@ -59,28 +60,39 @@ def subjects(request: Request, _auth: AuthContext = Depends(require_teacher)):
 
 
 @router.get("/knowledge-points")
-def knowledge_points(request: Request, subjectId: str | None = None, chapter: str | None = None, status: str | None = None, auth: AuthContext = Depends(require_teacher)):
+def knowledge_points(
+    request: Request, subjectId: str | None = None, chapter: str | None = None, status: str | None = None,
+    page: int = Query(1, ge=1), pageSize: int = Query(20, ge=1, le=100), auth: AuthContext = Depends(require_teacher),
+):
     with request.app.state.database.session() as session:
         filters = []
         if subjectId:
             filters.append(KnowledgePoint.subject_id == subjectId)
         if chapter:
             filters.append(KnowledgePoint.chapter == chapter)
-        all_records = session.scalars(select(KnowledgePoint).where(*filters).order_by(KnowledgePoint.sort_order, KnowledgePoint.name)).all()
-        status_counts = dict(Counter(item.status for item in all_records))
-        records = [item for item in all_records if status is None or item.status == status]
-        count_rows = session.execute(
-            select(QuestionKnowledgePoint.knowledge_point_id, func.count(QuestionKnowledgePoint.id))
-            .where(QuestionKnowledgePoint.knowledge_point_id.in_([item.id for item in records]))
+        status_counts = dict(session.execute(select(KnowledgePoint.status, func.count(KnowledgePoint.id)).where(*filters).group_by(KnowledgePoint.status)).all())
+        if status:
+            filters.append(KnowledgePoint.status == status)
+        total = session.scalar(select(func.count(KnowledgePoint.id)).where(*filters)) or 0
+        link_counts = (
+            select(QuestionKnowledgePoint.knowledge_point_id.label("point_id"), func.count(QuestionKnowledgePoint.id).label("question_count"))
             .group_by(QuestionKnowledgePoint.knowledge_point_id)
-        ).all() if records else []
-        counts = dict(count_rows)
+            .subquery()
+        )
+        rows = session.execute(
+            select(KnowledgePoint, func.coalesce(link_counts.c.question_count, 0))
+            .outerjoin(link_counts, link_counts.c.point_id == KnowledgePoint.id)
+            .where(*filters)
+            .order_by(KnowledgePoint.sort_order, KnowledgePoint.name, KnowledgePoint.id)
+            .offset((page - 1) * pageSize)
+            .limit(pageSize)
+        ).all()
         items = []
-        for point in records:
-            payload = _point_payload(point, counts.get(point.id, 0))
+        for point, question_count in rows:
+            payload = _point_payload(point, int(question_count))
             payload["editable"] = point.created_by == auth.user.id
             items.append(payload)
-    return request.app.state.success(request, {"items": items, "total": len(items), "statusCounts": status_counts})
+    return request.app.state.success(request, {"items": items, "total": total, "statusCounts": status_counts})
 
 
 @router.post("/knowledge-points")
@@ -155,15 +167,22 @@ def merge_knowledge_point(point_id: str, body: KnowledgePointMergeInput, request
             raise APIError(422, "只能合并同一课程的知识点", "KNOWLEDGE_POINT_SUBJECT_MISMATCH")
         source_links = session.scalars(select(QuestionKnowledgePoint).where(QuestionKnowledgePoint.knowledge_point_id == source.id)).all()
         affected_question_ids = {link.question_id for link in source_links}
+        affected_links = session.scalars(
+            select(QuestionKnowledgePoint)
+            .where(QuestionKnowledgePoint.question_id.in_(affected_question_ids))
+            .order_by(QuestionKnowledgePoint.question_id, QuestionKnowledgePoint.id)
+        ).all() if affected_question_ids else []
+        target_links = {link.question_id: link for link in affected_links if link.knowledge_point_id == target.id}
+        deleted_link_ids: set[str] = set()
         for link in source_links:
-            existing = session.scalar(select(QuestionKnowledgePoint).where(QuestionKnowledgePoint.question_id == link.question_id, QuestionKnowledgePoint.knowledge_point_id == target.id))
+            existing = target_links.get(link.question_id)
             if existing:
                 existing.weight += link.weight
                 session.delete(link)
+                deleted_link_ids.add(link.id)
             else:
                 link.knowledge_point_id = target.id
-        session.flush()
-        normalize_question_link_weights(session, affected_question_ids)
+        normalize_link_weights([link for link in affected_links if link.id not in deleted_link_ids])
         session.delete(source)
         session.flush()
         add_log(session, auth.user.id, "knowledge_point.merge", "knowledge_point", point_id, {"targetId": target.id, "questionCount": len(affected_question_ids)}, client_ip(request))
@@ -172,20 +191,41 @@ def merge_knowledge_point(point_id: str, body: KnowledgePointMergeInput, request
 
 
 @router.get("/questions")
-def questions(request: Request, subjectId: str | None = None, search: str = "", chapter: str | None = None, questionType: str | None = None, auth: AuthContext = Depends(require_teacher)):
+def questions(
+    request: Request, subjectId: str | None = None, chapter: str | None = None, knowledgePointId: str | None = None,
+    questionType: str | None = None, difficulty: str | None = None, source: str | None = None, keyword: str = "", search: str = "",
+    page: int = Query(1, ge=1), pageSize: int = Query(20, ge=1, le=100), auth: AuthContext = Depends(require_teacher),
+):
     with request.app.state.database.session() as session:
         filters = [or_(Question.created_by == auth.user.id, Question.created_by.is_(None))]
         if subjectId:
             filters.append(Question.subject_id == subjectId)
-        if search:
-            filters.append(Question.text.like(f"%{search}%"))
+        if knowledgePointId:
+            filters.append(QuestionKnowledgePoint.knowledge_point_id == knowledgePointId)
+        query_text = keyword or search
+        if query_text:
+            filters.append(Question.text.like(f"%{query_text}%"))
         if chapter:
             filters.append(Question.chapter == chapter)
         if questionType:
             filters.append(Question.question_type == questionType)
-        records = session.scalars(select(Question).where(*filters).order_by(Question.created_at.desc())).all()
+        if difficulty:
+            filters.append(Question.difficulty == difficulty)
+        if source:
+            filters.append(Question.source == source)
+        base = select(Question).where(*filters)
+        if knowledgePointId:
+            base = base.join(QuestionKnowledgePoint, QuestionKnowledgePoint.question_id == Question.id)
+        count_query = base.order_by(None).subquery()
+        total = session.scalar(select(func.count(func.distinct(count_query.c.id)))) or 0
+        records = session.scalars(
+            base.options(selectinload(Question.knowledge_point_links).selectinload(QuestionKnowledgePoint.knowledge_point))
+            .order_by(Question.created_at.desc(), Question.id)
+            .offset((page - 1) * pageSize)
+            .limit(pageSize)
+        ).unique().all()
         items = [question_payload(item, auth.user.id) for item in records]
-    return request.app.state.success(request, {"items": items, "total": len(items)})
+    return request.app.state.success(request, {"items": items, "total": total})
 
 
 @router.post("/questions")
@@ -232,15 +272,19 @@ def delete_catalog_question(question_id: str, request: Request, auth: AuthContex
 @router.post("/questions/{question_id}/copy")
 def copy_catalog_question(question_id: str, request: Request, auth: AuthContext = Depends(require_teacher)):
     with request.app.state.database.session() as session:
-        source = session.get(Question, question_id)
-        if source is None:
+        source = session.scalar(
+            select(Question)
+            .options(selectinload(Question.knowledge_point_links))
+            .where(Question.id == question_id)
+        )
+        if source is None or source.created_by not in {None, auth.user.id}:
             raise APIError(404, "题目不存在", "QUESTION_NOT_FOUND")
         copied = Question(
             id=str(uuid4()), text=source.text, question_type=source.question_type, options=source.options,
             correct_answer=source.correct_answer, explanation=source.explanation, rubric=source.rubric,
             difficulty=source.difficulty, points=source.points, chapter=source.chapter, subject_id=source.subject_id,
             attachments=source.attachments, answer_word_limit=source.answer_word_limit, grading_mode=source.grading_mode,
-            status="active", source="teacher-copy", created_by=auth.user.id, source_metadata=source.source_metadata,
+            status="review_required", source="teacher-copy", created_by=auth.user.id, source_metadata=source.source_metadata,
             content_fingerprint=source.content_fingerprint,
             knowledge_point_links=[
                 QuestionKnowledgePoint(id=str(uuid4()), knowledge_point_id=link.knowledge_point_id, weight=link.weight)

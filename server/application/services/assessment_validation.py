@@ -33,13 +33,18 @@ class QuestionDraftBase(BaseModel):
     knowledge_point_ids: list[StrictStr] = Field(alias="knowledgePointIds")
     text: StrictStr = Field(min_length=2, max_length=12000)
     question_type: str = Field(alias="questionType")
-    chapter: StrictStr | None = Field(default=None, max_length=160)
-    difficulty: StrictStr = Field(default="基础", max_length=24)
+    chapter: StrictStr | None = Field(default=None, min_length=1, max_length=160)
+    difficulty: Literal["基础", "中等", "困难"] = Field(default="基础")
     options: list[ChoiceOption] = Field(default_factory=list)
     correct_answer: Any | None = Field(default=None, alias="correctAnswer")
     points: StrictInt | StrictFloat = Field(default=10, gt=0)
     answer_word_limit: StrictInt | None = Field(default=None, alias="answerWordLimit")
     grading_mode: Literal["auto", "manual"] = Field(default="auto", alias="gradingMode")
+
+    @field_validator("text", "chapter", "difficulty", mode="before")
+    @classmethod
+    def strip_catalog_strings(cls, value: object) -> object:
+        return value.strip() if isinstance(value, str) else value
 
 
 class SingleChoiceDraft(QuestionDraftBase):

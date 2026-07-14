@@ -3694,7 +3694,7 @@ function PracticePage({ initialChapter, initialExerciseId, onRecordAttempt, exer
           <div className="filterBlock compact">
             <span>难度</span>
             <div className="pillGroup">
-              {["全部", "基础", "提高"].map((difficulty) => (
+              {["全部", "基础", "困难"].map((difficulty) => (
                 <button
                   className={cx(difficultyFilter === difficulty && "active")}
                   type="button"

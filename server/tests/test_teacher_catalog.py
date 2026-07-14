@@ -1,8 +1,13 @@
 from __future__ import annotations
 
+from datetime import datetime, timedelta, timezone
+
+import pytest
+from fastapi.testclient import TestClient
 from sqlalchemy import select
 
-from server.application.models import KnowledgePoint, OperationLog, Question, QuestionKnowledgePoint
+from server.application.models import KnowledgePoint, OperationLog, Question, QuestionKnowledgePoint, SessionToken
+from server.application.security import token_digest
 from server.tests.test_teacher import teacher_context
 
 
@@ -54,6 +59,33 @@ def seed_shared_soil_question(database) -> str:
         session.add(question)
         session.commit()
     return question.id
+
+
+def seed_invalid_shared_soil_question(database) -> str:
+    with database.session() as session:
+        question = Question(
+            id="invalid-shared-soil-question", text="失效共享题目。", question_type="判断题",
+            subject_id="soil-mechanics", chapter="第二章 土的渗透性", options=[], correct_answer=True,
+            source="imported", created_by=None, status="review_required",
+        )
+        session.add(question)
+        session.commit()
+    return question.id
+
+
+def teacher2_client(client: TestClient, database) -> TestClient:
+    with database.session() as session:
+        session.add(
+            SessionToken(
+                id="teacher-2-session", user_id="teacher-user-2", token_hash=token_digest("teacher-2-token"),
+                csrf_hash=token_digest("teacher-2-csrf"), expires_at=datetime.now(timezone.utc) + timedelta(hours=1),
+            )
+        )
+        session.commit()
+    other = TestClient(client.app)
+    other.cookies.set("foundation_session", "teacher-2-token")
+    other.cookies.set("foundation_csrf", "teacher-2-csrf")
+    return other
 
 
 def test_teacher_lists_subjects_and_filters_knowledge_points_with_counts(teacher_context) -> None:
@@ -112,6 +144,11 @@ def test_teacher_creates_unique_owned_knowledge_points_and_cannot_mutate_shared(
         json={"subjectId": "soil-mechanics", "chapter": "第二章 土的渗透性", "name": "渗透破坏", "status": "inactive"},
         headers=csrf(),
     ).status_code == 200
+    paged = client.get("/api/teacher/knowledge-points?subjectId=soil-mechanics&page=1&pageSize=1")
+    assert paged.status_code == 200
+    assert paged.json()["data"]["total"] >= 2
+    assert len(paged.json()["data"]["items"]) == 1
+    assert client.get("/api/teacher/knowledge-points?pageSize=101").status_code == 422
 
 
 def test_teacher_creates_subject_matched_active_question_and_legacy_adapter(teacher_context) -> None:
@@ -141,6 +178,42 @@ def test_teacher_creates_subject_matched_active_question_and_legacy_adapter(teac
     assert len(legacy_data["knowledgePoints"]) == 1
 
 
+@pytest.mark.parametrize(
+    "field,value",
+    [
+        ("text", " x "),
+        ("chapter", "   "),
+        ("difficulty", "提高"),
+        ("attachments", ["not-an-object"]),
+        ("attachments", [{"kind": ""}]),
+        ("rubric", ["not-an-object"]),
+    ],
+)
+def test_teacher_rejects_untrimmed_or_unstructured_canonical_question_fields(teacher_context, field, value) -> None:
+    client, database, _ = teacher_context
+    seed_soil_permeability(database)
+    response = client.post("/api/teacher/questions", json=choice_payload(**{field: value}), headers=csrf())
+    assert response.status_code == 422
+
+
+def test_teacher_accepts_structured_forward_compatible_question_metadata(teacher_context) -> None:
+    client, database, _ = teacher_context
+    seed_soil_permeability(database)
+    response = client.post(
+        "/api/teacher/questions",
+        json=choice_payload(
+            attachments=[
+                {"kind": "image", "src": "image.png"},
+                {"kind": "table", "columns": ["k"], "rows": [[1]]},
+                {"kind": "formula", "latex": "k=iA"},
+            ],
+            rubric=[{"criterion": "单位", "points": 2}],
+        ),
+        headers=csrf(),
+    )
+    assert response.status_code == 200
+
+
 def test_teacher_copies_shared_question_before_editing(teacher_context) -> None:
     client, database, _ = teacher_context
     shared_id = seed_shared_soil_question(database)
@@ -151,7 +224,64 @@ def test_teacher_copies_shared_question_before_editing(teacher_context) -> None:
     copy_data = copied.json()["data"]
     assert copy_data["createdBy"] == "teacher-user-1"
     assert copy_data["editable"] is True
-    assert client.put(copy_data["id"].join(["/api/teacher/questions/", ""]), json=choice_payload(text="教师副本可编辑"), headers=csrf()).status_code == 200
+    assert copy_data["status"] == "review_required"
+    updated = client.put(copy_data["id"].join(["/api/teacher/questions/", ""]), json=choice_payload(text="教师副本可编辑"), headers=csrf())
+    assert updated.status_code == 200
+    assert updated.json()["data"]["status"] == "active"
+
+
+def test_copy_hides_other_teachers_private_question_and_keeps_invalid_shared_copy_in_review(teacher_context) -> None:
+    client, database, _ = teacher_context
+    seed_soil_permeability(database)
+    private = client.post("/api/teacher/questions", json=choice_payload(), headers=csrf()).json()["data"]
+    other = teacher2_client(client, database)
+    denied = other.post(f"/api/teacher/questions/{private['id']}/copy", headers={"X-CSRF-Token": "teacher-2-csrf"})
+    assert denied.status_code == 404
+    own_copy = client.post(f"/api/teacher/questions/{private['id']}/copy", headers=csrf())
+    assert own_copy.status_code == 200
+    invalid_shared = client.post(f"/api/teacher/questions/{seed_invalid_shared_soil_question(database)}/copy", headers=csrf())
+    assert invalid_shared.status_code == 200
+    assert invalid_shared.json()["data"]["status"] == "review_required"
+
+
+def test_teacher_question_list_filters_and_paginates(teacher_context) -> None:
+    client, database, _ = teacher_context
+    seed_soil_permeability(database)
+    with database.session() as session:
+        secondary = KnowledgePoint(id="filter-secondary", subject_id="soil-mechanics", chapter="筛选章节", name="临界坡降", normalized_name="临界坡降")
+        shared = Question(
+            id="filter-shared", text="共享关键字", question_type="判断题", subject_id="soil-mechanics", chapter="筛选章节",
+            difficulty="基础", options=[], correct_answer=True, source="imported", created_by=None, status="active",
+            knowledge_point_links=[QuestionKnowledgePoint(id="filter-shared-link", knowledge_point=secondary)],
+        )
+        owned = Question(
+            id="filter-owned", text="教师关键字", question_type="判断题", subject_id="soil-mechanics", chapter="筛选章节",
+            difficulty="困难", options=[], correct_answer=False, source="teacher", created_by="teacher-user-1", status="active",
+            knowledge_point_links=[QuestionKnowledgePoint(id="filter-owned-link", knowledge_point=secondary)],
+        )
+        other = Question(
+            id="filter-other", text="另一章题目", question_type="单项选择题", subject_id="soil-mechanics", chapter="其他章节",
+            difficulty="中等", options=[{"label": "A", "text": "是"}, {"label": "B", "text": "否"}], correct_answer="A",
+            source="teacher", created_by="teacher-user-1", status="active",
+            knowledge_point_links=[QuestionKnowledgePoint(id="filter-other-link", knowledge_point_id="soil-permeability")],
+        )
+        session.add_all([secondary, shared, owned, other])
+        session.commit()
+
+    base = "/api/teacher/questions?subjectId=soil-mechanics"
+    assert client.get(f"{base}&chapter=筛选章节").json()["data"]["total"] == 2
+    assert client.get(f"{base}&knowledgePointId=filter-secondary").json()["data"]["total"] == 2
+    assert client.get(f"{base}&questionType=判断题").json()["data"]["total"] == 2
+    assert client.get(f"{base}&difficulty=困难").json()["data"]["items"][0]["id"] == "filter-owned"
+    assert client.get(f"{base}&source=imported").json()["data"]["items"][0]["id"] == "filter-shared"
+    assert client.get(f"{base}&keyword=教师关键字").json()["data"]["items"][0]["id"] == "filter-owned"
+    assert client.get(f"{base}&search=共享关键字").json()["data"]["items"][0]["id"] == "filter-shared"
+    first = client.get(f"{base}&page=1&pageSize=1").json()["data"]
+    second = client.get(f"{base}&page=2&pageSize=1").json()["data"]
+    assert first["total"] == 3
+    assert len(first["items"]) == len(second["items"]) == 1
+    assert first["items"][0]["id"] != second["items"][0]["id"]
+    assert client.get(f"{base}&pageSize=101").status_code == 422
 
 
 def test_teacher_merges_owned_points_transactionally_and_audits(teacher_context) -> None:
@@ -180,3 +310,33 @@ def test_teacher_merges_owned_points_transactionally_and_audits(teacher_context)
         assert question.status == "active"
         assert session.get(KnowledgePoint, "merge-source") is None
         assert session.scalar(select(OperationLog).where(OperationLog.action == "knowledge_point.merge")) is not None
+
+
+def test_teacher_merge_rolls_back_when_audit_fails(teacher_context, monkeypatch) -> None:
+    client, database, _ = teacher_context
+    with database.session() as session:
+        source = KnowledgePoint(id="rollback-source", subject_id="soil-mechanics", chapter="第二章", name="源点", normalized_name="源点", created_by="teacher-user-1")
+        target = KnowledgePoint(id="rollback-target", subject_id="soil-mechanics", chapter="第二章", name="目标点", normalized_name="目标点", created_by="teacher-user-1")
+        question = Question(
+            id="rollback-question", text="回滚题目。", question_type="判断题", subject_id="soil-mechanics", chapter="第二章",
+            options=[], correct_answer=True, source="teacher", created_by="teacher-user-1", status="active",
+            knowledge_point_links=[
+                QuestionKnowledgePoint(id="rollback-source-link", knowledge_point=source, weight=0.4),
+                QuestionKnowledgePoint(id="rollback-target-link", knowledge_point=target, weight=0.6),
+            ],
+        )
+        session.add_all([source, target, question])
+        session.commit()
+
+    def fail_audit(*_args, **_kwargs):
+        raise RuntimeError("audit unavailable")
+
+    monkeypatch.setattr("server.application.api.teacher_catalog.add_log", fail_audit)
+    with pytest.raises(RuntimeError, match="audit unavailable"):
+        client.post("/api/teacher/knowledge-points/rollback-source/merge", json={"targetId": "rollback-target"}, headers=csrf())
+    with database.session() as session:
+        assert session.get(KnowledgePoint, "rollback-source") is not None
+        question = session.get(Question, "rollback-question")
+        links = session.scalars(select(QuestionKnowledgePoint).where(QuestionKnowledgePoint.question_id == question.id)).all()
+        assert sorted((link.knowledge_point_id, link.weight) for link in links) == [("rollback-source", 0.4), ("rollback-target", 0.6)]
+        assert question.status == "active"

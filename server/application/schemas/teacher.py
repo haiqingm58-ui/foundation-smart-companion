@@ -17,7 +17,7 @@ class QuestionInput(TeacherModel):
     correctAnswer: Any | None = None
     explanation: str | None = Field(default=None, max_length=12000)
     rubric: list[dict[str, Any]] = Field(default_factory=list)
-    difficulty: str = Field(default="基础", pattern="^(基础|中等|提高)$")
+    difficulty: str = Field(default="基础", pattern="^(基础|中等|困难)$")
     points: float = Field(default=10, gt=0, le=1000)
     chapter: str | None = Field(default=None, max_length=120)
     knowledgePoint: str | None = Field(default=None, max_length=160)

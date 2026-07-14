@@ -253,3 +253,18 @@ def test_question_import_reports_rows_and_inserts_transactionally(teacher_contex
     assert rejected.status_code == 422
     with database.session() as session:
         assert len(session.scalars(select(Question).where(Question.created_by == "teacher-user-1")).all()) == 2
+
+
+def test_question_import_rejects_missing_legacy_knowledge_point_without_creating_question(teacher_context) -> None:
+    from server.application.models import Question
+
+    client, database, _settings = teacher_context
+    response = client.post(
+        "/api/teacher/questions/import",
+        json={"rows": [{"text": "缺少知识点的旧题目", "questionType": "简答题", "options": [], "correctAnswer": "参考答案", "chapter": "第3章 桩基础"}]},
+        headers={"X-CSRF-Token": "teacher-csrf"},
+    )
+    assert response.status_code == 422
+    assert response.json()["code"] == "KNOWLEDGE_POINT_REQUIRED"
+    with database.session() as session:
+        assert session.scalars(select(Question).where(Question.created_by == "teacher-user-1")).all() == []

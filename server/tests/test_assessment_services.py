@@ -32,6 +32,13 @@ def test_question_requires_one_to_three_knowledge_points(knowledge_ids):
     assert error.value.code == "KNOWLEDGE_POINT_COUNT"
 
 
+@pytest.mark.parametrize("field,value", [("text", " x "), ("chapter", "   "), ("difficulty", "提高")])
+def test_question_validation_normalizes_strings_before_enforcing_catalog_constraints(field, value):
+    with pytest.raises(AssessmentValidationError) as error:
+        validate_question(valid_choice_payload(**{field: value}))
+    assert error.value.code == "QUESTION_PAYLOAD_INVALID"
+
+
 def test_single_choice_requires_exactly_one_known_option():
     with pytest.raises(AssessmentValidationError) as error:
         validate_question(valid_choice_payload(correctAnswer=["A", "B"]))
