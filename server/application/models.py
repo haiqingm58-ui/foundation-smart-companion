@@ -199,6 +199,7 @@ class Subject(Base):
     sort_order: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     knowledge_points: Mapped[list[KnowledgePoint]] = relationship(back_populates="subject")
     questions: Mapped[list[Question]] = relationship(back_populates="subject")
+    papers: Mapped[list[Paper]] = relationship(back_populates="subject")
 
 
 class KnowledgePoint(Base):
@@ -351,6 +352,47 @@ def mark_invalid_active_questions_for_review(session: Session, flush_context) ->
                 set_committed_value(question, "status", REVIEW_REQUIRED_STATUS)
 
 
+class Paper(Base):
+    __tablename__ = "papers"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    subject_id: Mapped[str] = mapped_column(ForeignKey("subjects.id", ondelete="RESTRICT"), nullable=False, index=True)
+    title: Mapped[str] = mapped_column(String(255), nullable=False)
+    description: Mapped[str] = mapped_column(Text, default="", nullable=False)
+    duration_minutes: Mapped[int | None] = mapped_column(Integer)
+    total_points: Mapped[float] = mapped_column(Float, default=0, nullable=False)
+    status: Mapped[str] = mapped_column(String(24), default="draft", nullable=False, index=True)
+    version: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
+    assembly_mode: Mapped[str] = mapped_column(String(24), default="manual", nullable=False)
+    assembly_blueprint: Mapped[list[dict[str, Any]]] = mapped_column(JSON, default=list, nullable=False)
+    assembly_seed: Mapped[int | None] = mapped_column(Integer)
+    shortages: Mapped[list[dict[str, Any]]] = mapped_column(JSON, default=list, nullable=False)
+    created_by: Mapped[str] = mapped_column(ForeignKey("users.id"), nullable=False, index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow, nullable=False)
+    subject: Mapped[Subject] = relationship(back_populates="papers")
+    paper_questions: Mapped[list[PaperQuestion]] = relationship(
+        back_populates="paper", cascade="all, delete-orphan", order_by="PaperQuestion.sequence"
+    )
+
+
+class PaperQuestion(Base):
+    __tablename__ = "paper_questions"
+    __table_args__ = (
+        UniqueConstraint("paper_id", "question_id", name="uq_paper_question"),
+        UniqueConstraint("paper_id", "sequence", name="uq_paper_sequence"),
+    )
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    paper_id: Mapped[str] = mapped_column(ForeignKey("papers.id", ondelete="CASCADE"), nullable=False, index=True)
+    question_id: Mapped[str] = mapped_column(ForeignKey("questions.id", ondelete="RESTRICT"), nullable=False, index=True)
+    section_title: Mapped[str] = mapped_column(String(255), default="", nullable=False)
+    sequence: Mapped[int] = mapped_column(Integer, nullable=False)
+    points: Mapped[float] = mapped_column(Float, nullable=False)
+    paper: Mapped[Paper] = relationship(back_populates="paper_questions")
+    question: Mapped[Question] = relationship()
+
+
 class Assignment(Base):
     __tablename__ = "assignments"
 
@@ -358,8 +400,11 @@ class Assignment(Base):
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     description: Mapped[str] = mapped_column(Text, default="", nullable=False)
     teacher_id: Mapped[str] = mapped_column(ForeignKey("teachers.id"), nullable=False, index=True)
+    paper_id: Mapped[str | None] = mapped_column(ForeignKey("papers.id", ondelete="SET NULL"), index=True)
     starts_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     due_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    duration_minutes: Mapped[int | None] = mapped_column(Integer)
+    show_answers_mode: Mapped[str] = mapped_column(String(24), default="after_submission", nullable=False)
     total_points: Mapped[float] = mapped_column(Float, default=100, nullable=False)
     allow_resubmit: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     auto_grade: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
@@ -376,6 +421,7 @@ class AssignmentQuestion(Base):
     question_id: Mapped[str] = mapped_column(ForeignKey("questions.id"), nullable=False, index=True)
     sequence: Mapped[int] = mapped_column(Integer, nullable=False)
     points: Mapped[float] = mapped_column(Float, nullable=False)
+    question_snapshot: Mapped[dict[str, Any] | None] = mapped_column(JSON)
 
 
 class AssignmentTarget(Base):

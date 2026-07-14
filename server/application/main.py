@@ -12,6 +12,7 @@ from .api.auth import router as auth_router
 from .api.admin import router as admin_router
 from .api.teacher import router as teacher_router
 from .api.teacher_catalog import router as teacher_catalog_router
+from .api.teacher_papers import router as teacher_papers_router
 from .api.student import router as student_router
 from .api.qa import router as qa_router
 from .config import Settings, load_settings
@@ -69,6 +70,7 @@ def create_app(settings: Settings | None = None, database: Database | None = Non
     app.include_router(admin_router)
     app.include_router(teacher_router)
     app.include_router(teacher_catalog_router)
+    app.include_router(teacher_papers_router)
     app.include_router(student_router)
     app.include_router(qa_router)
     return app
