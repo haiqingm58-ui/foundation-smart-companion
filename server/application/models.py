@@ -423,7 +423,8 @@ class PracticeAttempt(Base):
     student_id: Mapped[str] = mapped_column(ForeignKey("students.id", ondelete="CASCADE"), nullable=False, index=True)
     question_id: Mapped[str] = mapped_column(ForeignKey("questions.id"), nullable=False, index=True)
     answer: Mapped[Any] = mapped_column(JSON, nullable=False)
-    score: Mapped[float] = mapped_column(Float, nullable=False)
+    status: Mapped[str] = mapped_column(String(24), default="graded", nullable=False, index=True)
+    score: Mapped[float | None] = mapped_column(Float)
     max_score: Mapped[float] = mapped_column(Float, nullable=False)
     criteria_scores: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
     confidence: Mapped[float] = mapped_column(Float, default=1, nullable=False)
@@ -446,10 +447,7 @@ class LearningProgress(Base):
 
 class KnowledgeMastery(Base):
     __tablename__ = "knowledge_mastery"
-    __table_args__ = (
-        UniqueConstraint("student_id", "knowledge_point", name="uq_student_knowledge"),
-        UniqueConstraint("student_id", "knowledge_point_id", name="uq_student_knowledge_point_id"),
-    )
+    __table_args__ = (UniqueConstraint("student_id", "knowledge_point_id", name="uq_student_knowledge_point_id"),)
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
     student_id: Mapped[str] = mapped_column(ForeignKey("students.id", ondelete="CASCADE"), nullable=False, index=True)

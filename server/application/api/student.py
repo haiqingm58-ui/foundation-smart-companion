@@ -8,6 +8,7 @@ from sqlalchemy import func, or_, select
 from ..errors import APIError
 from ..models import KnowledgeMastery, LearningProgress, PracticeAttempt, Question, Student, User
 from ..schemas.student import AttemptInput, ProgressInput
+from ..services.grading import grade_objective
 from .dependencies import AuthContext, require_student
 
 
@@ -40,7 +41,13 @@ def dashboard(request: Request, auth: AuthContext = Depends(require_student)):
         progress_rows = session.scalars(select(LearningProgress).where(LearningProgress.student_id == student.id)).all()
         attempts = session.scalars(select(PracticeAttempt).where(PracticeAttempt.student_id == student.id).order_by(PracticeAttempt.submitted_at.desc())).all()
         weak = session.scalars(select(KnowledgeMastery).where(KnowledgeMastery.student_id == student.id).order_by(KnowledgeMastery.mastery).limit(5)).all()
-        latest = attempts[0] if attempts else None
+        latest = next(
+            (
+                item for item in attempts
+                if item.status == "graded" and item.score is not None and item.max_score
+            ),
+            None,
+        )
     return request.app.state.success(
         request,
         {
@@ -87,35 +94,6 @@ def exercises(request: Request, page: int = Query(1, ge=1), pageSize: int = Quer
     return request.app.state.success(request, {"items": items, "total": total, "page": page, "pageSize": pageSize})
 
 
-def grade_answer(question: Question, answer) -> tuple[float, float, str, dict]:
-    if question.question_type in {"单项选择题", "判断题", "填空题"}:
-        correct = str(answer).strip().lower() == str(question.correct_answer).strip().lower()
-        return (question.points if correct else 0, 1.0, question.explanation or ("回答正确" if correct else "请复习对应知识点"), {})
-    if question.question_type == "多项选择题":
-        expected = sorted(str(item) for item in (question.correct_answer or []))
-        actual = sorted(str(item) for item in (answer or []))
-        correct = actual == expected
-        return (question.points if correct else 0, 1.0, question.explanation or "请核对全部选项", {})
-    text = str(answer or "").strip()
-    criteria = {}
-    earned = 0.0
-    rubric = question.rubric or []
-    if rubric:
-        for index, criterion in enumerate(rubric):
-            weight = float(criterion.get("weight", 0))
-            concepts = criterion.get("requiredConcepts") or []
-            matched = sum(1 for concept in concepts if concept in text)
-            score = weight * (matched / max(1, len(concepts)))
-            criteria[str(index)] = round(score, 2)
-            earned += score
-        earned = question.points * min(1, earned / 100)
-        confidence = 0.78 if len(text) >= 30 else 0.55
-    else:
-        earned = question.points * min(0.8, len(text) / 120)
-        confidence = 0.45
-    return round(earned, 2), confidence, "主观题已按评分点初评，低置信度结果需教师复核。", criteria
-
-
 @router.post("/exercises/{question_id}/attempts")
 def submit_attempt(question_id: str, body: AttemptInput, request: Request, auth: AuthContext = Depends(require_student)):
     with request.app.state.database.session() as session:
@@ -124,11 +102,24 @@ def submit_attempt(question_id: str, body: AttemptInput, request: Request, auth:
         if not question:
             raise APIError(404, "题目不存在", "QUESTION_NOT_FOUND")
         previous = session.scalar(select(func.count(PracticeAttempt.id)).where(PracticeAttempt.student_id == student.id, PracticeAttempt.question_id == question_id)) or 0
-        score, confidence, feedback, criteria = grade_answer(question, body.answer)
-        attempt = PracticeAttempt(id=str(uuid4()), student_id=student.id, question_id=question.id, answer=body.answer, score=score, max_score=question.points, criteria_scores=criteria, confidence=confidence, feedback=feedback, attempt_number=previous + 1)
+        result = grade_objective(
+            {
+                "questionType": question.question_type,
+                "correctAnswer": question.correct_answer,
+                "points": question.points,
+                "explanation": question.explanation,
+            },
+            body.answer,
+        )
+        attempt = PracticeAttempt(
+            id=str(uuid4()), student_id=student.id, question_id=question.id, answer=body.answer,
+            status=result.status, score=result.score, max_score=result.max_score,
+            criteria_scores=result.criteria_scores, confidence=result.confidence,
+            feedback=result.feedback, attempt_number=previous + 1,
+        )
         session.add(attempt)
-        mastery_value = (score / question.points * 100) if question.points else 0
-        if question.knowledge_point:
+        mastery_value = (result.score / question.points * 100) if result.score is not None and question.points else 0
+        if result.status == "graded" and question.knowledge_point:
             mastery = session.scalar(select(KnowledgeMastery).where(KnowledgeMastery.student_id == student.id, KnowledgeMastery.knowledge_point == question.knowledge_point))
             if not mastery:
                 mastery = KnowledgeMastery(
@@ -139,7 +130,7 @@ def submit_attempt(question_id: str, body: AttemptInput, request: Request, auth:
             mastery.mastery = (mastery.mastery * mastery.attempts + mastery_value) / (mastery.attempts + 1)
             mastery.attempts += 1
         session.commit()
-    return request.app.state.success(request, {"attemptId": attempt.id, "score": score, "maxScore": question.points, "confidence": confidence, "feedback": feedback, "criteriaScores": criteria, "teacherReview": confidence < 0.6})
+    return request.app.state.success(request, {"attemptId": attempt.id, "status": result.status, "score": result.score, "maxScore": result.max_score, "confidence": result.confidence, "feedback": result.feedback, "criteriaScores": result.criteria_scores, "teacherReview": result.status == "pending_review" or result.confidence < 0.6})
 
 
 @router.get("/report")
@@ -149,4 +140,5 @@ def report(request: Request, auth: AuthContext = Depends(require_student)):
         progress = session.scalars(select(LearningProgress).where(LearningProgress.student_id == student.id)).all()
         mastery = session.scalars(select(KnowledgeMastery).where(KnowledgeMastery.student_id == student.id).order_by(KnowledgeMastery.mastery)).all()
         attempts = session.scalars(select(PracticeAttempt).where(PracticeAttempt.student_id == student.id).order_by(PracticeAttempt.submitted_at.desc())).all()
-    return request.app.state.success(request, {"progress": round(student.progress, 1), "averageScore": round(student.average_score, 1), "rank": rank_for(student.average_score), "chapters": [{"id": item.chapter_id, "percent": item.percent, "lastSection": item.last_section} for item in progress], "mastery": [{"name": item.knowledge_point, "value": round(item.mastery, 1), "attempts": item.attempts} for item in mastery], "attemptTotal": len(attempts), "weakKnowledgePoints": [item.knowledge_point for item in mastery[:5] if item.mastery < 70]})
+    graded_attempts = [item for item in attempts if item.status == "graded" and item.score is not None]
+    return request.app.state.success(request, {"progress": round(student.progress, 1), "averageScore": round(student.average_score, 1), "rank": rank_for(student.average_score), "chapters": [{"id": item.chapter_id, "percent": item.percent, "lastSection": item.last_section} for item in progress], "mastery": [{"name": item.knowledge_point, "value": round(item.mastery, 1), "attempts": item.attempts} for item in mastery], "attemptTotal": len(attempts), "gradedAttemptTotal": len(graded_attempts), "weakKnowledgePoints": [item.knowledge_point for item in mastery[:5] if item.mastery < 70]})

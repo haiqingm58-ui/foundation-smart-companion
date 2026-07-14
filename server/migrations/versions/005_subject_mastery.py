@@ -19,6 +19,21 @@ def normalize_knowledge_point_name(value: str) -> str:
     return " ".join(value.split())
 
 
+def add_practice_attempt_review_status(bind) -> None:
+    columns = {column["name"]: column for column in inspect(bind).get_columns("practice_attempts")}
+    needs_status = "status" not in columns
+    needs_nullable_score = not columns["score"]["nullable"]
+    if needs_status or needs_nullable_score:
+        with op.batch_alter_table("practice_attempts") as batch_op:
+            if needs_status:
+                batch_op.add_column(
+                    sa.Column("status", sa.String(length=24), nullable=False, server_default="graded")
+                )
+                batch_op.create_index("ix_practice_attempts_status", ["status"])
+            if needs_nullable_score:
+                batch_op.alter_column("score", existing_type=sa.Float(), nullable=True)
+
+
 def add_mastery_columns(bind) -> None:
     columns = {column["name"] for column in inspect(bind).get_columns("knowledge_mastery")}
     if "knowledge_point_id" not in columns or "subject_id" not in columns:
@@ -118,15 +133,58 @@ def add_mastery_indexes_and_unique(bind) -> None:
             )
 
 
+def drop_legacy_mastery_unique(bind) -> None:
+    uniques = {constraint["name"] for constraint in inspect(bind).get_unique_constraints("knowledge_mastery")}
+    if "uq_student_knowledge" in uniques:
+        with op.batch_alter_table("knowledge_mastery") as batch_op:
+            batch_op.drop_constraint("uq_student_knowledge", type_="unique")
+
+
+def consolidate_legacy_mastery_names(bind) -> None:
+    metadata = sa.MetaData()
+    mastery = sa.Table("knowledge_mastery", metadata, autoload_with=bind)
+    rows = bind.execute(
+        sa.select(mastery).order_by(mastery.c.student_id, mastery.c.knowledge_point, mastery.c.id)
+    ).mappings().all()
+    canonical_rows: dict[tuple[str, str], dict] = {}
+    duplicate_ids: list[str] = []
+    for row in rows:
+        key = (row["student_id"], row["knowledge_point"])
+        canonical = canonical_rows.get(key)
+        if canonical is None:
+            canonical_rows[key] = dict(row)
+            continue
+        combined_attempts = canonical["attempts"] + row["attempts"]
+        combined_mastery = (
+            (canonical["mastery"] * canonical["attempts"] + row["mastery"] * row["attempts"]) / combined_attempts
+            if combined_attempts
+            else canonical["mastery"]
+        )
+        bind.execute(
+            mastery.update().where(mastery.c.id == canonical["id"]).values(
+                mastery=combined_mastery,
+                attempts=combined_attempts,
+            )
+        )
+        canonical["mastery"] = combined_mastery
+        canonical["attempts"] = combined_attempts
+        duplicate_ids.append(row["id"])
+    if duplicate_ids:
+        bind.execute(mastery.delete().where(mastery.c.id.in_(duplicate_ids)))
+
+
 def upgrade() -> None:
     bind = op.get_bind()
+    add_practice_attempt_review_status(bind)
     add_mastery_columns(bind)
     backfill_normalized_mastery(bind)
+    drop_legacy_mastery_unique(bind)
     add_mastery_indexes_and_unique(bind)
 
 
 def downgrade() -> None:
     bind = op.get_bind()
+    consolidate_legacy_mastery_names(bind)
     inspector = inspect(bind)
     columns = {column["name"] for column in inspector.get_columns("knowledge_mastery")}
     indexes = {index["name"] for index in inspector.get_indexes("knowledge_mastery")}
@@ -149,3 +207,16 @@ def downgrade() -> None:
                 batch_op.drop_column("subject_id")
             if "knowledge_point_id" in columns:
                 batch_op.drop_column("knowledge_point_id")
+            if "uq_student_knowledge" not in uniques:
+                batch_op.create_unique_constraint("uq_student_knowledge", ["student_id", "knowledge_point"])
+
+    practice_columns = {column["name"]: column for column in inspect(bind).get_columns("practice_attempts")}
+    if "status" in practice_columns or practice_columns["score"]["nullable"]:
+        bind.execute(sa.text("UPDATE practice_attempts SET score = 0 WHERE score IS NULL"))
+        with op.batch_alter_table("practice_attempts") as batch_op:
+            if "ix_practice_attempts_status" in {index["name"] for index in inspect(bind).get_indexes("practice_attempts")}:
+                batch_op.drop_index("ix_practice_attempts_status")
+            if "status" in practice_columns:
+                batch_op.drop_column("status")
+            if practice_columns["score"]["nullable"]:
+                batch_op.alter_column("score", existing_type=sa.Float(), nullable=False)

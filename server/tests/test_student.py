@@ -37,6 +37,8 @@ def student_context(database_url: str, tmp_path: Path):
                 Student(id="student-profile", user_id=user.id, student_no="20260001", progress=0, average_score=0),
                 SessionToken(id="student-session", user_id=user.id, token_hash=token_digest("student-token"), csrf_hash=token_digest("student-csrf"), expires_at=datetime.now(timezone.utc) + timedelta(hours=1)),
                 Question(id="question-choice", text="桩侧阻力属于哪类阻力？", question_type="单项选择题", options=[{"label": "A", "text": "桩土界面阻力"}, {"label": "B", "text": "空气阻力"}], correct_answer="A", explanation="桩侧阻力来源于桩土界面。", difficulty="基础", points=10, chapter="第3章 桩基础", knowledge_point="桩侧阻力", source="textbook"),
+                Question(id="question-short", text="说明桩侧阻力的发挥过程。", question_type="简答题", options=[], correct_answer=None, explanation="考查桩土相对位移。", difficulty="基础", points=12, chapter="第3章 桩基础", knowledge_point="桩侧阻力", answer_word_limit=100, source="textbook"),
+                Question(id="question-calculation", text="计算单桩竖向承载力。", question_type="计算题", options=[], correct_answer=None, explanation="写出计算过程。", difficulty="中等", points=20, chapter="第3章 桩基础", knowledge_point="单桩承载力", source="textbook"),
                 KnowledgeChunk(id="chunk-test", source_type="textbook", heading="第3章 桩基础 > 桩侧阻力", text="桩侧阻力由桩土界面的剪切作用发挥，并随桩土相对位移逐步发展。", chapter="第3章 桩基础", sequence=1),
             ]
         )
@@ -73,6 +75,33 @@ def test_student_progress_attempt_and_report_are_persisted(student_context) -> N
         assert session.scalar(select(PracticeAttempt).where(PracticeAttempt.question_id == "question-choice")) is not None
 
 
+@pytest.mark.parametrize("question_id", ["question-short", "question-calculation"])
+def test_subjective_practice_attempts_persist_pending_review_without_formal_grade(student_context, question_id: str) -> None:
+    from server.application.models import PracticeAttempt, Student
+
+    client, database = student_context
+    response = client.post(
+        f"/api/student/exercises/{question_id}/attempts",
+        json={"answer": "这是完整的作答过程。"},
+        headers={"X-CSRF-Token": "student-csrf"},
+    )
+    assert response.status_code == 200
+    assert response.json()["data"]["status"] == "pending_review"
+    assert response.json()["data"]["score"] is None
+    with database.session() as session:
+        attempt = session.scalar(select(PracticeAttempt).where(PracticeAttempt.question_id == question_id))
+        assert attempt.status == "pending_review"
+        assert attempt.score is None
+        assert session.get(Student, "student-profile").average_score == 0
+    dashboard = client.get("/api/student/dashboard")
+    assert dashboard.status_code == 200
+    assert dashboard.json()["data"]["latestScore"] is None
+    report = client.get("/api/student/report")
+    assert report.status_code == 200
+    assert report.json()["data"]["attemptTotal"] == 1
+    assert report.json()["data"]["gradedAttemptTotal"] == 0
+
+
 def test_student_dashboard_and_exercise_bank_use_database(student_context) -> None:
     client, _database = student_context
     dashboard = client.get("/api/student/dashboard")
@@ -80,7 +109,7 @@ def test_student_dashboard_and_exercise_bank_use_database(student_context) -> No
     assert dashboard.json()["data"]["student"]["name"] == "张同学"
     exercises = client.get("/api/student/exercises?chapter=第3章%20桩基础")
     assert exercises.status_code == 200
-    assert exercises.json()["data"]["total"] == 1
+    assert exercises.json()["data"]["total"] == 3
 
 
 def test_rag_returns_ranked_citation_without_llm(student_context) -> None:

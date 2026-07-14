@@ -3,7 +3,7 @@ from __future__ import annotations
 import unicodedata
 from typing import Annotated, Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, TypeAdapter, ValidationError
+from pydantic import BaseModel, ConfigDict, Field, StrictBool, StrictStr, TypeAdapter, ValidationError, field_validator
 
 
 class AssessmentValidationError(ValueError):
@@ -12,42 +12,62 @@ class AssessmentValidationError(ValueError):
         self.code = code
 
 
+class ChoiceOption(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    label: StrictStr = Field(min_length=1, max_length=32)
+    text: StrictStr = Field(min_length=1, max_length=12000)
+
+    @field_validator("label", "text")
+    @classmethod
+    def require_nonblank_text(cls, value: str) -> str:
+        if not value.strip():
+            raise ValueError("选项内容不能为空")
+        return value
+
+
 class QuestionDraftBase(BaseModel):
     model_config = ConfigDict(populate_by_name=True, extra="forbid")
 
-    subject_id: str = Field(alias="subjectId", min_length=1, max_length=64)
-    knowledge_point_ids: list[str] = Field(alias="knowledgePointIds")
-    text: str = Field(min_length=2, max_length=12000)
+    subject_id: StrictStr = Field(alias="subjectId", min_length=1, max_length=64)
+    knowledge_point_ids: list[StrictStr] = Field(alias="knowledgePointIds")
+    text: StrictStr = Field(min_length=2, max_length=12000)
     question_type: str = Field(alias="questionType")
-    options: list[dict[str, Any]] = Field(default_factory=list)
+    options: list[ChoiceOption] = Field(default_factory=list)
     correct_answer: Any | None = Field(default=None, alias="correctAnswer")
     points: float = Field(default=10, gt=0)
     answer_word_limit: int | None = Field(default=None, alias="answerWordLimit")
-    grading_mode: str = Field(default="auto", alias="gradingMode")
+    grading_mode: Literal["auto", "manual"] = Field(default="auto", alias="gradingMode")
 
 
 class SingleChoiceDraft(QuestionDraftBase):
     question_type: Literal["单项选择题"] = Field(alias="questionType")
+    correct_answer: StrictStr | list[StrictStr] = Field(alias="correctAnswer")
 
 
 class MultipleChoiceDraft(QuestionDraftBase):
     question_type: Literal["多项选择题"] = Field(alias="questionType")
+    correct_answer: list[StrictStr] = Field(alias="correctAnswer")
 
 
 class BooleanDraft(QuestionDraftBase):
     question_type: Literal["判断题"] = Field(alias="questionType")
+    correct_answer: StrictBool | StrictStr = Field(alias="correctAnswer")
 
 
 class FillBlankDraft(QuestionDraftBase):
     question_type: Literal["填空题"] = Field(alias="questionType")
+    correct_answer: list[StrictStr] = Field(alias="correctAnswer", min_length=1)
 
 
 class ShortAnswerDraft(QuestionDraftBase):
     question_type: Literal["简答题"] = Field(alias="questionType")
+    correct_answer: None = Field(default=None, alias="correctAnswer")
 
 
 class CalculationDraft(QuestionDraftBase):
     question_type: Literal["计算题"] = Field(alias="questionType")
+    correct_answer: None = Field(default=None, alias="correctAnswer")
 
 
 QuestionDraft = Annotated[
@@ -72,12 +92,16 @@ class ValidatedQuestion(BaseModel):
 
 
 def normalize_text(value: object) -> str:
-    return " ".join(unicodedata.normalize("NFKC", str(value)).split()).casefold()
+    if not isinstance(value, str):
+        return ""
+    return " ".join(unicodedata.normalize("NFKC", value).split()).casefold()
 
 
 def normalize_boolean(value: object) -> bool | None:
     if isinstance(value, bool):
         return value
+    if not isinstance(value, str):
+        return None
     normalized = normalize_text(value)
     if normalized in {"true", "1", "yes", "y", "正确", "对", "是"}:
         return True
@@ -89,6 +113,8 @@ def normalize_boolean(value: object) -> bool | None:
 def normalize_choice_set(value: object) -> list[str] | None:
     if isinstance(value, (str, bytes)) or not isinstance(value, (list, tuple, set)):
         return None
+    if not all(isinstance(item, str) for item in value):
+        return None
     normalized = {normalize_text(item) for item in value if normalize_text(item)}
     return sorted(normalized)
 
@@ -96,6 +122,8 @@ def normalize_choice_set(value: object) -> list[str] | None:
 def normalize_fill_answers(value: object) -> list[str]:
     values = [value] if isinstance(value, str) else value
     if not isinstance(values, (list, tuple, set)):
+        return []
+    if not all(isinstance(item, str) for item in values):
         return []
     return sorted({normalize_text(item) for item in values if normalize_text(item)})
 
@@ -109,8 +137,8 @@ def _payload_as_draft(payload: QuestionDraft | dict[str, Any]) -> QuestionDraft:
         raise AssessmentValidationError("QUESTION_PAYLOAD_INVALID", "题目载荷无效") from error
 
 
-def _option_labels(options: list[dict[str, Any]]) -> list[str]:
-    labels = [normalize_text(option.get("label", "")) for option in options]
+def _option_labels(options: list[ChoiceOption]) -> list[str]:
+    labels = [normalize_text(option.label) for option in options]
     if len(options) < 2 or any(not label for label in labels) or len(set(labels)) != len(labels):
         raise AssessmentValidationError("CHOICE_OPTIONS_INVALID", "选择题选项必须包含至少两个唯一标签")
     return labels
@@ -123,22 +151,22 @@ def validate_question(payload: QuestionDraft | dict[str, Any]) -> ValidatedQuest
         raise AssessmentValidationError("KNOWLEDGE_POINT_COUNT", "每道题必须关联一至三个不同知识点")
 
     correct_answer: Any | None = draft.correct_answer
-    grading_mode: Literal["auto", "manual"] = "manual" if draft.question_type == "计算题" else "auto"
+    grading_mode: Literal["auto", "manual"] = "manual" if draft.question_type in {"简答题", "计算题"} else "auto"
     if draft.question_type == "单项选择题":
         labels = _option_labels(draft.options)
         if not isinstance(correct_answer, str) or normalize_text(correct_answer) not in labels:
             raise AssessmentValidationError("SINGLE_CHOICE_ANSWER", "单项选择题必须指定一个有效答案")
         correct_answer = next(
-            str(option["label"]).strip()
+            option.label.strip()
             for option in draft.options
-            if normalize_text(option["label"]) == normalize_text(correct_answer)
+            if normalize_text(option.label) == normalize_text(correct_answer)
         )
     elif draft.question_type == "多项选择题":
         labels = _option_labels(draft.options)
         answers = normalize_choice_set(correct_answer)
         if not answers or any(answer not in labels for answer in answers):
             raise AssessmentValidationError("MULTIPLE_CHOICE_ANSWER", "多项选择题必须指定有效答案集合")
-        canonical_labels = {normalize_text(option["label"]): str(option["label"]).strip() for option in draft.options}
+        canonical_labels = {normalize_text(option.label): option.label.strip() for option in draft.options}
         correct_answer = [canonical_labels[answer] for answer in answers]
     elif draft.question_type == "判断题":
         normalized = normalize_boolean(correct_answer)
@@ -161,7 +189,7 @@ def validate_question(payload: QuestionDraft | dict[str, Any]) -> ValidatedQuest
         knowledge_point_ids=knowledge_point_ids,
         text=draft.text.strip(),
         question_type=draft.question_type,
-        options=draft.options,
+        options=[option.model_dump() for option in draft.options],
         correct_answer=correct_answer,
         points=draft.points,
         answer_word_limit=draft.answer_word_limit,
