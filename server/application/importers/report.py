@@ -75,12 +75,18 @@ def _validate_attachments(manifest_path: Path, attachments: Any, question_id: st
         _require(kind in {"image", "table", "formula"}, f"{question_id}: 附件类型无效")
         position = attachment.get("sourcePosition")
         _require(isinstance(position, dict) and isinstance(position.get("blockIndex"), int), f"{question_id}: 附件缺少源位置")
+        ordinal = attachment.get("inlineOrdinal")
+        placeholder = attachment.get("placeholder")
+        _require(isinstance(ordinal, int) and ordinal >= 1, f"{question_id}: 附件缺少行内顺序")
+        _require(placeholder == f"[[attachment:{ordinal}]]", f"{question_id}: 附件占位符无效")
         if kind == "table":
             rows = attachment.get("rows")
             _require(isinstance(rows, list) and all(isinstance(row, list) for row in rows), f"{question_id}: 表格行无效")
         elif kind == "formula":
             _require(isinstance(attachment.get("ommlText"), str), f"{question_id}: 公式缺少 OMML 文本")
             _require(isinstance(attachment.get("ommlSource"), str) and "oMath" in attachment["ommlSource"], f"{question_id}: 公式缺少 OMML 源码")
+            expected_digest = hashlib.sha256(attachment["ommlSource"].encode("utf-8")).hexdigest()
+            _require(attachment.get("ommlSha256") == expected_digest, f"{question_id}: OMML SHA-256 无效")
         else:
             digest = attachment.get("sha256")
             src = attachment.get("src")
@@ -91,6 +97,45 @@ def _validate_attachments(manifest_path: Path, attachments: Any, question_id: st
             asset = _image_asset_path(manifest_path, filename)
             _require(asset is not None, f"{question_id}: 图像资产不存在：{filename}")
             _require(hashlib.sha256(asset.read_bytes()).hexdigest() == digest, f"{question_id}: 图像内容 SHA-256 不匹配")
+
+
+def _validate_source_blocks(source_blocks: Any, attachments: list[dict[str, Any]], item_id: str) -> None:
+    _require(isinstance(source_blocks, list) and source_blocks, f"{item_id}: sourceBlocks 必须是非空数组")
+    for block in source_blocks:
+        _require(isinstance(block, dict), f"{item_id}: sourceBlocks 项必须是对象")
+        _require(block.get("kind") in {"paragraph", "table"}, f"{item_id}: sourceBlocks 类型无效")
+        _require(isinstance(block.get("role"), str) and block["role"], f"{item_id}: sourceBlocks 缺少角色")
+        position = block.get("sourcePosition")
+        _require(isinstance(position, dict) and isinstance(position.get("blockIndex"), int), f"{item_id}: sourceBlocks 缺少源位置")
+        _require(isinstance(block.get("text"), str), f"{item_id}: sourceBlocks 文本无效")
+        _require(isinstance(block.get("textWithPlaceholders"), str), f"{item_id}: sourceBlocks 占位文本无效")
+        inline_content = block.get("inlineContent")
+        _require(isinstance(inline_content, list), f"{item_id}: inlineContent 必须是数组")
+        reconstructed = ""
+        for token in inline_content:
+            _require(isinstance(token, dict) and token.get("kind") in {"text", "attachment"}, f"{item_id}: inlineContent 项无效")
+            if token["kind"] == "text":
+                _require(isinstance(token.get("text"), str), f"{item_id}: inlineContent 文本无效")
+                reconstructed += token["text"]
+            else:
+                ordinal = token.get("attachmentOrdinal")
+                placeholder = token.get("placeholder")
+                _require(isinstance(ordinal, int) and placeholder == f"[[attachment:{ordinal}]]", f"{item_id}: inlineContent 附件引用无效")
+                reconstructed += placeholder
+        _require(reconstructed == block["textWithPlaceholders"], f"{item_id}: sourceBlocks 无法按顺序重构")
+    for attachment in attachments:
+        matching_blocks = [
+            block for block in source_blocks
+            if block["sourcePosition"] == attachment["sourcePosition"]
+        ]
+        _require(matching_blocks, f"{item_id}: 附件源块未保留")
+        _require(any(
+            token.get("kind") == "attachment"
+            and token.get("attachmentOrdinal") == attachment["inlineOrdinal"]
+            and token.get("placeholder") == attachment["placeholder"]
+            for block in matching_blocks
+            for token in block["inlineContent"]
+        ), f"{item_id}: 附件行内位置未保留")
 
 
 def validate_generated_files(manifest_path: Path, report_path: Path) -> dict[str, Any]:
@@ -136,12 +181,13 @@ def validate_generated_files(manifest_path: Path, report_path: Path) -> dict[str
         point_ids = question.get("knowledgePointIds")
         _require(isinstance(point_ids, list) and 1 <= len(point_ids) <= 3 and len(set(point_ids)) == len(point_ids), f"{identifier}: 知识点数量无效")
         _require(all(point_id in catalog_ids for point_id in point_ids), f"{identifier}: 题目引用了未编目知识点")
-        _require(content_fingerprint(question.get("text", ""), question.get("options", [])) == fingerprint, f"{identifier}: 内容指纹不匹配")
+        _require(content_fingerprint(question.get("text", ""), question.get("options", []), question.get("attachments", [])) == fingerprint, f"{identifier}: 内容指纹不匹配")
         metadata = question.get("sourceMetadata")
         _require(isinstance(metadata, dict) and isinstance(metadata.get("file"), str), f"{identifier}: 缺少源文件")
         _require(isinstance(metadata.get("position"), dict) and isinstance(metadata["position"].get("blockIndex"), int), f"{identifier}: 缺少源位置")
         _require(isinstance(metadata.get("sequence"), int), f"{identifier}: 缺少源顺序")
         _validate_attachments(manifest_path, question.get("attachments"), identifier)
+        _validate_source_blocks(question.get("sourceBlocks"), question["attachments"], identifier)
         try:
             validate_question({key: question.get(key) for key in payload_keys})
         except AssessmentValidationError as error:
@@ -152,7 +198,12 @@ def validate_generated_files(manifest_path: Path, report_path: Path) -> dict[str
     _require(report.get("activeQuestions") == len(questions), "activeQuestions 与 manifest 不一致")
     _require(report.get("reviewQuestions") == len(review_items), "reviewQuestions 与 reviewItems 不一致")
     _require(report.get("deduplicatedQuestions") == len(questions) + len(review_items), "deduplicatedQuestions 计数不一致")
-    _require(report.get("sourceQuestions") == report.get("deduplicatedQuestions") + report.get("duplicateCount"), "sourceQuestions 计数不一致")
+    duplicate_occurrences = report.get("duplicateOccurrences")
+    _require(isinstance(duplicate_occurrences, list), "duplicateOccurrences 必须是数组")
+    _require(report.get("duplicateCount") == len(duplicate_occurrences), "duplicateCount 与 duplicateOccurrences 不一致")
+    _require(report.get("exactDuplicateCount") == len(duplicate_occurrences), "exactDuplicateCount 与 duplicateOccurrences 不一致")
+    _require(report.get("sourceQuestions") == report.get("deduplicatedQuestions") + len(duplicate_occurrences), "sourceQuestions 计数不一致")
+    _require(report.get("reviewGatedOccurrenceCount") == len(review_items), "reviewGatedOccurrenceCount 与 reviewItems 不一致")
     source_files = report.get("sourceFiles")
     _require(isinstance(source_files, list) and report.get("sourceFileCount") == len(source_files), "sourceFiles 计数不一致")
     source_names = [item.get("file") for item in source_files if isinstance(item, dict)]
@@ -175,6 +226,52 @@ def validate_generated_files(manifest_path: Path, report_path: Path) -> dict[str
         metadata = item.get("sourceMetadata")
         _require(isinstance(metadata, dict) and metadata.get("file") in source_names, "复核项源文件无效")
         _require(isinstance(metadata.get("position"), dict) and isinstance(metadata["position"].get("blockIndex"), int), "复核项源位置无效")
+        _validate_attachments(manifest_path, item.get("attachments"), item.get("id", "review-item"))
+        _validate_source_blocks(item.get("sourceBlocks"), item["attachments"], item.get("id", "review-item"))
+    conflicted_count = sum(item.get("duplicateClassification") == "conflicted" for item in review_items)
+    _require(report.get("conflictedDuplicateCount") == conflicted_count, "conflictedDuplicateCount 与 reviewItems 不一致")
+
+    for index, item in enumerate(duplicate_occurrences, start=1):
+        item_id = f"duplicate-{index}"
+        _require(isinstance(item, dict) and item.get("classification") == "exact", f"{item_id}: 精确重复记录无效")
+        _require(item.get("duplicateOfId") in question_ids, f"{item_id}: duplicateOfId 无效")
+        metadata = item.get("sourceMetadata")
+        _require(isinstance(metadata, dict) and metadata.get("file") in source_names, f"{item_id}: 源文件无效")
+        _validate_attachments(manifest_path, item.get("attachments"), item_id)
+        _validate_source_blocks(item.get("sourceBlocks"), item["attachments"], item_id)
+
+    loss_records = report.get("attachmentLossRecords")
+    _require(isinstance(loss_records, list), "attachmentLossRecords 必须是数组")
+    for index, record in enumerate(loss_records, start=1):
+        item_id = f"attachment-loss-{index}"
+        _require(isinstance(record, dict) and record.get("classification") == "unlinked-source-attachment", f"{item_id}: 损失记录无效")
+        metadata = record.get("sourceMetadata")
+        _require(isinstance(metadata, dict) and metadata.get("file") in source_names, f"{item_id}: 源文件无效")
+        _validate_attachments(manifest_path, [record.get("attachment")], item_id)
+
+    source_attachment_count = sum(item.get("attachmentOccurrenceCount", 0) for item in source_files)
+    _require(source_attachment_count == report.get("imageCount") + report.get("tableCount") + report.get("ommlCount"), "来源附件统计不一致")
+    expected_accounting = {
+        "sourceOccurrenceCount": source_attachment_count,
+        "activeOccurrenceCount": sum(len(item["attachments"]) for item in questions),
+        "reviewOccurrenceCount": sum(len(item["attachments"]) for item in review_items),
+        "exactDuplicateOccurrenceCount": sum(len(item["attachments"]) for item in duplicate_occurrences),
+        "lossOccurrenceCount": len(loss_records),
+    }
+    expected_accounting["accountedOccurrenceCount"] = sum(
+        expected_accounting[key]
+        for key in (
+            "activeOccurrenceCount",
+            "reviewOccurrenceCount",
+            "exactDuplicateOccurrenceCount",
+            "lossOccurrenceCount",
+        )
+    )
+    expected_accounting["unaccountedOccurrenceCount"] = (
+        expected_accounting["sourceOccurrenceCount"] - expected_accounting["accountedOccurrenceCount"]
+    )
+    _require(report.get("attachmentAccounting") == expected_accounting, "attachmentAccounting 与保留负载不一致")
+    _require(expected_accounting["unaccountedOccurrenceCount"] == 0, "存在未审计的来源附件")
 
     asset_dir = _image_asset_dir(manifest_path)
     image_asset_count = report.get("imageAssetCount")
@@ -186,6 +283,8 @@ def validate_generated_files(manifest_path: Path, report_path: Path) -> dict[str
             digest = hashlib.sha256(asset.read_bytes()).hexdigest()
             _require(asset.name.startswith(digest + "."), f"资产文件名与内容 SHA-256 不一致：{asset.name}")
     _require(manifest.get("sourceArchiveSha256") == report.get("sourceArchiveSha256"), "源归档 SHA-256 不一致")
+    _require(isinstance(report.get("sourceArchiveVerified"), bool), "sourceArchiveVerified 必须为布尔值")
+    _require(report.get("sourceArchiveVerified") == (report.get("sourceArchiveSha256") is not None), "源归档验证状态不一致")
     _require(report.get("status") in {"DONE", "DONE_WITH_CONCERNS"}, "报告状态无效")
     _require(report.get("status") == ("DONE_WITH_CONCERNS" if report.get("concerns") else "DONE"), "报告状态与 concerns 不一致")
     return {

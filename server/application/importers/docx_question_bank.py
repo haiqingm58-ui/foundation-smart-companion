@@ -52,6 +52,13 @@ EXPECTED_SOURCE_FILES = [
     "3-其他题库-1.docx",
     "4-其他题库-2.docx",
 ]
+EXPECTED_SOURCE_SHA256 = {
+    "1-随堂检测题库.docx": "61cb992e0862e4cd3dd6d73cf86ff9b74a7c4f56fd0c22433ff880bc3bcfa0a4",
+    "2-章节测验.docx": "1b606278ebfc5b4c6ddda67fbdaa1886577133852aefc4cd769896e4f6b38c93",
+    "3-其他题库-1.docx": "dd57d09924d3d0bc9b99ebc760db835bf58a081b31a5fbc9e84dc7bdd822cdec",
+    "4-其他题库-2.docx": "d5eaf7056f721d3ad56dbb77e545dd69a4c19fb26c988952c034e1dcc4bf1ad1",
+}
+EXPECTED_SOURCE_NOTE_SHA256 = "32dbc74123f66a561e6bd18ca5d0f2ce5eacf3949d83acef46304d4bcf63a7df"
 
 
 def _write_json(path: Path, payload: Any) -> None:
@@ -81,16 +88,35 @@ def _image_extension(data: bytes, target: str) -> str:
     return suffix if re.fullmatch(r"\.[a-z0-9]{1,5}", suffix) else ".bin"
 
 
-def _ordered_inline_attachments(
+def _append_text_token(tokens: list[dict[str, Any]], text: str) -> None:
+    if not text:
+        return
+    if tokens and tokens[-1]["kind"] == "text":
+        tokens[-1]["text"] += text
+    else:
+        tokens.append({"kind": "text", "text": text})
+
+
+def _ordered_inline_content(
     element: etree._Element,
     archive: ZipFile,
     relationships: dict[str, str],
     assets_dir: Path,
     position: dict[str, int],
-) -> list[dict[str, Any]]:
-    result: list[dict[str, Any]] = []
+    *,
+    starting_ordinal: int = 1,
+    include_text: bool = True,
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]], str]:
+    attachments: list[dict[str, Any]] = []
+    inline_content: list[dict[str, Any]] = []
     for child in element.iterdescendants():
         qname = etree.QName(child)
+        if include_text and qname.namespace == NS["w"] and qname.localname == "t":
+            _append_text_token(inline_content, child.text or "")
+            continue
+        if include_text and qname.namespace == NS["w"] and qname.localname in {"tab", "br", "cr"}:
+            _append_text_token(inline_content, "\t" if qname.localname == "tab" else "\n")
+            continue
         relationship_id: str | None = None
         if qname.namespace == NS["a"] and qname.localname == "blip":
             relationship_id = child.get(f"{{{NS['r']}}}embed") or child.get(f"{{{NS['r']}}}link")
@@ -99,14 +125,19 @@ def _ordered_inline_attachments(
         elif qname.namespace == NS["m"] and qname.localname in {"oMath", "oMathPara"}:
             if qname.localname == "oMath" and child.getparent() is not None and etree.QName(child.getparent()).namespace == NS["m"] and etree.QName(child.getparent()).localname == "oMathPara":
                 continue
-            result.append(
-                {
-                    "kind": "formula",
-                    "ommlText": compact_text("".join(child.xpath(".//m:t/text()", namespaces=NS))),
-                    "ommlSource": etree.tostring(child, encoding="unicode", with_tail=False),
-                    "sourcePosition": position,
-                }
-            )
+            source = etree.tostring(child, encoding="unicode", with_tail=False)
+            ordinal = starting_ordinal + len(attachments)
+            placeholder = f"[[attachment:{ordinal}]]"
+            attachments.append({
+                "kind": "formula",
+                "ommlText": compact_text("".join(child.xpath(".//m:t/text()", namespaces=NS))),
+                "ommlSource": source,
+                "ommlSha256": hashlib.sha256(source.encode("utf-8")).hexdigest(),
+                "sourcePosition": position,
+                "inlineOrdinal": ordinal,
+                "placeholder": placeholder,
+            })
+            inline_content.append({"kind": "attachment", "attachmentOrdinal": ordinal, "placeholder": placeholder})
             continue
         if relationship_id is None:
             continue
@@ -121,16 +152,23 @@ def _ordered_inline_attachments(
         asset.parent.mkdir(parents=True, exist_ok=True)
         if not asset.exists():
             asset.write_bytes(data)
-        result.append(
-            {
-                "kind": "image",
-                "src": f"/foundation-smart-companion/question-assets/soil-mechanics/{asset.name}",
-                "alt": "题目附图",
-                "sha256": digest,
-                "sourcePosition": position,
-            }
-        )
-    return result
+        ordinal = starting_ordinal + len(attachments)
+        placeholder = f"[[attachment:{ordinal}]]"
+        attachments.append({
+            "kind": "image",
+            "src": f"/foundation-smart-companion/question-assets/soil-mechanics/{asset.name}",
+            "alt": "题目附图",
+            "sha256": digest,
+            "sourcePosition": position,
+            "inlineOrdinal": ordinal,
+            "placeholder": placeholder,
+        })
+        inline_content.append({"kind": "attachment", "attachmentOrdinal": ordinal, "placeholder": placeholder})
+    text_with_placeholders = "".join(
+        token.get("text", "") if token["kind"] == "text" else token["placeholder"]
+        for token in inline_content
+    )
+    return attachments, inline_content, text_with_placeholders
 
 
 def _iter_body_blocks(parent: etree._Element):
@@ -158,12 +196,17 @@ def _blocks(path: Path, assets_dir: Path) -> tuple[list[dict[str, Any]], dict[st
             if kind == "p":
                 paragraph_index += 1
                 position = {"blockIndex": block_index, "paragraphIndex": paragraph_index}
+                attachments, inline_content, text_with_placeholders = _ordered_inline_content(
+                    element, archive, relationships, assets_dir, position
+                )
                 result.append(
                     {
                         "kind": "paragraph",
                         "text": _element_text(element),
                         "position": position,
-                        "attachments": _ordered_inline_attachments(element, archive, relationships, assets_dir, position),
+                        "attachments": attachments,
+                        "inlineContent": inline_content,
+                        "textWithPlaceholders": text_with_placeholders,
                     }
                 )
             elif kind == "tbl":
@@ -174,9 +217,35 @@ def _blocks(path: Path, assets_dir: Path) -> tuple[list[dict[str, Any]], dict[st
                     for row in element.xpath("./w:tr", namespaces=NS)
                 ]
                 table_row_count += len(rows)
-                attachments = [{"kind": "table", "rows": rows, "sourcePosition": position}]
-                attachments.extend(_ordered_inline_attachments(element, archive, relationships, assets_dir, position))
-                result.append({"kind": "table", "text": "", "position": position, "attachments": attachments})
+                table_placeholder = "[[attachment:1]]"
+                attachments = [{
+                    "kind": "table",
+                    "rows": rows,
+                    "sourcePosition": position,
+                    "inlineOrdinal": 1,
+                    "placeholder": table_placeholder,
+                }]
+                inline_attachments, inline_content, text_with_placeholders = _ordered_inline_content(
+                    element,
+                    archive,
+                    relationships,
+                    assets_dir,
+                    position,
+                    starting_ordinal=2,
+                    include_text=False,
+                )
+                attachments.extend(inline_attachments)
+                table_token = {"kind": "attachment", "attachmentOrdinal": 1, "placeholder": table_placeholder}
+                inline_content.insert(0, table_token)
+                text_with_placeholders = table_placeholder + text_with_placeholders
+                result.append({
+                    "kind": "table",
+                    "text": "",
+                    "position": position,
+                    "attachments": attachments,
+                    "inlineContent": inline_content,
+                    "textWithPlaceholders": text_with_placeholders,
+                })
         inline_attachments = [attachment for block in result for attachment in block["attachments"]]
         image_attachments = [item for item in inline_attachments if item["kind"] == "image"]
         formula_attachments = [item for item in inline_attachments if item["kind"] == "formula"]
@@ -250,6 +319,8 @@ def _start_candidate(
     original_type: str | None,
     chapter: str | None,
     chapter_heading: str | None,
+    *,
+    role: str = "stem",
 ) -> dict[str, Any]:
     return {
         "textParts": [stem] if stem else [],
@@ -265,33 +336,54 @@ def _start_candidate(
         "answerPosition": None,
         "postAnswerParts": [],
         "blockSequence": [block["position"]],
+        "sourceBlocks": [_source_block(block, role)],
         "endPosition": block["position"],
     }
 
 
-def _append_block(candidate: dict[str, Any], block: dict[str, Any], *, after_answer: bool = False) -> None:
+def _source_block(block: dict[str, Any], role: str) -> dict[str, Any]:
+    return {
+        "kind": block["kind"],
+        "role": role,
+        "sourcePosition": block["position"],
+        "text": block["text"],
+        "textWithPlaceholders": block["textWithPlaceholders"],
+        "inlineContent": block["inlineContent"],
+    }
+
+
+def _append_candidate_block(candidate: dict[str, Any], block: dict[str, Any], role: str) -> None:
     candidate["attachments"].extend(block["attachments"])
     candidate["blockSequence"].append(block["position"])
+    candidate["sourceBlocks"].append(_source_block(block, role))
     candidate["endPosition"] = block["position"]
+
+
+def _append_block(candidate: dict[str, Any], block: dict[str, Any], *, after_answer: bool = False) -> None:
     text = block["text"]
     if block["kind"] == "table" or not text:
+        _append_candidate_block(candidate, block, "postAnswer" if after_answer else "content")
         return
     if after_answer:
+        _append_candidate_block(candidate, block, "postAnswer")
         candidate["postAnswerParts"].append(text)
         return
     options = _inline_options(text)
     if options:
+        _append_candidate_block(candidate, block, "option")
         candidate["options"].extend(options)
         candidate["pendingOption"] = options[-1]["label"] if not options[-1]["text"] else None
         return
     pending_label = candidate.get("pendingOption")
     if pending_label:
+        _append_candidate_block(candidate, block, "optionContinuation")
         for option in reversed(candidate["options"]):
             if option["label"] == pending_label:
                 option["text"] = text
                 break
         candidate["pendingOption"] = None
         return
+    _append_candidate_block(candidate, block, "stemContinuation")
     candidate["textParts"].append(text)
 
 
@@ -344,6 +436,7 @@ def _finish_candidate(candidate: dict[str, Any]) -> dict[str, Any]:
         "answerPosition": candidate.get("answerPosition"),
         "endPosition": candidate.get("endPosition"),
         "blockSequence": candidate["blockSequence"],
+        "sourceBlocks": candidate["sourceBlocks"],
         "explanation": compact_text(" ".join(explanation_parts)) or None,
     }
 
@@ -364,6 +457,14 @@ def _candidate_from_buffer(
     return candidate
 
 
+def _attachment_occurrence_key(attachment: dict[str, Any]) -> bytes:
+    return canonical_json_bytes({
+        "kind": attachment.get("kind"),
+        "sourcePosition": attachment.get("sourcePosition"),
+        "inlineOrdinal": attachment.get("inlineOrdinal"),
+    })
+
+
 def _parse_document(path: Path, assets_dir: Path) -> tuple[list[dict[str, Any]], dict[str, Any]]:
     blocks, stats = _blocks(path, assets_dir)
     chapter: str | None = None
@@ -374,9 +475,17 @@ def _parse_document(path: Path, assets_dir: Path) -> tuple[list[dict[str, Any]],
     buffer: list[dict[str, Any]] = []
     unrecognized = 0
 
-    def finish_current() -> None:
+    def flush_post_answer_blocks() -> None:
+        if current is None:
+            return
+        for post_block in current.pop("postAnswerBlocks", []):
+            _append_block(current, post_block, after_answer=True)
+
+    def finish_current(*, include_post_answer: bool = True) -> None:
         nonlocal current
         if current is not None:
+            if include_post_answer:
+                flush_post_answer_blocks()
             questions.append(_finish_candidate(current))
             current = None
 
@@ -411,13 +520,14 @@ def _parse_document(path: Path, assets_dir: Path) -> tuple[list[dict[str, Any]],
         if current is not None and current["answerFound"]:
             trailing = TRAILING_TYPE_RE.match(text)
             if trailing and trailing.group(2):
+                flush_post_answer_blocks()
                 prefix = compact_text(trailing.group(1))
+                if prefix or block["attachments"]:
+                    _append_candidate_block(current, block, "postAnswer")
                 if prefix:
                     current["postAnswerParts"].append(prefix)
-                    current["blockSequence"].append(block["position"])
-                    current["endPosition"] = block["position"]
                 finish_current()
-                current = _start_candidate(block, "", trailing.group(2), chapter, chapter_heading)
+                current_type = trailing.group(2)
                 buffer.clear()
                 continue
 
@@ -430,15 +540,17 @@ def _parse_document(path: Path, assets_dir: Path) -> tuple[list[dict[str, Any]],
             continue
 
         if answer_match:
+            answer_block_added = False
             if current is None:
                 current = _candidate_from_buffer(buffer, current_type, chapter, chapter_heading)
                 buffer.clear()
             elif current["answerFound"]:
                 post_blocks = current.pop("postAnswerBlocks", [])
-                finish_current()
+                finish_current(include_post_answer=False)
                 current = _candidate_from_buffer(post_blocks, current_type, chapter, chapter_heading)
             if current is None:
-                current = _start_candidate(block, "", current_type, chapter, chapter_heading)
+                current = _start_candidate(block, "", current_type, chapter, chapter_heading, role="answer")
+                answer_block_added = True
                 unrecognized += 1
             source_answer = compact_text(answer_match.group(1))
             next_type = TRAILING_TYPE_RE.match(source_answer)
@@ -448,8 +560,8 @@ def _parse_document(path: Path, assets_dir: Path) -> tuple[list[dict[str, Any]],
             current["answer"] = source_answer
             current["answerFound"] = True
             current["answerPosition"] = block["position"]
-            current["blockSequence"].append(block["position"])
-            current["endPosition"] = block["position"]
+            if not answer_block_added:
+                _append_candidate_block(current, block, "answer")
             continue
 
         if current is None:
@@ -457,13 +569,25 @@ def _parse_document(path: Path, assets_dir: Path) -> tuple[list[dict[str, Any]],
             continue
         if current["answerFound"]:
             current.setdefault("postAnswerBlocks", []).append(block)
-            _append_block(current, block, after_answer=True)
         else:
             _append_block(current, block)
 
     finish_current()
+    linked_attachment_keys = {
+        _attachment_occurrence_key(attachment)
+        for question in questions
+        for attachment in question["attachments"]
+    }
+    all_attachments = [attachment for block in blocks for attachment in block["attachments"]]
+    attachment_losses = [
+        attachment for attachment in all_attachments
+        if _attachment_occurrence_key(attachment) not in linked_attachment_keys
+    ]
     stats["sourceQuestions"] = len(questions)
     stats["unrecognized"] = unrecognized
+    stats["attachmentOccurrenceCount"] = len(all_attachments)
+    stats["linkedAttachmentOccurrenceCount"] = len(all_attachments) - len(attachment_losses)
+    stats["_attachmentLosses"] = attachment_losses
     return questions, stats
 
 
@@ -477,10 +601,61 @@ def _richness(item: dict[str, Any]) -> tuple[int, int, int]:
     )
 
 
+def _variant_identity(item: dict[str, Any]) -> bytes:
+    metadata = item["sourceMetadata"]
+    return canonical_json_bytes({
+        "questionType": item.get("questionType"),
+        "chapter": item.get("chapter"),
+        "knowledgePointIds": item.get("knowledgePointIds", []),
+        "sourceAnswer": compact_text(str(metadata.get("sourceAnswer", item.get("sourceAnswer", "")))).casefold(),
+        "normalizedAnswer": item.get("correctAnswer", item.get("normalizedAnswer")),
+        "gradingMode": item.get("gradingMode"),
+        "explanation": compact_text(str(item.get("explanation") or "")).casefold(),
+    })
+
+
+def _review_occurrence_id(item: dict[str, Any]) -> str:
+    metadata = item["sourceMetadata"]
+    occurrence = hashlib.sha256(canonical_json_bytes({
+        "file": metadata["file"],
+        "sequence": metadata["sequence"],
+        "position": metadata["position"],
+    })).hexdigest()
+    return f"soil-review-{item['contentFingerprint'][:16]}-{occurrence[:12]}"
+
+
+def _record_as_conflict_review(record: dict[str, Any], detail: str) -> dict[str, Any]:
+    item = {
+        "contentFingerprint": record["contentFingerprint"],
+        "text": record["text"],
+        "questionType": record.get("questionType"),
+        "chapter": record.get("chapter"),
+        "knowledgePointIds": record.get("knowledgePointIds", []),
+        "options": record.get("options", []),
+        "sourceAnswer": record["sourceMetadata"].get("sourceAnswer", ""),
+        "normalizedAnswer": record.get("correctAnswer"),
+        "gradingMode": record.get("gradingMode"),
+        "explanation": record.get("explanation"),
+        "attachments": record.get("attachments", []),
+        "sourceBlocks": record.get("sourceBlocks", []),
+        "sourceMetadata": record["sourceMetadata"],
+        "reasons": [{"code": "DUPLICATE_CONFLICT", "detail": detail}],
+        "duplicateClassification": "conflicted",
+    }
+    item["id"] = _review_occurrence_id(item)
+    return item
+
+
+def _mark_conflicted_review(item: dict[str, Any], detail: str) -> None:
+    if not any(reason.get("code") == "DUPLICATE_CONFLICT" for reason in item["reasons"]):
+        item["reasons"].append({"code": "DUPLICATE_CONFLICT", "detail": detail})
+    item["duplicateClassification"] = "conflicted"
+
+
 def _deduplicate(
     records: list[dict[str, Any]],
     review_items: list[dict[str, Any]],
-) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[dict[str, Any]], int]:
     grouped: dict[str, dict[str, list[dict[str, Any]]]] = {}
     for record in records:
         grouped.setdefault(record["contentFingerprint"], {"records": [], "reviews": []})["records"].append(record)
@@ -489,37 +664,70 @@ def _deduplicate(
 
     deduplicated_records: list[dict[str, Any]] = []
     deduplicated_reviews: list[dict[str, Any]] = []
+    duplicate_occurrences: list[dict[str, Any]] = []
     for fingerprint in sorted(grouped):
         group = grouped[fingerprint]
-        candidates = group["records"] if group["records"] else group["reviews"]
-        ranked = sorted(
-            candidates,
-            key=lambda item: (
-                -_richness(item)[0],
-                -_richness(item)[1],
-                -_richness(item)[2],
-                item["sourceMetadata"]["file"],
-                item["sourceMetadata"]["sequence"],
-            ),
-        )
-        chosen = ranked[0]
-        all_items = sorted(
-            [*group["records"], *group["reviews"]],
-            key=lambda item: (item["sourceMetadata"]["file"], item["sourceMetadata"]["sequence"]),
-        )
-        duplicate_sources = [
-            item["sourceMetadata"]
-            for item in all_items
-            if item is not chosen
-        ]
-        if duplicate_sources:
-            chosen["sourceMetadata"]["duplicateSources"] = duplicate_sources
+        active_variants = {_variant_identity(item) for item in group["records"]}
+        if len(active_variants) > 1:
+            detail = "同一题面及语义附件存在不一致的题型、章节或答案变体，所有 active 候选均转入复核。"
+            converted = [_record_as_conflict_review(item, detail) for item in group["records"]]
+            for item in group["reviews"]:
+                _mark_conflicted_review(item, detail)
+            deduplicated_reviews.extend([*converted, *group["reviews"]])
+            continue
+
+        chosen: dict[str, Any] | None = None
         if group["records"]:
+            ranked = sorted(
+                group["records"],
+                key=lambda item: (
+                    -_richness(item)[0],
+                    -_richness(item)[1],
+                    -_richness(item)[2],
+                    item["sourceMetadata"]["file"],
+                    item["sourceMetadata"]["sequence"],
+                ),
+            )
+            chosen = ranked[0]
+            exact_duplicates = sorted(
+                ranked[1:],
+                key=lambda item: (item["sourceMetadata"]["file"], item["sourceMetadata"]["sequence"]),
+            )
+            if exact_duplicates:
+                chosen["sourceMetadata"]["duplicateSources"] = [
+                    item["sourceMetadata"] for item in exact_duplicates
+                ]
+                duplicate_occurrences.extend({
+                    "classification": "exact",
+                    "duplicateOfId": chosen["id"],
+                    "contentFingerprint": item["contentFingerprint"],
+                    "text": item["text"],
+                    "questionType": item.get("questionType"),
+                    "chapter": item.get("chapter"),
+                    "options": item.get("options", []),
+                    "sourceAnswer": item["sourceMetadata"].get("sourceAnswer", ""),
+                    "attachments": item.get("attachments", []),
+                    "sourceBlocks": item.get("sourceBlocks", []),
+                    "sourceMetadata": item["sourceMetadata"],
+                } for item in exact_duplicates)
             deduplicated_records.append(chosen)
-        else:
-            deduplicated_reviews.append(chosen)
+
+        if group["reviews"]:
+            if chosen is not None:
+                detail = "同一题面及语义附件同时存在 active 与 review 变体；review 原因和来源负载完整保留。"
+                for item in group["reviews"]:
+                    _mark_conflicted_review(item, detail)
+                    item["duplicateOfId"] = chosen["id"]
+            elif len({_variant_identity(item) for item in group["reviews"]}) > 1:
+                detail = "同一题面及语义附件存在不一致的复核变体，所有来源负载完整保留。"
+                for item in group["reviews"]:
+                    _mark_conflicted_review(item, detail)
+            deduplicated_reviews.extend(group["reviews"])
     sort_key = lambda item: (item["sourceMetadata"]["file"], item["sourceMetadata"]["sequence"])
-    return sorted(deduplicated_records, key=sort_key), sorted(deduplicated_reviews, key=sort_key)
+    duplicate_occurrences.sort(key=sort_key)
+    deduplicated_reviews.sort(key=sort_key)
+    conflicted_count = sum(item.get("duplicateClassification") == "conflicted" for item in deduplicated_reviews)
+    return sorted(deduplicated_records, key=sort_key), deduplicated_reviews, duplicate_occurrences, conflicted_count
 
 
 def parse_question_bank(
@@ -537,6 +745,7 @@ def parse_question_bank(
     records: list[dict[str, Any]] = []
     review_items: list[dict[str, Any]] = []
     source_files: list[dict[str, Any]] = []
+    attachment_loss_records: list[dict[str, Any]] = []
     sources = sorted(source_dir.glob("*.docx"), key=lambda item: item.name)
     for source in sources:
         parsed_questions, source_stats = _parse_document(source, assets_dir)
@@ -552,12 +761,21 @@ def parse_question_bank(
                 review_candidates += 1
         source_stats["activeCandidates"] = active_candidates
         source_stats["reviewCandidates"] = review_candidates
+        for attachment in source_stats.pop("_attachmentLosses"):
+            attachment_loss_records.append({
+                "classification": "unlinked-source-attachment",
+                "sourceMetadata": {
+                    "file": source.name,
+                    "position": attachment["sourcePosition"],
+                    "inlineOrdinal": attachment["inlineOrdinal"],
+                },
+                "attachment": attachment,
+                "reason": "附件位于未形成题目候选的源块中，作为显式损失审计记录保留。",
+            })
         source_files.append(source_stats)
     source_questions = len(records) + len(review_items)
-    records, review_items = _deduplicate(records, review_items)
+    records, review_items, duplicate_occurrences, conflicted_duplicate_count = _deduplicate(records, review_items)
     deduplicated_questions = len(records) + len(review_items)
-    is_supplied_corpus = [source.name for source in sources] == EXPECTED_SOURCE_FILES
-    archive_sha = SOURCE_ARCHIVE_SHA256 if is_supplied_corpus else None
     note_path = source_dir / "说明.txt"
     note_metadata = None
     if note_path.exists():
@@ -566,6 +784,13 @@ def parse_question_bank(
             "sha256": hashlib.sha256(note_path.read_bytes()).hexdigest(),
             "sizeBytes": note_path.stat().st_size,
         }
+    source_archive_verified = (
+        [source.name for source in sources] == EXPECTED_SOURCE_FILES
+        and {item["file"]: item["sha256"] for item in source_files} == EXPECTED_SOURCE_SHA256
+        and note_metadata is not None
+        and note_metadata["sha256"] == EXPECTED_SOURCE_NOTE_SHA256
+    )
+    archive_sha = SOURCE_ARCHIVE_SHA256 if source_archive_verified else None
     manifest = {
         "schemaVersion": 1,
         "subject": {"id": SUBJECT_ID, "title": "土力学", "slug": SUBJECT_ID, "status": "active", "sortOrder": 1},
@@ -586,10 +811,10 @@ def parse_question_bank(
     )
     concerns: list[str] = []
     if review_items:
-        concerns.append(f"{len(review_items)} 个去重后候选项因题型、答案、知识点或严格模式校验不确定而保留复核。")
+        concerns.append(f"{len(review_items)} 个来源候选项因题型、答案、知识点、重复冲突或严格模式校验不确定而保留复核。")
     if unrecognized:
         concerns.append(f"{unrecognized} 个答案标记缺少可靠的前置题目结构，已作为复核候选保留。")
-    if is_supplied_corpus:
+    if source_archive_verified:
         if source_questions < 1000:
             concerns.append(f"来源候选仅 {source_questions} 个，低于计划阈值 1000。")
         if image_count < 300:
@@ -603,10 +828,35 @@ def parse_question_bank(
         formats.append("WordprocessingML tables")
     if omml_count:
         formats.append("Office Math Markup Language")
+    active_attachment_count = sum(len(item["attachments"]) for item in records)
+    review_attachment_count = sum(len(item["attachments"]) for item in review_items)
+    exact_duplicate_attachment_count = sum(len(item["attachments"]) for item in duplicate_occurrences)
+    loss_attachment_count = len(attachment_loss_records)
+    source_attachment_count = sum(item["attachmentOccurrenceCount"] for item in source_files)
+    accounted_attachment_count = (
+        active_attachment_count
+        + review_attachment_count
+        + exact_duplicate_attachment_count
+        + loss_attachment_count
+    )
+    attachment_accounting = {
+        "sourceOccurrenceCount": source_attachment_count,
+        "activeOccurrenceCount": active_attachment_count,
+        "reviewOccurrenceCount": review_attachment_count,
+        "exactDuplicateOccurrenceCount": exact_duplicate_attachment_count,
+        "lossOccurrenceCount": loss_attachment_count,
+        "accountedOccurrenceCount": accounted_attachment_count,
+        "unaccountedOccurrenceCount": source_attachment_count - accounted_attachment_count,
+    }
+    if attachment_accounting["unaccountedOccurrenceCount"]:
+        concerns.append(
+            f"附件审计存在 {attachment_accounting['unaccountedOccurrenceCount']} 个未平衡来源出现，需复核。"
+        )
     report_data = {
         "schemaVersion": 1,
         "status": "DONE_WITH_CONCERNS" if concerns else "DONE",
         "sourceArchiveSha256": archive_sha,
+        "sourceArchiveVerified": source_archive_verified,
         "sourceNotes": note_metadata,
         "sourceFileCount": len(sources),
         "sourceFiles": source_files,
@@ -614,7 +864,10 @@ def parse_question_bank(
         "sourceQuestions": source_questions,
         "answerMarkerCount": answer_marker_count,
         "deduplicatedQuestions": deduplicated_questions,
-        "duplicateCount": source_questions - deduplicated_questions,
+        "duplicateCount": len(duplicate_occurrences),
+        "exactDuplicateCount": len(duplicate_occurrences),
+        "conflictedDuplicateCount": conflicted_duplicate_count,
+        "reviewGatedOccurrenceCount": len(review_items),
         "activeQuestions": len(records),
         "reviewQuestions": len(review_items),
         "imageCount": image_count,
@@ -626,6 +879,9 @@ def parse_question_bank(
         "ommlCount": omml_count,
         "unrecognized": unrecognized,
         "reviewReasonCounts": dict(sorted(reason_counts.items())),
+        "attachmentAccounting": attachment_accounting,
+        "attachmentLossRecords": attachment_loss_records,
+        "duplicateOccurrences": duplicate_occurrences,
         "concerns": concerns,
         "reviewItems": review_items,
     }

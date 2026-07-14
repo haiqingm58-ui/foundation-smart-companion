@@ -94,13 +94,40 @@ def compact_text(value: str) -> str:
     return " ".join(unicodedata.normalize("NFKC", value).replace("\u00a0", " ").split())
 
 
-def content_fingerprint(text: str, options: list[dict[str, str]]) -> str:
+def _attachment_identity(attachment: dict[str, Any]) -> dict[str, Any]:
+    kind = attachment.get("kind")
+    if kind == "image":
+        return {"kind": kind, "sha256": attachment.get("sha256")}
+    if kind == "table":
+        return {
+            "kind": kind,
+            "rows": [
+                [compact_text(str(cell)).casefold() for cell in row]
+                for row in attachment.get("rows", [])
+            ],
+        }
+    if kind == "formula":
+        source = str(attachment.get("ommlSource") or "")
+        return {
+            "kind": kind,
+            "ommlText": compact_text(str(attachment.get("ommlText") or "")).casefold(),
+            "ommlSha256": attachment.get("ommlSha256") or hashlib.sha256(source.encode("utf-8")).hexdigest(),
+        }
+    return {"kind": kind}
+
+
+def content_fingerprint(
+    text: str,
+    options: list[dict[str, str]],
+    attachments: list[dict[str, Any]] | None = None,
+) -> str:
     payload = {
         "text": compact_text(text).casefold(),
         "options": [
             {"label": compact_text(option["label"]).upper(), "text": compact_text(option["text"]).casefold()}
             for option in options
         ],
+        "attachments": [_attachment_identity(attachment) for attachment in attachments or []],
     }
     encoded = json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode("utf-8")
     return hashlib.sha256(encoded).hexdigest()
@@ -213,7 +240,7 @@ def normalize_candidate(
 ) -> tuple[dict[str, Any] | None, dict[str, Any] | None]:
     question_type = canonical_type(parsed.get("originalTypeLabel")) or parsed.get("inferredType")
     point_ids = knowledge_point_ids(parsed["text"], parsed["chapter"])
-    fingerprint = content_fingerprint(parsed["text"], parsed["options"])
+    fingerprint = content_fingerprint(parsed["text"], parsed["options"], parsed["attachments"])
     source_metadata = {
         "file": source_file,
         "position": parsed["position"],
@@ -285,6 +312,7 @@ def normalize_candidate(
         "rubric": [],
         "points": 10,
         "attachments": parsed["attachments"],
+        "sourceBlocks": parsed["sourceBlocks"],
         "answerWordLimit": answer_word_limit,
         "gradingMode": grading_mode,
         "status": "active",
@@ -316,14 +344,23 @@ def normalize_candidate(
             reasons.append({"code": error.code, "detail": str(error)})
     if not reasons:
         return record, None
+    occurrence_fingerprint = hashlib.sha256(
+        canonical_json_bytes({"file": source_file, "sequence": sequence, "position": parsed["position"]})
+    ).hexdigest()
     return None, {
-        "id": record["id"],
+        "id": f"soil-review-{fingerprint[:16]}-{occurrence_fingerprint[:12]}",
         "contentFingerprint": fingerprint,
         "text": parsed["text"],
         "questionType": question_type,
+        "chapter": parsed["chapter"],
+        "knowledgePointIds": point_ids,
         "options": parsed["options"],
         "sourceAnswer": source_answer,
+        "normalizedAnswer": correct_answer,
+        "gradingMode": grading_mode,
+        "explanation": parsed.get("explanation"),
         "attachments": parsed["attachments"],
+        "sourceBlocks": parsed["sourceBlocks"],
         "sourceMetadata": source_metadata,
         "reasons": reasons,
     }
