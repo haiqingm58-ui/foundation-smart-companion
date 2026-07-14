@@ -32,6 +32,20 @@ function renderTeacher(logout = vi.fn(), initialEntry = "/teacher") {
 }
 
 
+function canonicalQuestion(overrides = {}) {
+  return {
+    id: "canonical-question", text: "达西定律适用于何种流态？", subjectId: "soil-mechanics", chapter: "第二章 土的渗透性",
+    knowledgePoints: [{ id: "soil-darcy", name: "达西定律", weight: 1 }], questionType: "单项选择题", difficulty: "中等", points: 10,
+    options: [{ label: "A", text: "层流" }, { label: "B", text: "紊流" }], correctAnswer: "A",
+    explanation: "考查适用条件", rubric: [{ criterion: "依据", points: 10 }], attachments: [{ kind: "formula", latex: "k" }], gradingMode: "auto", status: "active", editable: true,
+    ...overrides,
+  };
+}
+
+
+beforeEach(() => vi.clearAllMocks());
+
+
 test("教师工作台展示真实统计和完整导航", async () => {
   renderTeacher();
   expect(await screen.findByRole("heading", { name: "教学工作台" })).toBeInTheDocument();
@@ -145,4 +159,92 @@ test("共享题目只显示复制操作，复制后以待复核的可编辑副�
   expect(await screen.findByRole("dialog", { name: "编辑题目" })).toBeInTheDocument();
   fireEvent.click(screen.getByRole("button", { name: "保存题目" }));
   await waitFor(() => expect(teacherApi.updateQuestion).toHaveBeenCalledWith(copied.id, expect.objectContaining({ subjectId: "soil-mechanics", knowledgePointIds: ["soil-darcy"] })));
+});
+
+
+test("教材共享题目只能复制，复制的判断题 false 保持布尔载荷", async () => {
+  const textbook = canonicalQuestion({
+    id: "textbook-boolean", text: "土的渗透性是否受孔隙比影响？", questionType: "判断题", options: [], correctAnswer: false,
+    source: "textbook", editable: false,
+  });
+  const copied = canonicalQuestion({ ...textbook, id: "copied-boolean", source: "teacher-copy", createdBy: "teacher-user-1", status: "review_required", editable: true });
+  teacherApi.questions.mockResolvedValueOnce({ items: [textbook], total: 1 }).mockResolvedValueOnce({ items: [textbook, copied], total: 2 });
+  teacherApi.copyQuestion.mockResolvedValueOnce(copied);
+  teacherApi.updateQuestion.mockResolvedValueOnce(copied);
+  renderTeacher(vi.fn(), "/teacher/question-bank");
+  const row = (await screen.findByText(textbook.text)).closest("tr");
+  expect(within(row).getByRole("button", { name: "复制到我的题库" })).toBeInTheDocument();
+  expect(within(row).queryByRole("button", { name: "编辑" })).not.toBeInTheDocument();
+  expect(within(row).queryByRole("button", { name: /删除题目/ })).not.toBeInTheDocument();
+  fireEvent.click(within(row).getByRole("button", { name: "复制到我的题库" }));
+  expect(await screen.findByRole("dialog", { name: "编辑题目" })).toBeInTheDocument();
+  expect(screen.getByLabelText("标准答案")).toHaveValue("false");
+  fireEvent.click(screen.getByRole("button", { name: "保存题目" }));
+  await waitFor(() => expect(teacherApi.updateQuestion).toHaveBeenCalledWith(copied.id, {
+    text: copied.text, questionType: "判断题", difficulty: copied.difficulty, points: copied.points, chapter: copied.chapter,
+    correctAnswer: false, explanation: copied.explanation, options: copied.options, rubric: copied.rubric, attachments: copied.attachments,
+    gradingMode: copied.gradingMode, answerWordLimit: undefined, subjectId: copied.subjectId, knowledgePointIds: ["soil-darcy"],
+  }));
+});
+
+
+test("编辑多项选择题时以 JSON 数组保留所有正确选项", async () => {
+  const question = canonicalQuestion({
+    id: "multiple-choice", questionType: "多项选择题", options: [{ label: "A", text: "层流" }, { label: "B", text: "紊流" }, { label: "C", text: "稳定流" }], correctAnswer: ["A", "C"],
+  });
+  teacherApi.questions.mockResolvedValueOnce({ items: [question], total: 1 });
+  teacherApi.updateQuestion.mockResolvedValueOnce(question);
+  renderTeacher(vi.fn(), "/teacher/question-bank");
+  await screen.findByText(question.text);
+  fireEvent.click(screen.getByRole("button", { name: "编辑" }));
+  expect(screen.getByLabelText(/标准答案（JSON 字符串数组）/)).toHaveValue('["A","C"]');
+  fireEvent.click(screen.getByRole("button", { name: "保存题目" }));
+  await waitFor(() => expect(teacherApi.updateQuestion).toHaveBeenCalledWith(question.id, {
+    text: question.text, questionType: "多项选择题", difficulty: question.difficulty, points: question.points, chapter: question.chapter,
+    correctAnswer: ["A", "C"], explanation: question.explanation, options: question.options, rubric: question.rubric, attachments: question.attachments,
+    gradingMode: question.gradingMode, answerWordLimit: undefined, subjectId: question.subjectId, knowledgePointIds: ["soil-darcy"],
+  }));
+});
+
+
+test("编辑填空题时以 JSON 同义答案列表保留生产载荷", async () => {
+  const question = canonicalQuestion({ id: "fill-blank", questionType: "填空题", options: [], correctAnswer: ["太沙基", "Terzaghi"] });
+  teacherApi.questions.mockResolvedValueOnce({ items: [question], total: 1 });
+  teacherApi.updateQuestion.mockResolvedValueOnce(question);
+  renderTeacher(vi.fn(), "/teacher/question-bank");
+  await screen.findByText(question.text);
+  fireEvent.click(screen.getByRole("button", { name: "编辑" }));
+  expect(screen.getByLabelText(/标准答案（JSON 同义答案数组）/)).toHaveValue('["太沙基","Terzaghi"]');
+  fireEvent.click(screen.getByRole("button", { name: "保存题目" }));
+  await waitFor(() => expect(teacherApi.updateQuestion).toHaveBeenCalledWith(question.id, {
+    text: question.text, questionType: "填空题", difficulty: question.difficulty, points: question.points, chapter: question.chapter,
+    correctAnswer: ["太沙基", "Terzaghi"], explanation: question.explanation, options: question.options, rubric: question.rubric, attachments: question.attachments,
+    gradingMode: question.gradingMode, answerWordLimit: undefined, subjectId: question.subjectId, knowledgePointIds: ["soil-darcy"],
+  }));
+});
+
+
+test("多项选择题的无效 JSON 在前端提示且不提交", async () => {
+  const question = canonicalQuestion({ id: "invalid-json", questionType: "多项选择题", correctAnswer: ["A"] });
+  teacherApi.questions.mockResolvedValueOnce({ items: [question], total: 1 });
+  renderTeacher(vi.fn(), "/teacher/question-bank");
+  await screen.findByText(question.text);
+  fireEvent.click(screen.getByRole("button", { name: "编辑" }));
+  fireEvent.change(screen.getByLabelText(/标准答案（JSON 字符串数组）/), { target: { value: "A, B" } });
+  fireEvent.click(screen.getByRole("button", { name: "保存题目" }));
+  expect(await screen.findByText("多项选择题答案必须是 JSON 字符串数组")).toBeInTheDocument();
+  expect(teacherApi.updateQuestion).not.toHaveBeenCalled();
+});
+
+
+test("填空题的非字符串 JSON 列表在前端提示且不提交", async () => {
+  const question = canonicalQuestion({ id: "invalid-fill", questionType: "填空题", options: [], correctAnswer: ["太沙基"] });
+  teacherApi.questions.mockResolvedValueOnce({ items: [question], total: 1 });
+  renderTeacher(vi.fn(), "/teacher/question-bank");
+  await screen.findByText(question.text);
+  fireEvent.click(screen.getByRole("button", { name: "编辑" }));
+  fireEvent.change(screen.getByLabelText(/标准答案（JSON 同义答案数组）/), { target: { value: '["太沙基", 1]' } });
+  fireEvent.click(screen.getByRole("button", { name: "保存题目" }));
+  expect(await screen.findByText("填空题答案必须是 JSON 同义答案数组")).toBeInTheDocument();
+  expect(teacherApi.updateQuestion).not.toHaveBeenCalled();
 });

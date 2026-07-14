@@ -64,6 +64,37 @@ function questionKnowledgePointNames(item) {
 }
 
 
+function answerDisplayValue(questionType, correctAnswer) {
+  if (questionType === "判断题") return correctAnswer === true ? "true" : "false";
+  if (questionType === "多项选择题" || questionType === "填空题") return JSON.stringify(Array.isArray(correctAnswer) ? correctAnswer : []);
+  return typeof correctAnswer === "string" ? correctAnswer : "";
+}
+
+
+function parseStringAnswerList(value, errorMessage) {
+  try {
+    const parsed = JSON.parse(value);
+    if (Array.isArray(parsed) && parsed.length && parsed.every((item) => typeof item === "string" && item.trim())) return parsed;
+  } catch {
+    // The caller receives the same concise validation error for invalid JSON and invalid shapes.
+  }
+  throw new Error(errorMessage);
+}
+
+
+function parseCorrectAnswer(questionType, value, existingAnswer) {
+  if (questionType === "判断题") {
+    if (value === "true") return true;
+    if (value === "false") return false;
+    throw new Error("判断题答案必须为真或假");
+  }
+  if (questionType === "多项选择题") return parseStringAnswerList(value, "多项选择题答案必须是 JSON 字符串数组");
+  if (questionType === "填空题") return parseStringAnswerList(value, "填空题答案必须是 JSON 同义答案数组");
+  if ((questionType === "简答题" || questionType === "计算题") && existingAnswer === null) return null;
+  return value;
+}
+
+
 export default function TeacherApp() {
   const { user, logout } = useAuth();
   const location = useLocation();
@@ -172,7 +203,7 @@ function QuestionsView({ data, loading, error, retry, open, notify, refresh }) {
       notify(reason.message || "复制题目失败", "error");
     }
   };
-  return <ViewState loading={loading} error={error} retry={retry}><PageHeading eyebrow="教学内容" title="题库管理" description="教材题目只读，自建题目可编辑和用于作业。" actions={<><button className="portalSecondary" onClick={() => open({ type: "question-import" })}><FilePlus2 size={17} />批量导入</button><button className="portalPrimary" onClick={() => open({ type: "question" })}><Plus size={17} />新建题目</button></>} /><Panel title="课程题库" description={`共 ${data?.total || 0} 道题`} actions={<SearchField value={query} onChange={setQuery} placeholder="搜索题干或知识点" />}><DataTable rows={rows} columns={[{ key: "text", label: "题目", render: (row) => <div className="portalQuestionCell"><strong>{row.text}</strong><span>{row.chapter || "未关联章节"} · {questionKnowledgePointNames(row) || "未标注知识点"}</span></div> }, { key: "questionType", label: "题型" }, { key: "difficulty", label: "难度" }, { key: "points", label: "分值" }, { key: "source", label: "来源", render: (row) => row.source === "textbook" ? "教材题库" : row.source === "imported" ? "共享题库" : row.source === "teacher-import" ? "批量导入" : "教师自建" }, { key: "actions", label: "操作", render: (row) => row.editable ? <div className="portalRowActions"><button className="portalTextButton" onClick={() => open({ type: "question", item: row })}>编辑</button><button className="portalIconDanger" onClick={() => remove(row)} aria-label={`删除题目 ${row.text}`}><Trash2 size={16} /></button></div> : row.source !== "textbook" ? <button className="portalTextButton" onClick={() => copy(row)}>复制到我的题库</button> : "只读" }]} empty="题库中暂无题目" /></Panel></ViewState>;
+  return <ViewState loading={loading} error={error} retry={retry}><PageHeading eyebrow="教学内容" title="题库管理" description="教材题目只读，自建题目可编辑和用于作业。" actions={<><button className="portalSecondary" onClick={() => open({ type: "question-import" })}><FilePlus2 size={17} />批量导入</button><button className="portalPrimary" onClick={() => open({ type: "question" })}><Plus size={17} />新建题目</button></>} /><Panel title="课程题库" description={`共 ${data?.total || 0} 道题`} actions={<SearchField value={query} onChange={setQuery} placeholder="搜索题干或知识点" />}><DataTable rows={rows} columns={[{ key: "text", label: "题目", render: (row) => <div className="portalQuestionCell"><strong>{row.text}</strong><span>{row.chapter || "未关联章节"} · {questionKnowledgePointNames(row) || "未标注知识点"}</span></div> }, { key: "questionType", label: "题型" }, { key: "difficulty", label: "难度" }, { key: "points", label: "分值" }, { key: "source", label: "来源", render: (row) => row.source === "textbook" ? "教材题库" : row.source === "imported" ? "共享题库" : row.source === "teacher-import" ? "批量导入" : "教师自建" }, { key: "actions", label: "操作", render: (row) => row.editable ? <div className="portalRowActions"><button className="portalTextButton" onClick={() => open({ type: "question", item: row })}>编辑</button><button className="portalIconDanger" onClick={() => remove(row)} aria-label={`删除题目 ${row.text}`}><Trash2 size={16} /></button></div> : <button className="portalTextButton" onClick={() => copy(row)}>复制到我的题库</button> }]} empty="题库中暂无题目" /></Panel></ViewState>;
 }
 
 
@@ -204,11 +235,13 @@ function ResourceModal({ close, done }) {
 
 
 function QuestionModal({ close, done, item }) {
-  const [busy, setBusy] = useState(false); const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false); const [error, setError] = useState(""); const [questionType, setQuestionType] = useState(item?.questionType || "简答题");
   const canonical = Boolean(item?.subjectId && Array.isArray(item.knowledgePoints));
   const knowledgePointIds = canonical ? item.knowledgePoints.map((point) => point.id) : [];
-  const submit = async (event) => { event.preventDefault(); const form = new FormData(event.currentTarget); setBusy(true); try { const common = { text: form.get("text"), questionType: form.get("questionType"), difficulty: form.get("difficulty"), points: Number(form.get("points")), chapter: form.get("chapter"), correctAnswer: form.get("correctAnswer"), explanation: form.get("explanation"), options: item?.options || [], rubric: item?.rubric || [], attachments: item?.attachments || [], gradingMode: item?.gradingMode || "auto", answerWordLimit: item?.answerWordLimit ?? undefined }; const body = canonical ? { ...common, subjectId: item.subjectId, knowledgePointIds } : { ...common, knowledgePoint: form.get("knowledgePoint") }; if (item) await teacherApi.updateQuestion(item.id, body); else await teacherApi.createQuestion(body); done(); } catch (reason) { setError(reason.message); setBusy(false); } };
-  return <Modal title={item ? "编辑题目" : "新建题目"} onClose={close} wide><form className="portalForm" onSubmit={submit}><Field label="题干"><textarea name="text" rows="4" defaultValue={item?.text || ""} required /></Field><div className="portalFormGrid"><Field label="题型"><select name="questionType" defaultValue={item?.questionType || "简答题"}><option>简答题</option><option>单项选择题</option><option>多项选择题</option><option>判断题</option><option>填空题</option><option>计算题</option></select></Field><Field label="难度"><select name="difficulty" defaultValue={item?.difficulty || "基础"}><option>基础</option><option>中等</option><option>困难</option></select></Field><Field label="分值"><input name="points" type="number" min="1" defaultValue={item?.points || 10} required /></Field><Field label="章节"><input name="chapter" defaultValue={item?.chapter || ""} placeholder="第3章 桩基础" /></Field></div>{canonical ? <Field label="关联知识点"><span>{questionKnowledgePointNames(item)}</span></Field> : <Field label="基础工程知识点"><input name="knowledgePoint" defaultValue={item?.knowledgePoint || ""} /></Field>}<Field label="标准答案"><textarea name="correctAnswer" rows="3" defaultValue={typeof item?.correctAnswer === "string" ? item.correctAnswer : ""} /></Field><Field label="答案解析"><textarea name="explanation" rows="3" defaultValue={item?.explanation || ""} /></Field>{error && <p className="portalFormError">{error}</p>}<div className="portalFormActions"><button type="button" onClick={close}>取消</button><button className="portalPrimary" disabled={busy}>保存题目</button></div></form></Modal>;
+  const answerValue = answerDisplayValue(questionType, item?.correctAnswer);
+  const submit = async (event) => { event.preventDefault(); const form = new FormData(event.currentTarget); let correctAnswer; try { correctAnswer = parseCorrectAnswer(questionType, form.get("correctAnswer"), item?.correctAnswer); } catch (reason) { setError(reason.message); return; } setBusy(true); setError(""); try { const common = { text: form.get("text"), questionType, difficulty: form.get("difficulty"), points: Number(form.get("points")), chapter: form.get("chapter"), correctAnswer, explanation: form.get("explanation"), options: item?.options || [], rubric: item?.rubric || [], attachments: item?.attachments || [], gradingMode: item?.gradingMode || "auto", answerWordLimit: item?.answerWordLimit ?? undefined }; const body = canonical ? { ...common, subjectId: item.subjectId, knowledgePointIds } : { ...common, knowledgePoint: form.get("knowledgePoint") }; if (item) await teacherApi.updateQuestion(item.id, body); else await teacherApi.createQuestion(body); done(); } catch (reason) { setError(reason.message); setBusy(false); } };
+  const answerField = questionType === "判断题" ? <Field label="标准答案"><select name="correctAnswer" defaultValue={answerValue}><option value="true">真</option><option value="false">假</option></select></Field> : questionType === "多项选择题" ? <Field label="标准答案（JSON 字符串数组）" hint='例如：["A","C"]'><textarea key={questionType} name="correctAnswer" rows="3" defaultValue={answerValue} /></Field> : questionType === "填空题" ? <Field label="标准答案（JSON 同义答案数组）" hint='例如：["太沙基","Terzaghi"]'><textarea key={questionType} name="correctAnswer" rows="3" defaultValue={answerValue} /></Field> : <Field label="标准答案"><textarea key={questionType} name="correctAnswer" rows="3" defaultValue={answerValue} /></Field>;
+  return <Modal title={item ? "编辑题目" : "新建题目"} onClose={close} wide><form className="portalForm" onSubmit={submit}><Field label="题干"><textarea name="text" rows="4" defaultValue={item?.text || ""} required /></Field><div className="portalFormGrid"><Field label="题型"><select name="questionType" value={questionType} onChange={(event) => setQuestionType(event.target.value)}><option>简答题</option><option>单项选择题</option><option>多项选择题</option><option>判断题</option><option>填空题</option><option>计算题</option></select></Field><Field label="难度"><select name="difficulty" defaultValue={item?.difficulty || "基础"}><option>基础</option><option>中等</option><option>困难</option></select></Field><Field label="分值"><input name="points" type="number" min="1" defaultValue={item?.points || 10} required /></Field><Field label="章节"><input name="chapter" defaultValue={item?.chapter || ""} placeholder="第3章 桩基础" /></Field></div>{canonical ? <Field label="关联知识点"><span>{questionKnowledgePointNames(item)}</span></Field> : <Field label="基础工程知识点"><input name="knowledgePoint" defaultValue={item?.knowledgePoint || ""} /></Field>}{answerField}<Field label="答案解析"><textarea name="explanation" rows="3" defaultValue={item?.explanation || ""} /></Field>{error && <p className="portalFormError">{error}</p>}<div className="portalFormActions"><button type="button" onClick={close}>取消</button><button className="portalPrimary" disabled={busy}>保存题目</button></div></form></Modal>;
 }
 
 
