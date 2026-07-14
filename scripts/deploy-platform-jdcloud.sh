@@ -29,44 +29,14 @@ rsync -az --delete -e "${RSYNC_RSH}" dist/ "${SSH_HOST}:${WEB_RELEASE}/"
 
 ssh "${SSH_OPTIONS[@]}" "${SSH_HOST}" "bash -s" <<EOF
 set -Eeuo pipefail
-SOURCE_RELEASE='${SOURCE_RELEASE}'
-SOURCE_BASE='${SOURCE_BASE}'
-WEB_RELEASE='${WEB_RELEASE}'
-WEB_BASE='${WEB_BASE}'
-KEEP_RELEASES='${KEEP_RELEASES}'
-
-python3 -m venv "\${SOURCE_RELEASE}/server/.venv"
-"\${SOURCE_RELEASE}/server/.venv/bin/pip" install --disable-pip-version-check -q --timeout 60 -i '${PIP_INDEX_URL}' -r "\${SOURCE_RELEASE}/server/requirements.txt"
-
-set -a
-source /etc/foundation-smart-companion.env
-set +a
-cd "\${SOURCE_RELEASE}"
-"\${SOURCE_RELEASE}/server/.venv/bin/python" -m server.manage migrate
-"\${SOURCE_RELEASE}/server/.venv/bin/python" -m server.manage import-question-bank "\${SOURCE_RELEASE}/content/question-banks/soil-mechanics/manifest.json"
-if [[ -f /var/lib/foundation-smart-companion/app.db ]]; then
-  "\${SOURCE_RELEASE}/server/.venv/bin/python" -m server.manage import-legacy /var/lib/foundation-smart-companion/app.db
-fi
-"\${SOURCE_RELEASE}/server/.venv/bin/python" -c 'from server.app import app; assert app.title'
-
-if [[ -d /opt/foundation-smart-companion && ! -L /opt/foundation-smart-companion ]]; then
-  mv /opt/foundation-smart-companion "/opt/foundation-smart-companion-legacy-${RELEASE_ID}"
-fi
-ln -sfn "\${SOURCE_RELEASE}" /opt/foundation-smart-companion.next
-mv -Tf /opt/foundation-smart-companion.next /opt/foundation-smart-companion
-
-ln -sfn "\${WEB_RELEASE}" "\${WEB_BASE}/current.next"
-mv -Tf "\${WEB_BASE}/current.next" "\${WEB_BASE}/current"
-ln -sfn "\${WEB_BASE}/current" /var/www/foundation-smart-companion.next
-mv -Tf /var/www/foundation-smart-companion.next /var/www/foundation-smart-companion
-
-systemctl daemon-reload
-systemctl restart foundation-smart-companion-api.service
-nginx -t
-systemctl reload nginx
-
-find "\${SOURCE_BASE}/releases" -mindepth 1 -maxdepth 1 -type d | sort -r | tail -n +\$((KEEP_RELEASES + 1)) | xargs -r rm -rf
-find "\${WEB_BASE}/releases" -mindepth 1 -maxdepth 1 -type d | sort -r | tail -n +\$((KEEP_RELEASES + 1)) | xargs -r rm -rf
+export SOURCE_RELEASE='${SOURCE_RELEASE}'
+export SOURCE_BASE='${SOURCE_BASE}'
+export WEB_RELEASE='${WEB_RELEASE}'
+export WEB_BASE='${WEB_BASE}'
+export KEEP_RELEASES='${KEEP_RELEASES}'
+export PIP_INDEX_URL='${PIP_INDEX_URL}'
+export RELEASE_ID='${RELEASE_ID}'
+source "\${SOURCE_RELEASE}/scripts/lib/deploy-platform-activate.sh"
 EOF
 
 wait_for_http "http://111.228.5.243/${APP_NAME}/api/health" 30 1

@@ -32,38 +32,74 @@ curl() {
 
 verify_page_contains "http://example.test/login" "《基础工程》智慧学伴"
 
-deploy_script="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/deploy-platform-jdcloud.sh"
-migration_line=$(rg -n 'server\.manage migrate' "${deploy_script}" | head -n 1 | cut -d: -f1)
-import_line=$(rg -n 'server\.manage import-question-bank' "${deploy_script}" | head -n 1 | cut -d: -f1)
-source_switch_line=$(rg -n 'mv -Tf /opt/foundation-smart-companion\.next /opt/foundation-smart-companion' "${deploy_script}" | head -n 1 | cut -d: -f1)
-restart_line=$(rg -n 'systemctl restart foundation-smart-companion-api\.service' "${deploy_script}" | head -n 1 | cut -d: -f1)
-nginx_reload_line=$(rg -n 'systemctl reload nginx' "${deploy_script}" | head -n 1 | cut -d: -f1)
+scripts_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+deploy_script="${scripts_dir}/deploy-platform-jdcloud.sh"
+activation_script="${scripts_dir}/lib/deploy-platform-activate.sh"
+rg -q 'source "\\?\$\{SOURCE_RELEASE\}/scripts/lib/deploy-platform-activate\.sh"' "${deploy_script}"
+migration_line=$(rg -n 'server\.manage migrate' "${activation_script}" | head -n 1 | cut -d: -f1)
+import_line=$(rg -n 'server\.manage import-question-bank' "${activation_script}" | head -n 1 | cut -d: -f1)
+source_switch_line=$(rg -n 'mv -Tf /opt/foundation-smart-companion\.next /opt/foundation-smart-companion' "${activation_script}" | head -n 1 | cut -d: -f1)
+restart_line=$(rg -n 'systemctl restart foundation-smart-companion-api\.service' "${activation_script}" | head -n 1 | cut -d: -f1)
+nginx_reload_line=$(rg -n 'systemctl reload nginx' "${activation_script}" | head -n 1 | cut -d: -f1)
 [[ -n "${migration_line}" && -n "${import_line}" && -n "${source_switch_line}" && -n "${restart_line}" && -n "${nginx_reload_line}" ]]
 [[ "${migration_line}" -lt "${import_line}" ]]
 pointer_count=0
 while IFS=: read -r pointer_line _; do
   pointer_count=$((pointer_count + 1))
   [[ "${import_line}" -lt "${pointer_line}" ]]
-done < <(rg -n 'ln -sfn .*\.next|mv -Tf .*\.next' "${deploy_script}")
+done < <(rg -n 'ln -sfn .*\.next|mv -Tf .*\.next' "${activation_script}")
 [[ "${pointer_count}" -eq 6 ]]
 [[ "${import_line}" -lt "${restart_line}" && "${import_line}" -lt "${nginx_reload_line}" ]]
 
-actions_file="$(mktemp)"
-record_action() { printf '%s\n' "$1" >> "${actions_file}"; }
-run_import() { return 17; }
-simulate_release_activation() {
-  set -Eeuo pipefail
-  run_import || return $?
-  record_action source_pointer
-  record_action web_pointer
-  record_action api_restart
-  record_action nginx_reload
-}
-if (simulate_release_activation); then
-  echo "expected import failure to stop release activation" >&2
+activation_root="$(mktemp -d)"
+actions_file="${activation_root}/actions.log"
+source_release="${activation_root}/source-release"
+web_release="${activation_root}/web-release"
+source_base="${activation_root}/source-base"
+web_base="${activation_root}/web-base"
+stub_bin="${activation_root}/bin"
+env_file="${activation_root}/foundation.env"
+mkdir -p "${source_release}/server/.venv/bin" "${source_release}/content/question-banks/soil-mechanics" "${source_release}/scripts/lib" "${web_release}" "${source_base}/releases" "${web_base}/releases" "${stub_bin}"
+cp "${activation_script}" "${source_release}/scripts/lib/deploy-platform-activate.sh"
+printf 'FOUNDATION_DATABASE_URL=sqlite:///%s/test.db\n' "${activation_root}" > "${env_file}"
+
+cat > "${source_release}/server/.venv/bin/python" <<'EOF'
+#!/usr/bin/env bash
+printf 'python %s\n' "$*" >> "${ACTIVATION_ACTIONS_FILE}"
+if [[ "$*" == "-m server.manage import-question-bank "* ]]; then
+  exit 47
+fi
+exit 0
+EOF
+cat > "${source_release}/server/.venv/bin/pip" <<'EOF'
+#!/usr/bin/env bash
+printf 'pip %s\n' "$*" >> "${ACTIVATION_ACTIONS_FILE}"
+EOF
+cat > "${stub_bin}/python3" <<'EOF'
+#!/usr/bin/env bash
+printf 'python3 %s\n' "$*" >> "${ACTIVATION_ACTIONS_FILE}"
+EOF
+for command in ln mv systemctl nginx find; do
+  cat > "${stub_bin}/${command}" <<EOF
+#!/usr/bin/env bash
+printf '${command} %s\\n' "\$*" >> "\${ACTIVATION_ACTIONS_FILE}"
+EOF
+  chmod +x "${stub_bin}/${command}"
+done
+chmod +x "${source_release}/server/.venv/bin/python" "${source_release}/server/.venv/bin/pip" "${stub_bin}/python3"
+
+if PATH="${stub_bin}:${PATH}" ACTIVATION_ACTIONS_FILE="${actions_file}" FOUNDATION_ENV_FILE="${env_file}" SOURCE_RELEASE="${source_release}" SOURCE_BASE="${source_base}" WEB_RELEASE="${web_release}" WEB_BASE="${web_base}" KEEP_RELEASES=5 RELEASE_ID=test-release bash "${source_release}/scripts/lib/deploy-platform-activate.sh"; then
+  echo "expected import failure to stop production activation script" >&2
   exit 1
 fi
-[[ ! -s "${actions_file}" ]]
-rm -f "${actions_file}"
+rg -q --fixed-strings "python -m server.manage migrate" "${actions_file}"
+rg -q --fixed-strings "python -m server.manage import-question-bank ${source_release}/content/question-banks/soil-mechanics/manifest.json" "${actions_file}"
+[[ "$(wc -l < "${actions_file}")" -eq 4 ]]
+if rg -q '^(ln|mv|systemctl|nginx|find) ' "${actions_file}"; then
+  echo "activation continued after import failure" >&2
+  cat "${actions_file}" >&2
+  exit 1
+fi
+rm -rf "${activation_root}"
 
 echo "deploy-utils tests passed"
