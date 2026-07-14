@@ -116,7 +116,11 @@ def test_teacher_manages_question_and_assignment_for_own_student(teacher_context
         headers={"X-CSRF-Token": "teacher-csrf"},
     )
     assert question.status_code == 200
-    question_id = question.json()["data"]["id"]
+    question_data = question.json()["data"]
+    assert question_data["subjectId"] == "foundation-engineering"
+    assert len(question_data["knowledgePoints"]) == 1
+    assert question_data["status"] == "active"
+    question_id = question_data["id"]
     assignment = client.post(
         "/api/teacher/assignments",
         json={"title": "桩基础练习", "description": "完成简答题", "studentIds": ["student-1"], "questionIds": [question_id], "totalPoints": 10, "allowResubmit": False, "autoGrade": False, "status": "published"},

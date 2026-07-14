@@ -26,10 +26,11 @@ from ..models import (
     TeacherStudentBinding,
     User,
 )
-from ..schemas.teacher import AssignmentInput, GradeInput, NoticeInput, QuestionImportInput, QuestionInput
+from ..schemas.teacher import AssignmentInput, GradeInput, NoticeInput, QuestionImportInput
 from ..services.audit import add_log
 from ..services.storage import chunk_text, extract_text, save_upload
 from ..services.question_imports import build_question_import_template, parse_question_import
+from ..services.question_service import create_question
 from .auth import client_ip
 from .dependencies import AuthContext, require_teacher
 
@@ -252,21 +253,6 @@ def delete_resource(resource_id: str, request: Request, auth: AuthContext = Depe
     return request.app.state.success(request, {})
 
 
-@router.get("/questions")
-def questions(request: Request, search: str = "", chapter: str | None = None, questionType: str | None = None, auth: AuthContext = Depends(require_teacher)):
-    with request.app.state.database.session() as session:
-        filters = [or_(Question.created_by == auth.user.id, Question.source == "textbook")]
-        if search:
-            filters.append(Question.text.like(f"%{search}%"))
-        if chapter:
-            filters.append(Question.chapter == chapter)
-        if questionType:
-            filters.append(Question.question_type == questionType)
-        records = session.scalars(select(Question).where(*filters).order_by(Question.created_at.desc())).all()
-        items = [question_payload(item) for item in records]
-    return request.app.state.success(request, {"items": items, "total": len(items)})
-
-
 @router.get("/question-import-template")
 def question_import_template(_auth: AuthContext = Depends(require_teacher)):
     return Response(
@@ -301,69 +287,11 @@ def import_questions(body: QuestionImportInput, request: Request, auth: AuthCont
         if existing:
             raise APIError(409, f"已有相同题目：{existing[0]}", "QUESTION_ALREADY_EXISTS")
         for item in body.rows:
-            question = Question(
-                id=str(uuid4()), text=item.text.strip(), question_type=item.questionType,
-                options=item.options, correct_answer=item.correctAnswer, explanation=item.explanation,
-                rubric=item.rubric, difficulty=item.difficulty, points=item.points,
-                chapter=item.chapter, knowledge_point=item.knowledgePoint,
-                source="teacher-import", created_by=auth.user.id,
-            )
-            session.add(question)
+            question = create_question(item.model_dump(by_alias=True), session, auth.user.id, source="teacher-import")
             created_ids.append(question.id)
         add_log(session, auth.user.id, "question.import", "question", None, {"count": len(created_ids)}, client_ip(request))
         session.commit()
     return request.app.state.success(request, {"created": len(created_ids), "ids": created_ids}, "题库导入成功")
-
-
-def question_payload(item: Question) -> dict:
-    return {"id": item.id, "text": item.text, "questionType": item.question_type, "options": item.options, "correctAnswer": item.correct_answer, "explanation": item.explanation, "rubric": item.rubric, "difficulty": item.difficulty, "points": item.points, "chapter": item.chapter, "knowledgePoint": item.knowledge_point, "source": item.source}
-
-
-@router.post("/questions")
-def create_question(body: QuestionInput, request: Request, auth: AuthContext = Depends(require_teacher)):
-    question = Question(
-        id=str(uuid4()), text=body.text, question_type=body.questionType, options=body.options,
-        correct_answer=body.correctAnswer, explanation=body.explanation, rubric=body.rubric,
-        difficulty=body.difficulty, points=body.points, chapter=body.chapter,
-        knowledge_point=body.knowledgePoint, source="teacher", created_by=auth.user.id,
-    )
-    with request.app.state.database.session() as session:
-        session.add(question)
-        add_log(session, auth.user.id, "question.create", "question", question.id, {"chapter": question.chapter}, client_ip(request))
-        session.commit()
-    return request.app.state.success(request, question_payload(question), "题目创建成功")
-
-
-@router.put("/questions/{question_id}")
-def update_question(question_id: str, body: QuestionInput, request: Request, auth: AuthContext = Depends(require_teacher)):
-    with request.app.state.database.session() as session:
-        question = session.get(Question, question_id)
-        if not question or question.created_by != auth.user.id:
-            raise APIError(404, "题目不存在或不可编辑", "QUESTION_NOT_FOUND")
-        values = {
-            "text": body.text, "question_type": body.questionType, "options": body.options,
-            "correct_answer": body.correctAnswer, "explanation": body.explanation, "rubric": body.rubric,
-            "difficulty": body.difficulty, "points": body.points, "chapter": body.chapter,
-            "knowledge_point": body.knowledgePoint,
-        }
-        for key, value in values.items():
-            setattr(question, key, value)
-        add_log(session, auth.user.id, "question.update", "question", question.id, {}, client_ip(request))
-        session.commit()
-        payload = question_payload(question)
-    return request.app.state.success(request, payload)
-
-
-@router.delete("/questions/{question_id}")
-def delete_question(question_id: str, request: Request, auth: AuthContext = Depends(require_teacher)):
-    with request.app.state.database.session() as session:
-        question = session.get(Question, question_id)
-        if not question or question.created_by != auth.user.id:
-            raise APIError(404, "题目不存在或不可删除", "QUESTION_NOT_FOUND")
-        session.delete(question)
-        add_log(session, auth.user.id, "question.delete", "question", question_id, {}, client_ip(request))
-        session.commit()
-    return request.app.state.success(request, {})
 
 
 @router.get("/assignments")

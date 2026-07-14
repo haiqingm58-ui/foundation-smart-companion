@@ -21,6 +21,8 @@ class QuestionInput(TeacherModel):
     points: float = Field(default=10, gt=0, le=1000)
     chapter: str | None = Field(default=None, max_length=120)
     knowledgePoint: str | None = Field(default=None, max_length=160)
+    answerWordLimit: int | None = Field(default=None, ge=20, le=2000)
+    gradingMode: str = Field(default="auto", pattern="^(auto|manual)$")
 
 
 class QuestionImportInput(TeacherModel):
