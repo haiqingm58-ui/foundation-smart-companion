@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { vi } from "vitest";
 import { AuthContext } from "../../stores/AuthContext.jsx";
@@ -17,16 +17,16 @@ vi.mock("../../api/teacher.js", () => ({
     submissions: vi.fn(async () => ({ items: [], total: 0 })),
     analytics: vi.fn(async () => ({ studentTotal: 2, averageScore: 78, averageProgress: 45, weakKnowledgePoints: [], scoreTrend: [] })),
     notices: vi.fn(async () => ({ items: [], total: 0 })),
-    uploadResource: vi.fn(), createQuestion: vi.fn(), deleteQuestion: vi.fn(), createAssignment: vi.fn(), gradeSubmission: vi.fn(), createNotice: vi.fn(),
+    uploadResource: vi.fn(), createQuestion: vi.fn(), updateQuestion: vi.fn(), deleteQuestion: vi.fn(), copyQuestion: vi.fn(), createAssignment: vi.fn(), gradeSubmission: vi.fn(), createNotice: vi.fn(),
     previewQuestionImport: vi.fn(), importQuestions: vi.fn(), questionImportTemplateUrl: vi.fn(() => "/api/template.xlsx"),
   },
 }));
 
 
-function renderTeacher(logout = vi.fn()) {
+function renderTeacher(logout = vi.fn(), initialEntry = "/teacher") {
   return render(
     <AuthContext.Provider value={{ user: { name: "周老师", role: "teacher", college: "土木工程学院" }, logout }}>
-      <MemoryRouter initialEntries={["/teacher"]}><TeacherApp /></MemoryRouter>
+      <MemoryRouter initialEntries={[initialEntry]}><TeacherApp /></MemoryRouter>
     </AuthContext.Provider>,
   );
 }
@@ -95,4 +95,54 @@ test("干净的题库预检结果可以确认入库", async () => {
   fireEvent.click(next);
   fireEvent.click(screen.getByRole("button", { name: "确认入库" }));
   await waitFor(() => expect(teacherApi.importQuestions).toHaveBeenCalledWith([row]));
+});
+
+
+test("编辑土力学题目时保留 canonical subjectId 和全部知识点 ID", async () => {
+  const soilQuestion = {
+    id: "soil-question", text: "达西定律适用于何种流态？", subjectId: "soil-mechanics", chapter: "第二章 土的渗透性",
+    knowledgePoints: [{ id: "soil-darcy", name: "达西定律", weight: 0.5 }, { id: "soil-permeability", name: "土的渗透性", weight: 0.5 }],
+    questionType: "单项选择题", difficulty: "中等", points: 10,
+    options: [{ label: "A", text: "层流" }, { label: "B", text: "紊流" }], correctAnswer: "A",
+    explanation: "考查适用条件", rubric: [], attachments: [], gradingMode: "auto", status: "active", editable: true,
+  };
+  teacherApi.questions.mockResolvedValueOnce({ items: [soilQuestion], total: 1 });
+  teacherApi.updateQuestion.mockResolvedValueOnce(soilQuestion);
+  renderTeacher(vi.fn(), "/teacher/question-bank");
+  await screen.findByText(soilQuestion.text);
+  fireEvent.click(screen.getByRole("button", { name: "编辑" }));
+  fireEvent.click(screen.getByRole("button", { name: "保存题目" }));
+  await waitFor(() => expect(teacherApi.updateQuestion).toHaveBeenCalledWith(
+    soilQuestion.id,
+    expect.objectContaining({ subjectId: "soil-mechanics", knowledgePointIds: ["soil-darcy", "soil-permeability"] }),
+  ));
+  expect(teacherApi.updateQuestion.mock.calls[0][1]).not.toHaveProperty("knowledgePoint");
+});
+
+
+test("共享题目只显示复制操作，复制后以待复核的可编辑副本打开", async () => {
+  const shared = {
+    id: "shared-import", text: "共享导入题", subjectId: "soil-mechanics", chapter: "第二章 土的渗透性",
+    knowledgePoints: [{ id: "soil-darcy", name: "达西定律", weight: 1 }], questionType: "判断题", difficulty: "基础", points: 5,
+    options: [], correctAnswer: true, rubric: [], attachments: [], gradingMode: "auto", source: "imported", status: "active", editable: false,
+  };
+  const owned = { ...shared, id: "owned-question", text: "教师自建题", source: "teacher", editable: true };
+  const copied = { ...shared, id: "copied-question", text: "共享导入题（副本）", source: "teacher-copy", createdBy: "teacher-user-1", status: "review_required", editable: true };
+  teacherApi.questions.mockResolvedValueOnce({ items: [shared, owned], total: 2 }).mockResolvedValueOnce({ items: [shared, owned, copied], total: 3 });
+  teacherApi.copyQuestion.mockResolvedValueOnce(copied);
+  teacherApi.updateQuestion.mockResolvedValueOnce(copied);
+  renderTeacher(vi.fn(), "/teacher/question-bank");
+  const sharedRow = (await screen.findByText(shared.text)).closest("tr");
+  const ownedRow = screen.getByText(owned.text).closest("tr");
+  expect(within(sharedRow).getByRole("button", { name: "复制到我的题库" })).toBeInTheDocument();
+  expect(within(sharedRow).queryByRole("button", { name: "编辑" })).not.toBeInTheDocument();
+  expect(within(sharedRow).queryByRole("button", { name: /删除题目/ })).not.toBeInTheDocument();
+  expect(within(ownedRow).getByRole("button", { name: "编辑" })).toBeInTheDocument();
+  expect(within(ownedRow).getByRole("button", { name: /删除题目/ })).toBeInTheDocument();
+  fireEvent.click(within(sharedRow).getByRole("button", { name: "复制到我的题库" }));
+  await waitFor(() => expect(teacherApi.copyQuestion).toHaveBeenCalledWith(shared.id));
+  expect(await screen.findByText("题目副本已创建，待复核")).toBeInTheDocument();
+  expect(await screen.findByRole("dialog", { name: "编辑题目" })).toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: "保存题目" }));
+  await waitFor(() => expect(teacherApi.updateQuestion).toHaveBeenCalledWith(copied.id, expect.objectContaining({ subjectId: "soil-mechanics", knowledgePointIds: ["soil-darcy"] })));
 });
