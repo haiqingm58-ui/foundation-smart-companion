@@ -71,3 +71,48 @@ Implementation commit: `c6518ea9c142232b5f9eeb18f1e83dde893803f7`
 ### Concerns
 
 No known functional blockers.
+
+## Frontend Integration Review
+
+### Status
+
+Complete. Canonical teacher question edits preserve their API subject and all linked knowledge points; shared rows are copy-only and copies open as editable `review_required` records.
+
+### Interfaces and Permissions
+
+- Existing canonical questions submit `subjectId` and `knowledgePointIds` only. The legacy singular `knowledgePoint` field remains available only for the explicitly labelled new foundation-engineering flow.
+- Question list display joins canonical knowledge-point names without changing the current layout.
+- `editable` controls edit/delete visibility. Read-only non-textbook shared questions offer `teacherApi.copyQuestion`; the returned teacher-owned copy is refreshed and selected for editing.
+
+### Tests
+
+Added TeacherApp component coverage for canonical multi-knowledge-point updates, read-only shared copy controls and review-required editable copies, and teacher-owned edit/delete controls.
+
+### Exact Outputs
+
+```text
+npm test -- src/pages/teacher/TeacherApp.test.jsx
+Test Files  1 passed (1)
+Tests  7 passed (7)
+
+server/.venv/bin/pytest server/tests/test_teacher_catalog.py server/tests/test_teacher.py -q
+24 passed in 3.97s
+
+npm test -- --run
+Test Files  6 passed (6)
+Tests  18 passed (18)
+
+npm run build
+vite build: built successfully
+Prerendered 8 routes with SEO metadata.
+```
+
+`git diff --check` completed successfully before the implementation commit.
+
+### SHA
+
+Implementation commit: `ec293a957bf778d7219d8cb5a53c9d5238ae0e81`
+
+### Concerns
+
+No known functional blockers. Task 9 remains responsible for replacing the read-only canonical knowledge-point display with a full multi-select editor.
