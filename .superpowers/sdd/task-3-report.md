@@ -116,3 +116,48 @@ Implementation commit: `ec293a957bf778d7219d8cb5a53c9d5238ae0e81`
 ### Concerns
 
 No known functional blockers. Task 9 remains responsible for replacing the read-only canonical knowledge-point display with a full multi-select editor.
+
+## Typed Answer UI Review
+
+### Status
+
+Complete. Every read-only shared question, including textbook rows, is copy-only. Canonical edits now preserve the boolean, multiple-choice, and fill-blank answer shapes required by the API.
+
+### Interfaces and Permissions
+
+- `editable` is the sole client-side decision for edit/delete versus copy. The server continues to omit private questions outside the teacher's visibility scope.
+- Judgment answers use an explicit true/false control and submit a boolean. Multiple-choice and fill-blank answers use labelled JSON string-array fields and submit arrays of strings.
+- Invalid JSON or non-string/empty array entries are rejected locally without calling the teacher API. Existing options, rubric, attachments, subject ID, knowledge-point IDs, grading mode, and answer word limit are retained on update.
+
+### Tests
+
+Added production-shape component tests for textbook copy-only rows, a copied false judgment answer, multiple-choice answer arrays, fill-blank synonym arrays, and invalid local JSON/format handling.
+
+### Exact Outputs
+
+```text
+npm test -- src/pages/teacher/TeacherApp.test.jsx
+Test Files  1 passed (1)
+Tests  12 passed (12)
+
+server/.venv/bin/pytest server/tests/test_teacher_catalog.py server/tests/test_teacher.py -q
+24 passed in 3.94s
+
+npm test -- --run
+Test Files  6 passed (6)
+Tests  23 passed (23)
+
+npm run build
+vite build: built successfully
+Prerendered 8 routes with SEO metadata.
+```
+
+`git diff --check` completed successfully before the implementation commit.
+
+### SHA
+
+Implementation commit: `7f32675ce4883810312c3673f33e162225f442d8`
+
+### Concerns
+
+No known functional blockers. Task 9 remains responsible for the full canonical knowledge-point multi-select editor and richer answer-authoring controls.
