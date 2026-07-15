@@ -3,7 +3,11 @@ from __future__ import annotations
 from copy import deepcopy
 from uuid import uuid4
 
-from fastapi import APIRouter, Depends, Request
+from typing import Literal
+from urllib.parse import quote
+
+from fastapi import APIRouter, Depends, Query, Request
+from fastapi.responses import Response
 from sqlalchemy import delete, or_, select
 from sqlalchemy.orm import selectinload
 
@@ -27,6 +31,7 @@ from ..schemas.paper import (
 )
 from ..services.audit import add_log
 from ..services.paper_assembly import assemble_paper
+from ..services.paper_export import ExportOptions, render_paper
 from .auth import client_ip
 from .dependencies import AuthContext, require_teacher
 from .teacher import teacher_for
@@ -250,6 +255,37 @@ def get_paper(
         paper = _owned_paper(session, paper_id, auth.user.id)
         payload = _paper_payload(paper)
     return request.app.state.success(request, payload)
+
+
+@router.get("/{paper_id}/export")
+def export_paper(
+    paper_id: str,
+    request: Request,
+    format: Literal["docx", "pdf"] = Query("docx"),
+    variant: Literal["questions", "answer-sheet", "answers"] = Query("questions"),
+    auth: AuthContext = Depends(require_teacher),
+):
+    media_types = {
+        "docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "pdf": "application/pdf",
+    }
+    suffixes = {"questions": "试题", "answer-sheet": "答题卡", "answers": "参考答案"}
+    with request.app.state.database.session() as session:
+        paper = _owned_paper(session, paper_id, auth.user.id)
+        content = render_paper(paper, variant, format, ExportOptions())
+        add_log(
+            session,
+            auth.user.id,
+            "paper.export",
+            "paper",
+            paper.id,
+            {"format": format, "variant": variant},
+            client_ip(request),
+        )
+        session.commit()
+        filename = f"{paper.title}-{suffixes[variant]}.{format}"
+    disposition = f"attachment; filename=paper-{variant}.{format}; filename*=UTF-8''{quote(filename)}"
+    return Response(content=content, media_type=media_types[format], headers={"Content-Disposition": disposition})
 
 
 @router.put("/{paper_id}")

@@ -1,0 +1,10 @@
+{
+  "title": "土力学单元测试",
+  "subject": "土力学",
+  "duration": "考试时间：90 分钟",
+  "total": "满分：30 分",
+  "sections": ["一、选择题", "二、综合题"],
+  "answer_heading": "参考答案",
+  "correct_answer": "正确答案：A",
+  "answer_sheet_heading": "答题卡"
+}
