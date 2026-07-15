@@ -344,7 +344,8 @@ def test_source_blocks_preserve_attachment_order_and_never_leak_answer_side(
     assert media_count(content, format) == (2 if variant == "answers" else 1)
     assert all(marker in text for marker in ("FORMULA_STEM", "TABLE_STEM", "IMAGE_STEM"))
     assert ordered_text.index("FORMULA_STEM") < ordered_text.index("TABLE_STEM") < ordered_text.index("IMAGE_STEM")
-    for marker in ("答案侧内容", "FORMULA_SECRET", "TABLE_SECRET", "IMAGE_SECRET"):
+    assert "答案侧内容" not in text
+    for marker in ("FORMULA_SECRET", "TABLE_SECRET", "IMAGE_SECRET"):
         assert (marker in text) is (variant == "answers")
     if variant == "answers":
         assert ordered_text.index("FORMULA_SECRET") < ordered_text.index("TABLE_SECRET") < ordered_text.index("IMAGE_SECRET")
@@ -388,6 +389,55 @@ def test_structured_answers_are_localized_without_losing_fields(format: str) -> 
     assert "正确答案：可接受答案：孔隙比、空隙比" in text
     assert "正确答案：12.5 cm3/s；容差：0.1" in text
     assert "False" not in text
+
+
+@pytest.mark.parametrize("format", ["docx", "pdf"])
+def test_normalized_answers_do_not_repeat_imported_answer_or_explanation_text(format: str) -> None:
+    from server.application.services.paper_export import ExportOptions, render_paper
+
+    answer_position = {"blockIndex": 20, "paragraphIndex": 20}
+    explanation_position = {"blockIndex": 21, "paragraphIndex": 21}
+    question = {
+        "text": "达西定律适用于何种流态？",
+        "questionType": "单项选择题",
+        "options": [{"label": "A", "text": "紊流"}, {"label": "B", "text": "层流"}],
+        "correctAnswer": "B",
+        "explanation": "达西定律描述层流渗透。",
+        "attachments": [],
+        "sourceMetadata": {
+            "answerPosition": answer_position,
+            "sourceBlocks": [
+                {"kind": "paragraph", "role": "answer", "sourcePosition": answer_position, "text": "答案：B"},
+                {"kind": "paragraph", "role": "postAnswer", "sourcePosition": explanation_position, "text": "达西定律描述层流渗透。"},
+            ],
+        },
+    }
+
+    content = render_paper(paper_with_question(question), "answers", format, ExportOptions())
+    text = extract_docx_text(content) if format == "docx" else extract_pdf_text(content)
+
+    assert text.count("答案：B") == 1
+    assert text.count("达西定律描述层流渗透。") == 1
+
+
+@pytest.mark.parametrize("format", ["docx", "pdf"])
+def test_real_imported_answer_block_is_not_duplicated(format: str) -> None:
+    from server.application.services.paper_export import ExportOptions, render_paper
+
+    manifest = json.loads(REAL_MANIFEST.read_text(encoding="utf-8"))
+    question = deepcopy(manifest["questions"][0])
+    assert question["correctAnswer"] == "B"
+    assert any(block.get("role") == "answer" for block in question["sourceBlocks"])
+
+    content = render_paper(
+        paper_with_question(question, title="真实导入答案去重"),
+        "answers",
+        format,
+        ExportOptions(asset_root=PROJECT_ROOT / "public"),
+    )
+    text = extract_docx_text(content) if format == "docx" else extract_pdf_text(content)
+
+    assert text.count("答案：B") == 1
 
 
 @pytest.mark.parametrize("format", ["docx", "pdf"])
@@ -520,8 +570,11 @@ def test_multi_page_and_oversized_table_rows_split_with_repeated_headers(format:
     if format == "pdf":
         reader = PdfReader(io.BytesIO(content))
         assert len(reader.pages) >= 3
-        assert "分析下列多页试验记录" in (reader.pages[0].extract_text() or "")
-        assert sum((page.extract_text() or "").count("编号") for page in reader.pages) >= 2
+        page_texts = [page.extract_text() or "" for page in reader.pages]
+        assert "分析下列多页试验记录" in page_texts[0]
+        assert all(len(text.strip()) > 100 for text in page_texts)
+        assert all("编号" in text for text in page_texts)
+        assert "超长单元格（续" in "\n".join(page_texts)
         assert "超长单元格" in extract_pdf_text(content)
     else:
         from docx import Document
@@ -536,7 +589,15 @@ def test_multi_page_and_oversized_table_rows_split_with_repeated_headers(format:
             for row in table.rows
             if row.cells[0].text == "超长单元格"
         )
-        assert not oversized_row._tr.xpath("./w:trPr/w:cantSplit")
+        assert oversized_row._tr.xpath("./w:trPr/w:cantSplit")
+        continuation_rows = [
+            row
+            for table in document.tables
+            for row in table.rows
+            if row.cells[0].text.startswith("超长单元格（续")
+        ]
+        assert continuation_rows
+        assert all(row._tr.xpath("./w:trPr/w:cantSplit") for row in continuation_rows)
         assert "超长单元格" in extract_docx_text(content)
 
 

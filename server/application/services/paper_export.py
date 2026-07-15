@@ -42,6 +42,7 @@ APP_ASSET_PREFIX = "/foundation-smart-companion/question-assets/soil-mechanics/"
 MAX_IMAGE_BYTES = 8 * 1024 * 1024
 MAX_EMBEDDED_IMAGE_BYTES = 20 * 1024 * 1024
 MAX_IMAGE_PIXELS = 25_000_000
+MAX_TABLE_ROW_LINES = 24
 ALLOWED_IMAGE_FORMATS = {
     "png": "PNG",
     "jpg": "JPEG",
@@ -557,18 +558,32 @@ def _set_table_widths(table, widths: list[Cm]) -> None:
             row.cells[index].width = width
 
 
-def _row_is_page_sized(values: list[Any], column_count: int) -> bool:
-    chars_per_line = max(8, 52 // max(column_count, 1))
-    estimated_lines = max(
-        (math.ceil(len(str(value)) / chars_per_line) for value in values),
-        default=1,
-    )
-    return estimated_lines <= 42
+def _table_rows_for_export(rows: list[list[Any]]) -> list[list[str]]:
+    if not rows:
+        return []
+    column_count = max(1, max((len(row) for row in rows), default=1))
+    chars_per_line = max(8, 52 // column_count)
+    max_chars = chars_per_line * MAX_TABLE_ROW_LINES
+    normalized: list[list[str]] = []
+    for row in rows:
+        cells = [str(row[index]) if index < len(row) else "" for index in range(column_count)]
+        chunks = [
+            [value[offset : offset + max_chars] for offset in range(0, len(value), max_chars)] or [""]
+            for value in cells
+        ]
+        chunk_count = max(len(parts) for parts in chunks)
+        for chunk_index in range(chunk_count):
+            values = [parts[chunk_index] if chunk_index < len(parts) else "" for parts in chunks]
+            if chunk_index and cells[0] and len(chunks[0]) == 1:
+                values[0] = f"{cells[0]}（续 {chunk_index + 1}/{chunk_count}）"
+            normalized.append(values)
+    return normalized
 
 
 def _docx_table(document: Document, rows: list[list[Any]]) -> None:
     if not rows:
         return
+    rows = _table_rows_for_export(rows)
     column_count = max(1, max((len(row) for row in rows), default=1))
     table = document.add_table(rows=0, cols=column_count)
     table.style = "Table Grid"
@@ -583,9 +598,7 @@ def _docx_table(document: Document, rows: list[list[Any]]) -> None:
             )
         if row_index == 0:
             _repeat_table_header(table.rows[-1])
-            _prevent_row_split(table.rows[-1])
-        elif _row_is_page_sized(values, column_count):
-            _prevent_row_split(table.rows[-1])
+        _prevent_row_split(table.rows[-1])
     paragraph = document.add_paragraph()
     paragraph.paragraph_format.space_after = Pt(1)
 
@@ -683,7 +696,12 @@ def _docx_answer(document: Document, row: Any, options: ExportOptions) -> None:
     contents = _block_contents(row, "answer")
     if contents:
         for content in contents:
-            for unit in content.units:
+            units = (
+                [unit for unit in content.units if unit.kind != "text"]
+                if content.role.casefold() in ANSWER_ROLES
+                else content.units
+            )
+            for unit in units:
                 _docx_unit(document, unit, options)
     else:
         for unit in _fallback_units(row, "answer"):
@@ -832,6 +850,7 @@ def _pdf_paragraph(text: str, style: ParagraphStyle) -> Paragraph:
 def _pdf_table(rows: list[list[Any]], styles: dict[str, ParagraphStyle]) -> Table | None:
     if not rows:
         return None
+    rows = _table_rows_for_export(rows)
     column_count = max(1, max((len(row) for row in rows), default=1))
     data = [
         [
@@ -845,7 +864,7 @@ def _pdf_table(rows: list[list[Any]], styles: dict[str, ParagraphStyle]) -> Tabl
         colWidths=[16.6 * cm / column_count] * column_count,
         repeatRows=1,
         splitByRow=1,
-        splitInRow=1,
+        splitInRow=0,
         hAlign="LEFT",
     )
     table.setStyle(
@@ -975,7 +994,12 @@ def _pdf_answer(
     contents = _block_contents(row, "answer")
     if contents:
         for content in contents:
-            for unit in content.units:
+            units = (
+                [unit for unit in content.units if unit.kind != "text"]
+                if content.role.casefold() in ANSWER_ROLES
+                else content.units
+            )
+            for unit in units:
                 _pdf_unit(story, unit, options, styles)
     else:
         for unit in _fallback_units(row, "answer"):
