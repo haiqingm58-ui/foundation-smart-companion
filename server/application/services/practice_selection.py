@@ -16,9 +16,34 @@ from ..models import KnowledgePoint, PracticeAttempt, PracticeSession, PracticeS
 MAX_STUDENT_ANSWER_BYTES = 16 * 1024
 
 
+def _safe_attachment(item: Any) -> dict[str, Any] | None:
+    if not isinstance(item, dict):
+        return None
+    kind = item.get("kind")
+    if kind == "image" and isinstance(item.get("src"), str):
+        result = {"kind": "image", "src": item["src"]}
+        for key in ("alt", "altText", "width", "height"):
+            if isinstance(item.get(key), (str, int, float)):
+                result[key] = item[key]
+        return result
+    if kind == "table" and isinstance(item.get("rows"), list):
+        rows = item["rows"]
+        if all(isinstance(row, list) and all(isinstance(cell, (str, int, float, bool)) or cell is None for cell in row) for row in rows):
+            result = {"kind": "table", "rows": deepcopy(rows)}
+            if isinstance(item.get("caption"), str):
+                result["caption"] = item["caption"]
+            return result
+    if kind == "formula":
+        formula = item.get("latex", item.get("ommlText"))
+        if isinstance(formula, str):
+            return {"kind": "formula", "latex": formula}
+    return None
+
+
 def student_safe_snapshot(snapshot: dict[str, Any], include_solutions: bool = False) -> dict[str, Any]:
     """Project a private snapshot to fields that are intentionally student-visible."""
     options = snapshot.get("options") if isinstance(snapshot.get("options"), list) else []
+    attachments = [_safe_attachment(item) for item in snapshot.get("attachments", [])]
     payload: dict[str, Any] = {
         "id": snapshot.get("id"),
         "subjectId": snapshot.get("subjectId"),
@@ -36,6 +61,7 @@ def student_safe_snapshot(snapshot: dict[str, Any], include_solutions: bool = Fa
         "sequence": snapshot.get("sequence"),
         "sectionTitle": snapshot.get("sectionTitle"),
         "points": snapshot.get("points"),
+        "attachments": [item for item in attachments if item is not None],
     }
     if include_solutions:
         payload.update({

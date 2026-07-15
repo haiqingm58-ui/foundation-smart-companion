@@ -306,7 +306,9 @@ def test_after_submission_reveals_and_autograde_false_stays_pending(assessment_c
     manual_id = _assignment(database, auto_grade=False)
     manual = client.post(f"/api/student/assignments/{manual_id}/start", headers=CSRF).json()["data"]
     client.put(f"/api/student/submissions/{manual['submissionId']}/answers/{manual['questions'][0]['id']}", json={"answer": "A"}, headers=CSRF)
-    assert client.post(f"/api/student/submissions/{manual['submissionId']}/submit", headers=CSRF).json()["data"]["status"] == "pending_review"
+    pending = client.post(f"/api/student/submissions/{manual['submissionId']}/submit", headers=CSRF).json()["data"]
+    assert pending["status"] == "pending_review"
+    assert pending["score"] is None
 
 
 @pytest.mark.parametrize("answer", [{"label": "A"}, "Z", ["A", "A"], ["A"], "x" * 17000])
@@ -330,7 +332,8 @@ def test_migration_007_constraints_and_nullable_start_state(tmp_path) -> None:
     assert "submitted_at" in {column["name"] for column in inspector.get_columns("submissions") if column["nullable"]}
     assert ("assignment_id", "student_id", "attempt_number") in {tuple(item["column_names"]) for item in inspector.get_unique_constraints("submissions")}
     assert ("submission_id", "question_id") in {tuple(item["column_names"]) for item in inspector.get_unique_constraints("submission_answers")}
-    assert "uq_submission_one_in_progress" in {item["name"] for item in inspector.get_indexes("submissions")}
+    indexes = {item["name"]: item for item in inspector.get_indexes("submissions")}
+    assert {"uq_submission_one_in_progress", "ix_submissions_submitted_at"}.issubset(indexes)
 
 
 def test_after_close_boundary_and_all_student_object_routes_are_idor_safe(assessment_context) -> None:
@@ -484,3 +487,55 @@ def test_parallel_submits_commit_once_and_return_committed_result(assessment_con
     with database.session() as session:
         assert len(session.scalars(select(PracticeAttempt).where(PracticeAttempt.student_id == "student-profile")).all()) == len(practice["questions"])
         assert len(session.scalars(select(SubmissionAnswer).where(SubmissionAnswer.submission_id == formal["submissionId"])).all()) == 1
+
+
+def test_after_close_never_uses_personal_duration_to_reveal(assessment_context) -> None:
+    from server.application.models import AssignmentTarget, SessionToken, Submission
+    from server.application.security import token_digest
+
+    client, database = assessment_context
+    assignment_id = _assignment(database, show_answers_mode="after_close", due_at=datetime.now(timezone.utc) + timedelta(hours=2))
+    _assignment(database, student_id="other-student")
+    first = client.post(f"/api/student/assignments/{assignment_id}/start", headers=CSRF).json()["data"]
+    client.put(f"/api/student/submissions/{first['submissionId']}/answers/{first['questions'][0]['id']}", json={"answer": "A"}, headers=CSRF)
+    client.post(f"/api/student/submissions/{first['submissionId']}/submit", headers=CSRF)
+    with database.session() as session:
+        session.add(AssignmentTarget(id="second-target", assignment_id=assignment_id, student_id="other-student"))
+        session.add(SessionToken(id="duration-other-session", user_id="other-student-user", token_hash=token_digest("duration-other-token"), csrf_hash=token_digest("duration-other-csrf"), expires_at=datetime.now(timezone.utc) + timedelta(hours=1)))
+        session.get(Submission, first["submissionId"]).started_at = datetime.now(timezone.utc) - timedelta(minutes=31)
+        session.commit()
+    second = TestClient(client.app)
+    second.cookies.set("foundation_session", "duration-other-token")
+    second.cookies.set("foundation_csrf", "duration-other-csrf")
+    assert second.post(f"/api/student/assignments/{assignment_id}/start", headers={"X-CSRF-Token": "duration-other-csrf"}).status_code == 200
+    result = client.get(f"/api/student/submissions/{first['submissionId']}/result").json()["data"]
+    assert result["showAnswers"] is False
+    assert "explanation" not in result["questions"][0]
+
+
+def test_student_payload_keeps_safe_image_table_and_formula_attachments(assessment_context) -> None:
+    from server.application.models import AssignmentQuestion, Question
+
+    client, database = assessment_context
+    attachments = [
+        {"kind": "image", "src": "/assets/figure.png", "altText": "渗流图", "sourcePosition": {"private": True}},
+        {"kind": "table", "rows": [["a", 1], ["b", 2]], "caption": "数据表", "provenance": "private"},
+        {"kind": "formula", "ommlText": "q=kiA", "ommlSource": "<private/>", "sourceMetadata": {"secret": True}},
+    ]
+    with database.session() as session:
+        session.get(Question, "soil-question-00").attachments = attachments
+        session.commit()
+    practice = _practice(client, count=13)
+    practice_question = next(item for item in practice["questions"] if item["id"] == "soil-question-00")
+    assert practice_question["attachments"] == [
+        {"kind": "image", "src": "/assets/figure.png", "altText": "渗流图"},
+        {"kind": "table", "rows": [["a", 1], ["b", 2]], "caption": "数据表"},
+        {"kind": "formula", "latex": "q=kiA"},
+    ]
+    assignment_id = _assignment(database)
+    with database.session() as session:
+        assignment_question = session.scalar(select(AssignmentQuestion).where(AssignmentQuestion.assignment_id == assignment_id))
+        assignment_question.question_snapshot = {**assignment_question.question_snapshot, "attachments": attachments}
+        session.commit()
+    formal = client.post(f"/api/student/assignments/{assignment_id}/start", headers=CSRF).json()["data"]
+    assert formal["questions"][0]["attachments"] == practice_question["attachments"]

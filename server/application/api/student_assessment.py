@@ -232,6 +232,10 @@ def _ensure_assignment_open(assignment: Assignment, submission: Submission | Non
         raise APIError(409, "试卷已截止", "ASSIGNMENT_CLOSED")
 
 
+def _assignment_globally_closed(assignment: Assignment) -> bool:
+    return assignment.status == "closed" or (aware(assignment.due_at) is not None and now() >= aware(assignment.due_at))
+
+
 def _assignment_questions(session, assignment: Assignment) -> list[AssignmentQuestion]:
     records = list(session.scalars(select(AssignmentQuestion).where(AssignmentQuestion.assignment_id == assignment.id).order_by(AssignmentQuestion.sequence)))
     for item in records:
@@ -270,13 +274,16 @@ def _countdown(assignment: Assignment, submission: Submission | None = None) -> 
     }
 
 
-def _submission_for(session, submission_id: str, student_id: str) -> tuple[Submission, Assignment]:
-    row = session.execute(
+def _submission_for(session, submission_id: str, student_id: str, *, lock: bool = False) -> tuple[Submission, Assignment]:
+    statement = (
         select(Submission, Assignment)
         .join(Assignment, Assignment.id == Submission.assignment_id)
         .join(AssignmentTarget, AssignmentTarget.assignment_id == Assignment.id)
         .where(Submission.id == submission_id, Submission.student_id == student_id, AssignmentTarget.student_id == student_id)
-    ).first()
+    )
+    if lock:
+        statement = statement.with_for_update()
+    row = session.execute(statement).first()
     if not row:
         raise APIError(404, "提交记录不存在", "SUBMISSION_NOT_FOUND")
     return row
@@ -338,7 +345,7 @@ def start_formal_paper(assignment_id: str, request: Request, auth: AuthContext =
 def save_formal_answer(submission_id: str, question_id: str, body: AnswerSave, request: Request, auth: AuthContext = Depends(require_student)):
     with request.app.state.database.session() as session:
         student = student_for(session, auth.user.id)
-        submission, assignment = _submission_for(session, submission_id, student.id)
+        submission, assignment = _submission_for(session, submission_id, student.id, lock=True)
         if submission.status != "in_progress":
             raise APIError(409, "试卷已提交，不能继续保存答案", "SUBMISSION_CLOSED")
         _ensure_assignment_open(assignment, submission)
@@ -356,8 +363,11 @@ def save_formal_answer(submission_id: str, question_id: str, body: AnswerSave, r
             session.commit()
         except IntegrityError:
             session.rollback()
+            submission, assignment = _submission_for(session, submission_id, student.id, lock=True)
+            if submission.status != "in_progress":
+                raise APIError(409, "试卷已提交，不能继续保存答案", "SUBMISSION_CLOSED")
             answer = session.scalar(select(SubmissionAnswer).where(SubmissionAnswer.submission_id == submission_id, SubmissionAnswer.question_id == question_id))
-            if not answer:
+            if answer is None:
                 raise APIError(409, "答案保存冲突，请重试", "SUBMISSION_ANSWER_CONFLICT")
             answer.answer = body.answer
             session.commit()
@@ -369,7 +379,7 @@ def save_formal_answer(submission_id: str, question_id: str, body: AnswerSave, r
 def submit_formal_paper(submission_id: str, request: Request, auth: AuthContext = Depends(require_student)):
     with request.app.state.database.session() as session:
         student = student_for(session, auth.user.id)
-        submission, assignment = _submission_for(session, submission_id, student.id)
+        submission, assignment = _submission_for(session, submission_id, student.id, lock=True)
         if submission.status in {"graded", "pending_review"}:
             payload = {"submissionId": submission.id, "status": submission.status, "score": submission.score, "maxScore": assignment.total_points, "countdown": _countdown(assignment, submission)}
             return request.app.state.success(request, payload, "试卷已提交")
@@ -412,7 +422,7 @@ def submit_formal_paper(submission_id: str, request: Request, auth: AuthContext 
                     pending = True
                 else:
                     score += result.score
-        submission.score = score
+        submission.score = None if pending else score
         submission.status = "pending_review" if pending else "graded"
         submission.submitted_at = now()
         submission.graded_at = now() if not pending else None
@@ -431,8 +441,7 @@ def formal_result(submission_id: str, request: Request, auth: AuthContext = Depe
         if submission.status == "in_progress":
             raise APIError(409, "提交后才能查看结果", "SUBMISSION_NOT_FINISHED")
         reveal = assignment.show_answers_mode == "after_submission" or (
-            assignment.show_answers_mode == "after_close"
-            and (assignment.status == "closed" or (_deadline(assignment, submission) is not None and now() >= _deadline(assignment, submission)))
+            assignment.show_answers_mode == "after_close" and _assignment_globally_closed(assignment)
         )
         payload = {"submissionId": submission.id, "assignmentId": assignment.id, "status": submission.status, "score": submission.score, "maxScore": assignment.total_points, "showAnswers": reveal, "questions": _formal_questions_payload(session, assignment, submission, reveal=reveal)}
     return request.app.state.success(request, payload)

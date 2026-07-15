@@ -306,7 +306,7 @@ def assignments(request: Request, auth: AuthContext = Depends(require_teacher)):
             submitted_count = session.scalar(
                 select(func.count(func.distinct(Submission.student_id))).where(Submission.assignment_id == item.id, Submission.status != "in_progress")
             ) or 0
-            average_score = session.scalar(select(func.avg(Submission.score)).where(Submission.assignment_id == item.id, Submission.score.is_not(None), Submission.status != "in_progress"))
+            average_score = session.scalar(select(func.avg(Submission.score)).where(Submission.assignment_id == item.id, Submission.score.is_not(None), Submission.status == "graded"))
             items.append({
                 "id": item.id, "title": item.title, "description": item.description,
                 "startsAt": item.starts_at, "dueAt": item.due_at, "totalPoints": item.total_points,

@@ -69,6 +69,8 @@ def upgrade() -> None:
         if "started_at" not in columns:
             batch_op.add_column(sa.Column("started_at", sa.DateTime(timezone=True), nullable=True))
             batch_op.create_index("ix_submissions_started_at", ["started_at"])
+        if "ix_submissions_submitted_at" not in submission_indexes:
+            batch_op.create_index("ix_submissions_submitted_at", ["submitted_at"])
         if "submitted_at" in columns:
             batch_op.alter_column("submitted_at", existing_type=sa.DateTime(timezone=True), nullable=True)
         if "uq_submission_assignment_student_attempt" not in submission_uniques:
@@ -106,6 +108,8 @@ def downgrade() -> None:
                     batch_op.drop_constraint("uq_submission_assignment_student_attempt", type_="unique")
                 if "ix_submissions_started_at" in indexes:
                     batch_op.drop_index("ix_submissions_started_at")
+                if "ix_submissions_submitted_at" in indexes:
+                    batch_op.drop_index("ix_submissions_submitted_at")
                 batch_op.drop_column("started_at")
         if "uq_submission_one_in_progress" in indexes:
             op.drop_index("uq_submission_one_in_progress", table_name="submissions")

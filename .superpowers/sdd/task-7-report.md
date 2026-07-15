@@ -160,3 +160,44 @@ Compilation of all changed Python modules and `git diff --check` completed with 
 ### Remaining Concerns
 
 The available test environment is SQLite. The migration and ORM define PostgreSQL-compatible partial-index clauses, and the concurrency regression uses the production-supported SQLite engine. No PostgreSQL service was configured for a live harness run.
+
+## Second Review Remediation
+
+### Status
+
+`DONE`
+
+- Review baseline: `59eb7f5` (`fix: harden student assessment workflows`)
+- Findings addressed: Critical 1, Important 3, Minor 2.
+
+### Changes
+
+- `after_close` answer disclosure now depends only on global assignment closure: explicit `closed` status or the assignment-level `dueAt` boundary. Per-student duration remains a write/countdown deadline and cannot disclose answers.
+- Formal autosave and submit both acquire a row lock on the owned submission before checking state or changing answers. Conflict recovery re-reads that row and rejects any closed/submitting submission before writing.
+- The student-safe snapshot projection now preserves known display-only image, table, and formula attachment shapes while dropping source position, OMML source, provenance, source metadata, and unknown nested fields.
+- Pending formal submissions now persist and return `score=null`; teacher assignment score metrics include only final `graded` submissions.
+- Revision 007 now creates and downgrades `ix_submissions_submitted_at`, matching the ORM metadata alongside the partial in-progress unique index.
+
+### Re-review Evidence
+
+```text
+$ server/.venv/bin/pytest server/tests/test_student_assessment.py::test_after_close_never_uses_personal_duration_to_reveal server/tests/test_student_assessment.py::test_student_payload_keeps_safe_image_table_and_formula_attachments -q
+..                                                                       [100%]
+2 passed in 0.83s
+
+$ server/.venv/bin/pytest server/tests/test_student_assessment.py server/tests/test_student.py server/tests/test_teacher.py server/tests/test_teacher_papers.py server/tests/test_migrations.py -q
+........................................................................ [100%]
+72 passed in 12.88s
+
+$ server/.venv/bin/pytest server/tests -q
+........................................................................ [ 41%]
+.............................s.......................................... [ 83%]
+............................                                             [100%]
+171 passed, 1 skipped in 25.71s
+```
+
+Compilation of changed modules and `git diff --check` completed with no output and exit code 0.
+
+### Remaining Concerns
+
+The available test environment remains SQLite. PostgreSQL row-lock syntax is emitted through SQLAlchemy's portable `with_for_update()` path and partial-index DDL is defined for PostgreSQL, but no live PostgreSQL harness was configured.
