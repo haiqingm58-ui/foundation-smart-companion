@@ -38,10 +38,13 @@ activation_script="${scripts_dir}/lib/deploy-platform-activate.sh"
 rg -q 'source "\\?\$\{SOURCE_RELEASE\}/scripts/lib/deploy-platform-activate\.sh"' "${deploy_script}"
 migration_line=$(rg -n 'server\.manage migrate' "${activation_script}" | head -n 1 | cut -d: -f1)
 import_line=$(rg -n 'server\.manage import-question-bank' "${activation_script}" | head -n 1 | cut -d: -f1)
+font_install_line=$(rg -n 'fonts-wqy-zenhei' "${activation_script}" | head -n 1 | cut -d: -f1)
+font_preflight_line=$(rg -n 'TTFont' "${activation_script}" | head -n 1 | cut -d: -f1)
 source_switch_line=$(rg -n 'mv -Tf /opt/foundation-smart-companion\.next /opt/foundation-smart-companion' "${activation_script}" | head -n 1 | cut -d: -f1)
 restart_line=$(rg -n 'systemctl restart foundation-smart-companion-api\.service' "${activation_script}" | head -n 1 | cut -d: -f1)
 nginx_reload_line=$(rg -n 'systemctl reload nginx' "${activation_script}" | head -n 1 | cut -d: -f1)
-[[ -n "${migration_line}" && -n "${import_line}" && -n "${source_switch_line}" && -n "${restart_line}" && -n "${nginx_reload_line}" ]]
+[[ -n "${font_install_line}" && -n "${font_preflight_line}" && -n "${migration_line}" && -n "${import_line}" && -n "${source_switch_line}" && -n "${restart_line}" && -n "${nginx_reload_line}" ]]
+[[ "${font_install_line}" -lt "${font_preflight_line}" && "${font_preflight_line}" -lt "${migration_line}" ]]
 [[ "${migration_line}" -lt "${import_line}" ]]
 pointer_count=0
 while IFS=: read -r pointer_line _; do
@@ -59,6 +62,7 @@ source_base="${activation_root}/source-base"
 web_base="${activation_root}/web-base"
 stub_bin="${activation_root}/bin"
 env_file="${activation_root}/foundation.env"
+font_path="${activation_root}/fonts/wqy-zenhei.ttc"
 mkdir -p "${source_release}/server/.venv/bin" "${source_release}/content/question-banks/soil-mechanics" "${source_release}/scripts/lib" "${web_release}" "${source_base}/releases" "${web_base}/releases" "${stub_bin}"
 cp "${activation_script}" "${source_release}/scripts/lib/deploy-platform-activate.sh"
 printf 'FOUNDATION_DATABASE_URL=sqlite:///%s/test.db\n' "${activation_root}" > "${env_file}"
@@ -79,6 +83,14 @@ cat > "${stub_bin}/python3" <<'EOF'
 #!/usr/bin/env bash
 printf 'python3 %s\n' "$*" >> "${ACTIVATION_ACTIONS_FILE}"
 EOF
+cat > "${stub_bin}/apt-get" <<'EOF'
+#!/usr/bin/env bash
+printf 'apt-get %s\n' "$*" >> "${ACTIVATION_ACTIONS_FILE}"
+if [[ "$*" == *" install "* || "$*" == install\ * ]]; then
+  mkdir -p "$(dirname "${FOUNDATION_PDF_FONT_PATH}")"
+  printf 'synthetic-font' > "${FOUNDATION_PDF_FONT_PATH}"
+fi
+EOF
 for command in ln mv systemctl nginx find; do
   cat > "${stub_bin}/${command}" <<EOF
 #!/usr/bin/env bash
@@ -86,15 +98,18 @@ printf '${command} %s\\n' "\$*" >> "\${ACTIVATION_ACTIONS_FILE}"
 EOF
   chmod +x "${stub_bin}/${command}"
 done
-chmod +x "${source_release}/server/.venv/bin/python" "${source_release}/server/.venv/bin/pip" "${stub_bin}/python3"
+chmod +x "${source_release}/server/.venv/bin/python" "${source_release}/server/.venv/bin/pip" "${stub_bin}/python3" "${stub_bin}/apt-get"
 
-if PATH="${stub_bin}:${PATH}" ACTIVATION_ACTIONS_FILE="${actions_file}" FOUNDATION_ENV_FILE="${env_file}" SOURCE_RELEASE="${source_release}" SOURCE_BASE="${source_base}" WEB_RELEASE="${web_release}" WEB_BASE="${web_base}" KEEP_RELEASES=5 RELEASE_ID=test-release bash "${source_release}/scripts/lib/deploy-platform-activate.sh"; then
+if PATH="${stub_bin}:${PATH}" ACTIVATION_ACTIONS_FILE="${actions_file}" FOUNDATION_PDF_FONT_PATH="${font_path}" FOUNDATION_ENV_FILE="${env_file}" SOURCE_RELEASE="${source_release}" SOURCE_BASE="${source_base}" WEB_RELEASE="${web_release}" WEB_BASE="${web_base}" KEEP_RELEASES=5 RELEASE_ID=test-release bash "${source_release}/scripts/lib/deploy-platform-activate.sh"; then
   echo "expected import failure to stop production activation script" >&2
   exit 1
 fi
+rg -q --fixed-strings "apt-get update" "${actions_file}"
+rg -q --fixed-strings "apt-get install -y --no-install-recommends fonts-wqy-zenhei" "${actions_file}"
+rg -q --fixed-strings "python -c from reportlab.pdfbase.ttfonts import TTFont" "${actions_file}"
 rg -q --fixed-strings "python -m server.manage migrate" "${actions_file}"
 rg -q --fixed-strings "python -m server.manage import-question-bank ${source_release}/content/question-banks/soil-mechanics/manifest.json" "${actions_file}"
-[[ "$(wc -l < "${actions_file}")" -eq 4 ]]
+[[ "$(wc -l < "${actions_file}")" -eq 7 ]]
 if rg -q '^(ln|mv|systemctl|nginx|find) ' "${actions_file}"; then
   echo "activation continued after import failure" >&2
   cat "${actions_file}" >&2

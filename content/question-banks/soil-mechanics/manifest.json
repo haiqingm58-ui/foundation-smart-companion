@@ -73747,25 +73747,29 @@
           "alt": "题目附图",
           "inlineOrdinal": 1,
           "kind": "image",
+          "legacySourceFormat": "WMF",
+          "legacySourceSha256": "201daf00ce1c2ef57b8bce7d1e1cce9288a0cbed70efcd4dd28ef931dc24edff",
           "placeholder": "[[attachment:1]]",
-          "sha256": "201daf00ce1c2ef57b8bce7d1e1cce9288a0cbed70efcd4dd28ef931dc24edff",
+          "sha256": "27a9773b8f293208e541179c6609b97dcfeb350b08359f1fe6fc68b701681881",
           "sourcePosition": {
             "blockIndex": 316,
             "paragraphIndex": 311
           },
-          "src": "/foundation-smart-companion/question-assets/soil-mechanics/201daf00ce1c2ef57b8bce7d1e1cce9288a0cbed70efcd4dd28ef931dc24edff.wmf"
+          "src": "/foundation-smart-companion/question-assets/soil-mechanics/27a9773b8f293208e541179c6609b97dcfeb350b08359f1fe6fc68b701681881.png"
         },
         {
           "alt": "题目附图",
           "inlineOrdinal": 2,
           "kind": "image",
+          "legacySourceFormat": "WMF",
+          "legacySourceSha256": "786054bb581e9c2cb5f345521af8aaf9e13a9bdb98891b859e8811839fff1c03",
           "placeholder": "[[attachment:2]]",
-          "sha256": "786054bb581e9c2cb5f345521af8aaf9e13a9bdb98891b859e8811839fff1c03",
+          "sha256": "88a0db8bc0b73122c216bc9a38d74ff4c610fb2a61e7b0129f4968c17a274110",
           "sourcePosition": {
             "blockIndex": 316,
             "paragraphIndex": 311
           },
-          "src": "/foundation-smart-companion/question-assets/soil-mechanics/786054bb581e9c2cb5f345521af8aaf9e13a9bdb98891b859e8811839fff1c03.wmf"
+          "src": "/foundation-smart-companion/question-assets/soil-mechanics/88a0db8bc0b73122c216bc9a38d74ff4c610fb2a61e7b0129f4968c17a274110.png"
         },
         {
           "inlineOrdinal": 1,
@@ -73807,106 +73811,122 @@
           "alt": "题目附图",
           "inlineOrdinal": 1,
           "kind": "image",
+          "legacySourceFormat": "WMF",
+          "legacySourceSha256": "80f76d4a17ff04ff28fc08d76573e2eca2576b8d252a1da081f8968bcd7c49f8",
           "placeholder": "[[attachment:1]]",
-          "sha256": "80f76d4a17ff04ff28fc08d76573e2eca2576b8d252a1da081f8968bcd7c49f8",
+          "sha256": "ff4b8e65d129fdc93264af4e729effcb6f8d30725ad097036b4585f3e4e1b7bf",
           "sourcePosition": {
             "blockIndex": 320,
             "paragraphIndex": 314
           },
-          "src": "/foundation-smart-companion/question-assets/soil-mechanics/80f76d4a17ff04ff28fc08d76573e2eca2576b8d252a1da081f8968bcd7c49f8.wmf"
+          "src": "/foundation-smart-companion/question-assets/soil-mechanics/ff4b8e65d129fdc93264af4e729effcb6f8d30725ad097036b4585f3e4e1b7bf.png"
         },
         {
           "alt": "题目附图",
           "inlineOrdinal": 2,
           "kind": "image",
+          "legacySourceFormat": "WMF",
+          "legacySourceSha256": "8651076b9be13630ec938b8b1bc7a10b1a3ecc69bfd45ef1328954b669942e91",
           "placeholder": "[[attachment:2]]",
-          "sha256": "8651076b9be13630ec938b8b1bc7a10b1a3ecc69bfd45ef1328954b669942e91",
+          "sha256": "fe883caa75a4cbdd5e0a60bcf23a3e3be8bc9cbbee6ed198ebee913c74920bb1",
           "sourcePosition": {
             "blockIndex": 320,
             "paragraphIndex": 314
           },
-          "src": "/foundation-smart-companion/question-assets/soil-mechanics/8651076b9be13630ec938b8b1bc7a10b1a3ecc69bfd45ef1328954b669942e91.wmf"
+          "src": "/foundation-smart-companion/question-assets/soil-mechanics/fe883caa75a4cbdd5e0a60bcf23a3e3be8bc9cbbee6ed198ebee913c74920bb1.png"
         },
         {
           "alt": "题目附图",
           "inlineOrdinal": 1,
           "kind": "image",
+          "legacySourceFormat": "WMF",
+          "legacySourceSha256": "8c5702423d3fb773e1c45ba4612dd684f3513137cb46aea58cb668e5482809e1",
           "placeholder": "[[attachment:1]]",
-          "sha256": "8c5702423d3fb773e1c45ba4612dd684f3513137cb46aea58cb668e5482809e1",
+          "sha256": "dd98d28a3669982a548be563a00a26c0feb4d0d32b0f97b5dcda3ed2437fc4c2",
           "sourcePosition": {
             "blockIndex": 321,
             "paragraphIndex": 315
           },
-          "src": "/foundation-smart-companion/question-assets/soil-mechanics/8c5702423d3fb773e1c45ba4612dd684f3513137cb46aea58cb668e5482809e1.wmf"
+          "src": "/foundation-smart-companion/question-assets/soil-mechanics/dd98d28a3669982a548be563a00a26c0feb4d0d32b0f97b5dcda3ed2437fc4c2.png"
         },
         {
           "alt": "题目附图",
           "inlineOrdinal": 1,
           "kind": "image",
+          "legacySourceFormat": "WMF",
+          "legacySourceSha256": "949592eb2c0fa99412dea1d41a65e18b986c896b75b4377d803296bf8070b14a",
           "placeholder": "[[attachment:1]]",
-          "sha256": "949592eb2c0fa99412dea1d41a65e18b986c896b75b4377d803296bf8070b14a",
+          "sha256": "0df50e66dbdd7de8b318facdf5e1edb7a7472ea59945d92b831b0127bfb9df1c",
           "sourcePosition": {
             "blockIndex": 322,
             "paragraphIndex": 316
           },
-          "src": "/foundation-smart-companion/question-assets/soil-mechanics/949592eb2c0fa99412dea1d41a65e18b986c896b75b4377d803296bf8070b14a.wmf"
+          "src": "/foundation-smart-companion/question-assets/soil-mechanics/0df50e66dbdd7de8b318facdf5e1edb7a7472ea59945d92b831b0127bfb9df1c.png"
         },
         {
           "alt": "题目附图",
           "inlineOrdinal": 2,
           "kind": "image",
+          "legacySourceFormat": "WMF",
+          "legacySourceSha256": "00f9d6a5476c548f207230b56f79e6a9ca8bfa182b1b2b24b4792ca50f12d424",
           "placeholder": "[[attachment:2]]",
-          "sha256": "00f9d6a5476c548f207230b56f79e6a9ca8bfa182b1b2b24b4792ca50f12d424",
+          "sha256": "44faeed46c29a0f4905c187f28f322c45da047fc81f66d63afc85bd008022312",
           "sourcePosition": {
             "blockIndex": 322,
             "paragraphIndex": 316
           },
-          "src": "/foundation-smart-companion/question-assets/soil-mechanics/00f9d6a5476c548f207230b56f79e6a9ca8bfa182b1b2b24b4792ca50f12d424.wmf"
+          "src": "/foundation-smart-companion/question-assets/soil-mechanics/44faeed46c29a0f4905c187f28f322c45da047fc81f66d63afc85bd008022312.png"
         },
         {
           "alt": "题目附图",
           "inlineOrdinal": 1,
           "kind": "image",
+          "legacySourceFormat": "WMF",
+          "legacySourceSha256": "4ef094d61e6b88cbe4ae6f4c9e964b82233acf444cf8511733580f121bb29de9",
           "placeholder": "[[attachment:1]]",
-          "sha256": "4ef094d61e6b88cbe4ae6f4c9e964b82233acf444cf8511733580f121bb29de9",
+          "sha256": "7533ae570efd4636c2a3fc6299ed2dcfebe5ea68ce38a875b24f5bab41cf53ab",
           "sourcePosition": {
             "blockIndex": 323,
             "paragraphIndex": 317
           },
-          "src": "/foundation-smart-companion/question-assets/soil-mechanics/4ef094d61e6b88cbe4ae6f4c9e964b82233acf444cf8511733580f121bb29de9.wmf"
+          "src": "/foundation-smart-companion/question-assets/soil-mechanics/7533ae570efd4636c2a3fc6299ed2dcfebe5ea68ce38a875b24f5bab41cf53ab.png"
         },
         {
           "alt": "题目附图",
           "inlineOrdinal": 1,
           "kind": "image",
+          "legacySourceFormat": "WMF",
+          "legacySourceSha256": "3bd86ac3ffd04ada10eaae00add9cbc805896756e8aee1b0b14171364174672f",
           "placeholder": "[[attachment:1]]",
-          "sha256": "3bd86ac3ffd04ada10eaae00add9cbc805896756e8aee1b0b14171364174672f",
+          "sha256": "508d09f81c70b601867d73476143ef8e22a78174253aa3e6e7f0cba9c6245486",
           "sourcePosition": {
             "blockIndex": 324,
             "paragraphIndex": 318
           },
-          "src": "/foundation-smart-companion/question-assets/soil-mechanics/3bd86ac3ffd04ada10eaae00add9cbc805896756e8aee1b0b14171364174672f.wmf"
+          "src": "/foundation-smart-companion/question-assets/soil-mechanics/508d09f81c70b601867d73476143ef8e22a78174253aa3e6e7f0cba9c6245486.png"
         },
         {
           "alt": "题目附图",
           "inlineOrdinal": 2,
           "kind": "image",
+          "legacySourceFormat": "WMF",
+          "legacySourceSha256": "11bfae95fb7ab0c87fef5a1a9bd352736337dc8b5cf59408e6d61b07259c22de",
           "placeholder": "[[attachment:2]]",
-          "sha256": "11bfae95fb7ab0c87fef5a1a9bd352736337dc8b5cf59408e6d61b07259c22de",
+          "sha256": "abf95a077289867356441bf772281d753c8f8a8e909e1b0021eba93278ccf75b",
           "sourcePosition": {
             "blockIndex": 324,
             "paragraphIndex": 318
           },
-          "src": "/foundation-smart-companion/question-assets/soil-mechanics/11bfae95fb7ab0c87fef5a1a9bd352736337dc8b5cf59408e6d61b07259c22de.wmf"
+          "src": "/foundation-smart-companion/question-assets/soil-mechanics/abf95a077289867356441bf772281d753c8f8a8e909e1b0021eba93278ccf75b.png"
         }
       ],
       "chapter": "第四章 土的压缩性与地基沉降",
-      "contentFingerprint": "6f90c430ad8c4baa7b2ec9fb3c742e3b4c74b10ce7845eca6f2562b13ceaa2df",
+      "contentFingerprint": "583f70ff3bebc5436219dc65f0350eac12df27c5339ddc35f6dd0353fa82108e",
       "correctAnswer": null,
       "difficulty": "基础",
       "explanation": "双面排水,厚度取一半,, 以土层1的固结系数计算, ,",
       "gradingMode": "manual",
-      "id": "soil-6f90c430ad8c4baa7b2ec9fb",
+      "id": "soil-583f70ff3bebc5436219dc65",
       "knowledgePointIds": [
         "sm-04-consolidation-degree"
       ],

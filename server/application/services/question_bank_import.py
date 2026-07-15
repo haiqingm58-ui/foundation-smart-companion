@@ -154,7 +154,11 @@ def _apply_question(question: Question, payload: dict[str, Any]) -> bool:
         "difficulty": payload["difficulty"], "points": float(payload["points"]), "chapter": payload["chapter"],
         "knowledge_point": None, "subject_id": payload["subjectId"], "attachments": payload["attachments"],
         "answer_word_limit": payload["answerWordLimit"], "grading_mode": payload["gradingMode"], "status": "active",
-        "source_metadata": payload["sourceMetadata"], "content_fingerprint": payload["contentFingerprint"],
+        "source_metadata": {
+            **payload["sourceMetadata"],
+            "sourceBlocks": payload["sourceBlocks"],
+        },
+        "content_fingerprint": payload["contentFingerprint"],
         "source": QUESTION_BANK_SOURCE, "created_by": None,
     }
     for attribute, value in values.items():

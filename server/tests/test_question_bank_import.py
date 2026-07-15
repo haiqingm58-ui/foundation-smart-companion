@@ -114,12 +114,18 @@ def test_manifest_import_is_idempotent_and_records_shared_ownership(database, so
         links = session.scalars(select(QuestionKnowledgePoint).order_by(QuestionKnowledgePoint.question_id, QuestionKnowledgePoint.knowledge_point_id)).all()
         logs = session.scalars(select(OperationLog).where(OperationLog.action == "question_bank.import").order_by(OperationLog.created_at)).all()
 
+    source_questions = {item["id"]: item for item in load_manifest(soil_manifest)["questions"]}
+
     assert subject is not None
     assert [(point.id, point.created_by) for point in points] == [("sm-effective-stress", None), ("sm-shear-strength", None)]
     assert [(question.id, question.source, question.status, question.created_by) for question in questions] == [
         ("soil-effective-stress-choice", "soil-mechanics-bank", "active", None),
         ("soil-shear-strength-choice", "soil-mechanics-bank", "active", None),
     ]
+    assert all(
+        question.source_metadata["sourceBlocks"] == source_questions[question.id]["sourceBlocks"]
+        for question in questions
+    )
     assert [(link.question_id, link.knowledge_point_id, link.weight) for link in links] == [
         ("soil-effective-stress-choice", "sm-effective-stress", 1.0),
         ("soil-shear-strength-choice", "sm-effective-stress", 0.5),

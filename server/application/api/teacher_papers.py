@@ -1,17 +1,19 @@
 from __future__ import annotations
 
 from copy import deepcopy
+from tempfile import SpooledTemporaryFile
+from typing import BinaryIO, Iterator, Literal
 from uuid import uuid4
 
-from typing import Literal
 from urllib.parse import quote
 
 from fastapi import APIRouter, Depends, Query, Request
-from fastapi.responses import Response
+from fastapi.responses import StreamingResponse
 from sqlalchemy import delete, or_, select
 from sqlalchemy.orm import selectinload
 
 from ..errors import APIError
+from ..config import ROOT_DIR
 from ..models import (
     Assignment,
     AssignmentQuestion,
@@ -31,13 +33,25 @@ from ..schemas.paper import (
 )
 from ..services.audit import add_log
 from ..services.paper_assembly import assemble_paper
-from ..services.paper_export import ExportOptions, render_paper
+from ..services.paper_export import (
+    ExportOptions,
+    PaperExportError,
+    render_paper_to_file,
+)
 from .auth import client_ip
 from .dependencies import AuthContext, require_teacher
 from .teacher import teacher_for
 
 
 router = APIRouter(prefix="/api/teacher/papers", tags=["teacher-papers"])
+
+
+def _stream_file(handle: BinaryIO, chunk_size: int = 64 * 1024) -> Iterator[bytes]:
+    try:
+        while chunk := handle.read(chunk_size):
+            yield chunk
+    finally:
+        handle.close()
 
 
 def _owned_paper(session, paper_id: str, actor_id: str) -> Paper:
@@ -270,22 +284,44 @@ def export_paper(
         "pdf": "application/pdf",
     }
     suffixes = {"questions": "试题", "answer-sheet": "答题卡", "answers": "参考答案"}
-    with request.app.state.database.session() as session:
-        paper = _owned_paper(session, paper_id, auth.user.id)
-        content = render_paper(paper, variant, format, ExportOptions())
-        add_log(
-            session,
-            auth.user.id,
-            "paper.export",
-            "paper",
-            paper.id,
-            {"format": format, "variant": variant},
-            client_ip(request),
-        )
-        session.commit()
-        filename = f"{paper.title}-{suffixes[variant]}.{format}"
-    disposition = f"attachment; filename=paper-{variant}.{format}; filename*=UTF-8''{quote(filename)}"
-    return Response(content=content, media_type=media_types[format], headers={"Content-Disposition": disposition})
+    stream = SpooledTemporaryFile(max_size=4 * 1024 * 1024, mode="w+b")
+    try:
+        with request.app.state.database.session() as session:
+            paper = _owned_paper(session, paper_id, auth.user.id)
+            try:
+                render_paper_to_file(
+                    paper,
+                    variant,
+                    format,
+                    ExportOptions(asset_root=ROOT_DIR / "public"),
+                    stream,
+                )
+            except PaperExportError as error:
+                raise APIError(422, str(error), "PAPER_EXPORT_ASSET_INVALID") from error
+            add_log(
+                session,
+                auth.user.id,
+                "paper.export",
+                "paper",
+                paper.id,
+                {"format": format, "variant": variant},
+                client_ip(request),
+            )
+            session.commit()
+            filename = f"{paper.title}-{suffixes[variant]}.{format}"
+        stream.seek(0)
+    except Exception:
+        stream.close()
+        raise
+    disposition = (
+        f"attachment; filename=paper-{variant}.{format}; "
+        f"filename*=UTF-8''{quote(filename, safe='')}"
+    )
+    return StreamingResponse(
+        _stream_file(stream),
+        media_type=media_types[format],
+        headers={"Content-Disposition": disposition},
+    )
 
 
 @router.put("/{paper_id}")

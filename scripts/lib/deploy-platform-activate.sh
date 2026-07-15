@@ -10,9 +10,22 @@ set -Eeuo pipefail
 
 PIP_INDEX_URL="${PIP_INDEX_URL:-https://pypi.tuna.tsinghua.edu.cn/simple}"
 FOUNDATION_ENV_FILE="${FOUNDATION_ENV_FILE:-/etc/foundation-smart-companion.env}"
+FOUNDATION_PDF_FONT_PATH="${FOUNDATION_PDF_FONT_PATH:-/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc}"
+FOUNDATION_PDF_FONT_SUBFONT_INDEX="${FOUNDATION_PDF_FONT_SUBFONT_INDEX:-0}"
+
+if [[ ! -r "${FOUNDATION_PDF_FONT_PATH}" ]]; then
+  apt-get update
+  apt-get install -y --no-install-recommends fonts-wqy-zenhei
+fi
+if [[ ! -r "${FOUNDATION_PDF_FONT_PATH}" ]]; then
+  echo "PDF Chinese font is unavailable after provisioning: ${FOUNDATION_PDF_FONT_PATH}" >&2
+  exit 1
+fi
+export FOUNDATION_PDF_FONT_PATH FOUNDATION_PDF_FONT_SUBFONT_INDEX
 
 python3 -m venv "${SOURCE_RELEASE}/server/.venv"
 "${SOURCE_RELEASE}/server/.venv/bin/pip" install --disable-pip-version-check -q --timeout 60 -i "${PIP_INDEX_URL}" -r "${SOURCE_RELEASE}/server/requirements.txt"
+"${SOURCE_RELEASE}/server/.venv/bin/python" -c 'from reportlab.pdfbase.ttfonts import TTFont; import os; font = TTFont("FoundationPdfPreflight", os.environ["FOUNDATION_PDF_FONT_PATH"], subfontIndex=int(os.environ["FOUNDATION_PDF_FONT_SUBFONT_INDEX"])); assert all(ord(char) in font.face.charToGlyph for char in "土力学试卷")'
 
 set -a
 source "${FOUNDATION_ENV_FILE}"

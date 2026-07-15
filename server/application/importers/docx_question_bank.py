@@ -59,6 +59,19 @@ EXPECTED_SOURCE_SHA256 = {
     "4-其他题库-2.docx": "d5eaf7056f721d3ad56dbb77e545dd69a4c19fb26c988952c034e1dcc4bf1ad1",
 }
 EXPECTED_SOURCE_NOTE_SHA256 = "32dbc74123f66a561e6bd18ca5d0f2ce5eacf3949d83acef46304d4bcf63a7df"
+LEGACY_IMAGE_CONVERSIONS = {
+    "201daf00ce1c2ef57b8bce7d1e1cce9288a0cbed70efcd4dd28ef931dc24edff": "27a9773b8f293208e541179c6609b97dcfeb350b08359f1fe6fc68b701681881",
+    "786054bb581e9c2cb5f345521af8aaf9e13a9bdb98891b859e8811839fff1c03": "88a0db8bc0b73122c216bc9a38d74ff4c610fb2a61e7b0129f4968c17a274110",
+    "80f76d4a17ff04ff28fc08d76573e2eca2576b8d252a1da081f8968bcd7c49f8": "ff4b8e65d129fdc93264af4e729effcb6f8d30725ad097036b4585f3e4e1b7bf",
+    "8651076b9be13630ec938b8b1bc7a10b1a3ecc69bfd45ef1328954b669942e91": "fe883caa75a4cbdd5e0a60bcf23a3e3be8bc9cbbee6ed198ebee913c74920bb1",
+    "8c5702423d3fb773e1c45ba4612dd684f3513137cb46aea58cb668e5482809e1": "dd98d28a3669982a548be563a00a26c0feb4d0d32b0f97b5dcda3ed2437fc4c2",
+    "949592eb2c0fa99412dea1d41a65e18b986c896b75b4377d803296bf8070b14a": "0df50e66dbdd7de8b318facdf5e1edb7a7472ea59945d92b831b0127bfb9df1c",
+    "00f9d6a5476c548f207230b56f79e6a9ca8bfa182b1b2b24b4792ca50f12d424": "44faeed46c29a0f4905c187f28f322c45da047fc81f66d63afc85bd008022312",
+    "4ef094d61e6b88cbe4ae6f4c9e964b82233acf444cf8511733580f121bb29de9": "7533ae570efd4636c2a3fc6299ed2dcfebe5ea68ce38a875b24f5bab41cf53ab",
+    "3bd86ac3ffd04ada10eaae00add9cbc805896756e8aee1b0b14171364174672f": "508d09f81c70b601867d73476143ef8e22a78174253aa3e6e7f0cba9c6245486",
+    "11bfae95fb7ab0c87fef5a1a9bd352736337dc8b5cf59408e6d61b07259c22de": "abf95a077289867356441bf772281d753c8f8a8e909e1b0021eba93278ccf75b",
+}
+CANONICAL_ASSET_ROOT = Path(__file__).resolve().parents[3] / "public/question-assets/soil-mechanics"
 
 
 def _write_json(path: Path, payload: Any) -> None:
@@ -86,6 +99,32 @@ def _image_extension(data: bytes, target: str) -> str:
             return suffix
     suffix = Path(target).suffix.lower()
     return suffix if re.fullmatch(r"\.[a-z0-9]{1,5}", suffix) else ".bin"
+
+
+def _pinned_legacy_image(data: bytes) -> tuple[bytes, str]:
+    source_digest = hashlib.sha256(data).hexdigest()
+    converted_digest = LEGACY_IMAGE_CONVERSIONS.get(source_digest)
+    if converted_digest is None:
+        raise RuntimeError("发现未经审核的 WMF/EMF 题图，请先转换为 PNG 并登记源文件摘要")
+    canonical_asset = CANONICAL_ASSET_ROOT / f"{converted_digest}.png"
+    try:
+        converted = canonical_asset.read_bytes()
+    except OSError as error:
+        raise RuntimeError(f"已审核的旧版题图资产缺失：{canonical_asset.name}") from error
+    if hashlib.sha256(converted).hexdigest() != converted_digest:
+        raise RuntimeError(f"已审核的旧版题图资产摘要不匹配：{canonical_asset.name}")
+    return converted, source_digest
+
+
+def _normalize_image_asset(data: bytes, target: str) -> tuple[bytes, str, dict[str, str]]:
+    suffix = _image_extension(data, target)
+    if suffix not in {".wmf", ".emf"}:
+        return data, suffix, {}
+    converted, source_digest = _pinned_legacy_image(data)
+    return converted, ".png", {
+        "legacySourceFormat": suffix.removeprefix(".").upper(),
+        "legacySourceSha256": source_digest,
+    }
 
 
 def _append_text_token(tokens: list[dict[str, Any]], text: str) -> None:
@@ -146,8 +185,8 @@ def _ordered_inline_content(
             continue
         member = posixpath.normpath(posixpath.join("word", target))
         data = archive.read(member)
+        data, suffix, legacy_metadata = _normalize_image_asset(data, target)
         digest = hashlib.sha256(data).hexdigest()
-        suffix = _image_extension(data, target)
         asset = assets_dir / f"{digest}{suffix}"
         asset.parent.mkdir(parents=True, exist_ok=True)
         if not asset.exists():
@@ -162,6 +201,7 @@ def _ordered_inline_content(
             "sourcePosition": position,
             "inlineOrdinal": ordinal,
             "placeholder": placeholder,
+            **legacy_metadata,
         })
         inline_content.append({"kind": "attachment", "attachmentOrdinal": ordinal, "placeholder": placeholder})
     text_with_placeholders = "".join(
@@ -739,8 +779,13 @@ def parse_question_bank(
     output_dir = Path(output_dir)
     assets_dir = Path(public_assets_dir) if public_assets_dir is not None else output_dir / "question-assets"
     assets_dir.mkdir(parents=True, exist_ok=True)
+    pinned_assets = (
+        {f"{digest}.png" for digest in LEGACY_IMAGE_CONVERSIONS.values()}
+        if assets_dir.resolve() == CANONICAL_ASSET_ROOT.resolve()
+        else set()
+    )
     for stale_asset in assets_dir.iterdir():
-        if stale_asset.is_file() or stale_asset.is_symlink():
+        if stale_asset.name not in pinned_assets and (stale_asset.is_file() or stale_asset.is_symlink()):
             stale_asset.unlink()
     records: list[dict[str, Any]] = []
     review_items: list[dict[str, Any]] = []

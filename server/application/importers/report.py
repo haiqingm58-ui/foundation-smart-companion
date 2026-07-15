@@ -9,6 +9,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from PIL import Image, UnidentifiedImageError
+
 from server.application.services.assessment_validation import AssessmentValidationError, validate_question
 
 from .question_normalization import SUBJECT_ID, content_fingerprint
@@ -16,6 +18,10 @@ from .question_normalization import SUBJECT_ID, content_fingerprint
 
 class ReportValidationError(ValueError):
     pass
+
+
+SAFE_IMAGE_FORMATS = {".png": "PNG", ".jpg": "JPEG", ".jpeg": "JPEG", ".gif": "GIF", ".webp": "WEBP"}
+MAX_IMAGE_BYTES = 8 * 1024 * 1024
 
 
 @dataclass(frozen=True)
@@ -96,7 +102,20 @@ def _validate_attachments(manifest_path: Path, attachments: Any, question_id: st
             _require(filename.startswith(digest + "."), f"{question_id}: 图像文件名与 SHA-256 不匹配")
             asset = _image_asset_path(manifest_path, filename)
             _require(asset is not None, f"{question_id}: 图像资产不存在：{filename}")
-            _require(hashlib.sha256(asset.read_bytes()).hexdigest() == digest, f"{question_id}: 图像内容 SHA-256 不匹配")
+            data = asset.read_bytes()
+            _require(len(data) <= MAX_IMAGE_BYTES, f"{question_id}: 图像资产超过大小限制")
+            _require(hashlib.sha256(data).hexdigest() == digest, f"{question_id}: 图像内容 SHA-256 不匹配")
+            suffix = asset.suffix.lower()
+            _require(suffix in SAFE_IMAGE_FORMATS, f"{question_id}: 图像资产类型不安全")
+            try:
+                with Image.open(asset) as image:
+                    actual_format = image.format
+                    width, height = image.size
+                    image.verify()
+            except (OSError, UnidentifiedImageError) as error:
+                raise ReportValidationError(f"{question_id}: 图像资产无法解码") from error
+            _require(actual_format == SAFE_IMAGE_FORMATS[suffix], f"{question_id}: 图像扩展名与内容类型不匹配")
+            _require(width > 0 and height > 0 and width * height <= 25_000_000, f"{question_id}: 图像尺寸无效")
 
 
 def _validate_source_blocks(source_blocks: Any, attachments: list[dict[str, Any]], item_id: str) -> None:

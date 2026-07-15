@@ -10,7 +10,7 @@ from docx.shared import Inches
 from PIL import Image
 import pytest
 
-from server.application.importers.docx_question_bank import parse_question_bank
+from server.application.importers.docx_question_bank import LEGACY_IMAGE_CONVERSIONS, parse_question_bank
 from server.application.importers.report import ReportValidationError, validate_generated_files
 
 
@@ -380,6 +380,15 @@ def test_archive_provenance_is_unset_for_filename_only_match(tmp_path: Path) -> 
     assert report["sourceArchiveVerified"] is False
 
 
+def test_legacy_wmf_corpus_uses_pinned_reviewed_png_conversions() -> None:
+    assert len(LEGACY_IMAGE_CONVERSIONS) == 10
+    assert LEGACY_IMAGE_CONVERSIONS[
+        "11bfae95fb7ab0c87fef5a1a9bd352736337dc8b5cf59408e6d61b07259c22de"
+    ] == "abf95a077289867356441bf772281d753c8f8a8e909e1b0021eba93278ccf75b"
+    asset_root = Path(__file__).resolve().parents[2] / "public/question-assets/soil-mechanics"
+    assert all((asset_root / f"{digest}.png").is_file() for digest in LEGACY_IMAGE_CONVERSIONS.values())
+
+
 @pytest.mark.skipif(not REAL_SOURCE.exists(), reason="ignored soil-mechanics source corpus is not available")
 def test_real_corpus_covers_all_sources_and_accounts_for_every_candidate(tmp_path: Path) -> None:
     assets_dir = tmp_path / "assets"
@@ -431,6 +440,18 @@ def test_real_corpus_covers_all_sources_and_accounts_for_every_candidate(tmp_pat
         if record["attachment"]["kind"] == "image"
     )
     assert referenced_assets == {path.name for path in assets_dir.iterdir()}
+    image_attachments = [
+        attachment
+        for item in preserved
+        for attachment in item["attachments"]
+        if attachment["kind"] == "image"
+    ]
+    assert image_attachments
+    assert all(attachment["src"].endswith((".png", ".jpg", ".jpeg", ".gif", ".webp")) for attachment in image_attachments)
+    assert not list(assets_dir.glob("*.wmf"))
+    for asset in assets_dir.iterdir():
+        with Image.open(asset) as image:
+            image.verify()
 
     sequence_85 = next(
         item for item in preserved
