@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
 from concurrent.futures import ThreadPoolExecutor
+from threading import Event
 from time import time_ns
 
 import pytest
@@ -429,7 +430,7 @@ def test_parallel_formal_starts_persist_one_in_progress_attempt(assessment_conte
     from server.application.models import Submission
 
     client, database = assessment_context
-    assignment_id = _assignment(database)
+    assignment_id = _assignment(database, show_answers_mode="after_submission")
 
     def start_once():
         request_client = TestClient(client.app)
@@ -539,3 +540,143 @@ def test_student_payload_keeps_safe_image_table_and_formula_attachments(assessme
         session.commit()
     formal = client.post(f"/api/student/assignments/{assignment_id}/start", headers=CSRF).json()["data"]
     assert formal["questions"][0]["attachments"] == practice_question["attachments"]
+    resumed = client.post(f"/api/student/assignments/{assignment_id}/start", headers=CSRF).json()["data"]
+    assert resumed["questions"][0]["attachments"] == practice_question["attachments"]
+    client.put(f"/api/student/submissions/{formal['submissionId']}/answers/{formal['questions'][0]['id']}", json={"answer": "A"}, headers=CSRF)
+    client.post(f"/api/student/submissions/{formal['submissionId']}/submit", headers=CSRF)
+    assert client.get(f"/api/student/submissions/{formal['submissionId']}/result").json()["data"]["questions"][0]["attachments"] == practice_question["attachments"]
+
+
+@pytest.mark.parametrize("existing_answer", [False, True])
+def test_barrier_autosave_then_submit_grades_the_committed_answer(assessment_context, monkeypatch, existing_answer: bool) -> None:
+    import server.application.api.student_assessment as assessment_api
+    from server.application.models import Submission, SubmissionAnswer
+
+    client, database = assessment_context
+    assignment_id = _assignment(database)
+    started = client.post(f"/api/student/assignments/{assignment_id}/start", headers=CSRF).json()["data"]
+    submission_id, question_id = started["submissionId"], started["questions"][0]["id"]
+    if existing_answer:
+        assert client.put(f"/api/student/submissions/{submission_id}/answers/{question_id}", json={"answer": "B"}, headers=CSRF).status_code == 200
+    entered, release = Event(), Event()
+    original_validate = assessment_api.validate_student_answer
+
+    def wait_after_claim(snapshot, answer):
+        entered.set()
+        assert release.wait(5)
+        return original_validate(snapshot, answer)
+
+    monkeypatch.setattr(assessment_api, "validate_student_answer", wait_after_claim)
+
+    def request_client():
+        result = TestClient(client.app)
+        result.cookies.set("foundation_session", "student-token")
+        result.cookies.set("foundation_csrf", "student-csrf")
+        return result
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        autosave = pool.submit(lambda: request_client().put(f"/api/student/submissions/{submission_id}/answers/{question_id}", json={"answer": "A"}, headers=CSRF))
+        assert entered.wait(5)
+        submit = pool.submit(lambda: request_client().post(f"/api/student/submissions/{submission_id}/submit", headers=CSRF))
+        release.set()
+        autosave_response, submit_response = autosave.result(10), submit.result(10)
+    assert autosave_response.status_code == 200
+    assert submit_response.status_code == 200
+    with database.session() as session:
+        record = session.get(Submission, submission_id)
+        answers = session.scalars(select(SubmissionAnswer).where(SubmissionAnswer.submission_id == submission_id)).all()
+        assert record.status == "graded"
+        assert record.score == 10
+        assert len(answers) == 1
+        assert answers[0].answer == "A"
+        assert answers[0].score == 10
+
+
+def test_barrier_submit_then_autosave_returns_closed_without_lock_error(assessment_context, monkeypatch) -> None:
+    import server.application.api.student_assessment as assessment_api
+    from server.application.models import SubmissionAnswer
+
+    client, database = assessment_context
+    assignment_id = _assignment(database)
+    started = client.post(f"/api/student/assignments/{assignment_id}/start", headers=CSRF).json()["data"]
+    submission_id, question_id = started["submissionId"], started["questions"][0]["id"]
+    entered, release = Event(), Event()
+    original_grade = assessment_api.grade_objective
+
+    def wait_after_submit_claim(snapshot, answer):
+        entered.set()
+        assert release.wait(5)
+        return original_grade(snapshot, answer)
+
+    monkeypatch.setattr(assessment_api, "grade_objective", wait_after_submit_claim)
+
+    def request_client():
+        result = TestClient(client.app)
+        result.cookies.set("foundation_session", "student-token")
+        result.cookies.set("foundation_csrf", "student-csrf")
+        return result
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        submit = pool.submit(lambda: request_client().post(f"/api/student/submissions/{submission_id}/submit", headers=CSRF))
+        assert entered.wait(5)
+        autosave = pool.submit(lambda: request_client().put(f"/api/student/submissions/{submission_id}/answers/{question_id}", json={"answer": "A"}, headers=CSRF))
+        release.set()
+        submit_response, autosave_response = submit.result(10), autosave.result(10)
+    assert submit_response.status_code == 200
+    assert autosave_response.status_code == 409
+    assert autosave_response.json()["code"] == "SUBMISSION_CLOSED"
+    with database.session() as session:
+        assert session.scalar(select(SubmissionAnswer).where(SubmissionAnswer.submission_id == submission_id)) is not None
+
+
+@pytest.mark.parametrize("question_type,valid,invalid", [
+    ("单项选择题", "A", "Z"),
+    ("多项选择题", ["A", "B"], ["A", "A"]),
+    ("判断题", True, "true"),
+    ("填空题", "渗流", []),
+    ("简答题", "abc", "abcd"),
+    ("计算题", "abc", "abcd"),
+])
+def test_all_answer_types_use_same_validation_on_practice_and_formal_autosave(assessment_context, question_type, valid, invalid) -> None:
+    from server.application.models import AssignmentQuestion, Question
+
+    client, database = assessment_context
+    with database.session() as session:
+        question = session.get(Question, "soil-question-00")
+        question.question_type = question_type
+        question.options = [{"label": "A", "text": "甲"}, {"label": "B", "text": "乙"}] if "选择" in question_type else []
+        question.answer_word_limit = 3 if question_type in {"简答题", "计算题"} else None
+        session.commit()
+    practice = _practice(client, count=13)
+    practice_question = next(item for item in practice["questions"] if item["id"] == "soil-question-00")
+    practice_url = f"/api/student/practice-sessions/{practice['id']}/answers/{practice_question['id']}"
+    rejected = client.put(practice_url, json={"answer": invalid}, headers=CSRF)
+    assert rejected.status_code == 422
+    assert rejected.json()["success"] is False
+    assert client.put(practice_url, json={"answer": valid}, headers=CSRF).status_code == 200
+    assignment_id = _assignment(database)
+    with database.session() as session:
+        row = session.scalar(select(AssignmentQuestion).where(AssignmentQuestion.assignment_id == assignment_id))
+        row.question_snapshot = {**row.question_snapshot, "questionType": question_type, "options": [{"label": "A", "text": "甲"}, {"label": "B", "text": "乙"}] if "选择" in question_type else [], "answerWordLimit": 3 if question_type in {"简答题", "计算题"} else None}
+        session.commit()
+    formal = client.post(f"/api/student/assignments/{assignment_id}/start", headers=CSRF).json()["data"]
+    formal_url = f"/api/student/submissions/{formal['submissionId']}/answers/{formal['questions'][0]['id']}"
+    assert client.put(formal_url, json={"answer": invalid}, headers=CSRF).status_code == 422
+    assert client.put(formal_url, json={"answer": valid}, headers=CSRF).status_code == 200
+
+
+def test_allowed_resubmission_uses_latest_graded_attempt_for_average(assessment_context) -> None:
+    from server.application.models import Student
+
+    client, database = assessment_context
+    assignment_id = _assignment(database, allow_resubmit=True)
+    first = client.post(f"/api/student/assignments/{assignment_id}/start", headers=CSRF).json()["data"]
+    client.put(f"/api/student/submissions/{first['submissionId']}/answers/{first['questions'][0]['id']}", json={"answer": "A"}, headers=CSRF)
+    assert client.post(f"/api/student/submissions/{first['submissionId']}/submit", headers=CSRF).json()["data"]["score"] == 10
+    second = client.post(f"/api/student/assignments/{assignment_id}/start", headers=CSRF).json()["data"]
+    assert second["attemptNumber"] == 2
+    client.put(f"/api/student/submissions/{second['submissionId']}/answers/{second['questions'][0]['id']}", json={"answer": "B"}, headers=CSRF)
+    assert client.post(f"/api/student/submissions/{second['submissionId']}/submit", headers=CSRF).json()["data"]["score"] == 0
+    assert client.post(f"/api/student/assignments/{assignment_id}/start", headers=CSRF).status_code == 409
+    with database.session() as session:
+        assert session.get(Student, "student-profile").average_score == 0

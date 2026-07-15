@@ -348,6 +348,13 @@ def save_formal_answer(submission_id: str, question_id: str, body: AnswerSave, r
         submission, assignment = _submission_for(session, submission_id, student.id, lock=True)
         if submission.status != "in_progress":
             raise APIError(409, "试卷已提交，不能继续保存答案", "SUBMISSION_CLOSED")
+        claimed = session.execute(
+            update(Submission)
+            .where(Submission.id == submission.id, Submission.student_id == student.id, Submission.status == "in_progress")
+            .values(started_at=Submission.started_at)
+        )
+        if not claimed.rowcount:
+            raise APIError(409, "试卷已提交，不能继续保存答案", "SUBMISSION_CLOSED")
         _ensure_assignment_open(assignment, submission)
         item = session.scalar(select(AssignmentQuestion).where(AssignmentQuestion.assignment_id == assignment.id, AssignmentQuestion.question_id == question_id))
         if not item:

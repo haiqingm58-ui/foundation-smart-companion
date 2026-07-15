@@ -201,3 +201,41 @@ Compilation of changed modules and `git diff --check` completed with no output a
 ### Remaining Concerns
 
 The available test environment remains SQLite. PostgreSQL row-lock syntax is emitted through SQLAlchemy's portable `with_for_update()` path and partial-index DDL is defined for PostgreSQL, but no live PostgreSQL harness was configured.
+
+## Final Review Verification
+
+### Status
+
+`DONE`
+
+- Review baseline: `0c3e65c` (`fix: close assessment review gaps`)
+- Remaining verification gaps addressed: Important 1, Minor 3.
+
+### Added Evidence
+
+- Formal autosave now makes a guarded no-op update of the in-progress submission after acquiring the row lock. This serializes it with submit on SQLite and PostgreSQL; a closed/submitting row cannot be modified after retry.
+- Barrier-controlled SQLite interleavings cover autosave-before-submit with both a first-answer insert and an existing answer, plus submit-before-autosave. They verify one answer row, the same answer used for grading, final status/score, and `SUBMISSION_CLOSED` for the losing autosave without a lock-error response.
+- The answer-validation matrix reaches all six question types through both practice and formal routes, including multiple-choice duplicate labels, invalid shapes, and exact text-limit acceptance/rejection.
+- Added formal attachment assertions for start, resume, and revealed results; known image/table/formula display values are retained while private source fields remain absent.
+- Added permitted resubmission coverage: attempt two is created, the third start is capped, and the latest graded attempt determines the formal average.
+
+### Final Verification
+
+```text
+$ server/.venv/bin/pytest server/tests/test_student_assessment.py server/tests/test_student.py server/tests/test_teacher.py server/tests/test_teacher_papers.py server/tests/test_migrations.py -q
+........................................................................ [ 87%]
+..........                                                               [100%]
+82 passed in 15.29s
+
+$ server/.venv/bin/pytest server/tests -q
+........................................................................ [ 39%]
+.............................s.......................................... [ 79%]
+......................................                                   [100%]
+181 passed, 1 skipped in 28.22s
+```
+
+Compilation of changed modules and `git diff --check` completed with no output and exit code 0.
+
+### Remaining Concerns
+
+SQLite barrier races are verified. `FOUNDATION_TEST_POSTGRES_URL` was not configured, so no live PostgreSQL harness run was possible; the same lock-aware code path is used through SQLAlchemy.
