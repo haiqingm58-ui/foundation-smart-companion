@@ -193,6 +193,151 @@ def task1_schema_signature(database) -> dict:
     return {"tables": tables, "catalog": table_details}
 
 
+TASK6_SCHEMA_TABLES = ("papers", "paper_questions", "assignments", "assignment_questions")
+
+
+def task6_database_schema_signature(database, table_names=TASK6_SCHEMA_TABLES) -> dict:
+    inspector = inspect(database.engine)
+    signature = {}
+    for table_name in table_names:
+        signature[table_name] = {
+            "columns": tuple(
+                sorted(
+                    (
+                        column["name"],
+                        str(column["type"]),
+                        column["nullable"],
+                        column["name"] in inspector.get_pk_constraint(table_name)["constrained_columns"],
+                    )
+                    for column in inspector.get_columns(table_name)
+                )
+            ),
+            "indexes": tuple(
+                sorted(
+                    (index["name"], tuple(index["column_names"]), index["unique"])
+                    for index in inspector.get_indexes(table_name)
+                )
+            ),
+            "foreign_keys": tuple(
+                sorted(
+                    (
+                        tuple(foreign_key["constrained_columns"]),
+                        foreign_key["referred_table"],
+                        tuple(foreign_key["referred_columns"]),
+                        foreign_key["options"].get("ondelete"),
+                    )
+                    for foreign_key in inspector.get_foreign_keys(table_name)
+                )
+            ),
+            "uniques": tuple(
+                sorted(
+                    (constraint["name"], tuple(constraint["column_names"]))
+                    for constraint in inspector.get_unique_constraints(table_name)
+                )
+            ),
+        }
+    return signature
+
+
+def task6_model_schema_signature() -> dict:
+    from server.application.models import Base
+
+    signature = {}
+    for table_name in TASK6_SCHEMA_TABLES:
+        table = Base.metadata.tables[table_name]
+        signature[table_name] = {
+            "columns": tuple(
+                sorted(
+                    (column.name, str(column.type), column.nullable, column.primary_key)
+                    for column in table.columns
+                )
+            ),
+            "indexes": tuple(
+                sorted(
+                    (index.name, tuple(column.name for column in index.columns), index.unique)
+                    for index in table.indexes
+                )
+            ),
+            "foreign_keys": tuple(
+                sorted(
+                    (
+                        tuple(column.name for column in constraint.columns),
+                        next(iter(constraint.elements)).column.table.name,
+                        tuple(element.column.name for element in constraint.elements),
+                        constraint.ondelete,
+                    )
+                    for constraint in table.foreign_key_constraints
+                )
+            ),
+            "uniques": tuple(
+                sorted(
+                    (constraint.name, tuple(column.name for column in constraint.columns))
+                    for constraint in table.constraints
+                    if constraint.__class__.__name__ == "UniqueConstraint"
+                )
+            ),
+        }
+    return signature
+
+
+def insert_revision_005_assignment_rows(connection) -> None:
+    now = "2026-07-14 00:00:00"
+    connection.execute(
+        text(
+            """
+            INSERT INTO users (
+                id, username, password_hash, password_algorithm, role, role_label, name,
+                status, college, school, must_change_password, created_at, updated_at
+            ) VALUES (
+                'task6-teacher-user', 'task6-teacher', 'hash', 'argon2', 'teacher', '指导老师', '试卷教师',
+                'active', '土木工程学院', '湖南大学', 0, :now, :now
+            )
+            """
+        ),
+        {"now": now},
+    )
+    connection.execute(
+        text(
+            "INSERT INTO teachers (id, user_id, teacher_no, college, course, created_at) "
+            "VALUES ('task6-teacher', 'task6-teacher-user', 'TP6', '土木工程学院', '土力学', :now)"
+        ),
+        {"now": now},
+    )
+    connection.execute(
+        text(
+            """
+            INSERT INTO questions (
+                id, text, question_type, options, rubric, difficulty, points, subject_id,
+                attachments, grading_mode, status, source_metadata, source, created_at, updated_at
+            ) VALUES (
+                'task6-question', '迁移保留题干', '简答题', '[]', '[]', '基础', 12, 'soil-mechanics',
+                '[]', 'manual', 'review_required', '{}', 'textbook', :now, :now
+            )
+            """
+        ),
+        {"now": now},
+    )
+    connection.execute(
+        text(
+            """
+            INSERT INTO assignments (
+                id, title, description, teacher_id, total_points, allow_resubmit,
+                auto_grade, status, created_at
+            ) VALUES (
+                'task6-assignment', '迁移保留作业', '保留的描述', 'task6-teacher', 12, 0, 0, 'published', :now
+            )
+            """
+        ),
+        {"now": now},
+    )
+    connection.execute(
+        text(
+            "INSERT INTO assignment_questions (id, assignment_id, question_id, sequence, points) "
+            "VALUES ('task6-assignment-question', 'task6-assignment', 'task6-question', 1, 12)"
+        )
+    )
+
+
 def test_fresh_and_historical_migrations_have_task1_schema_parity(tmp_path: Path, database_url: str) -> None:
     from server.application.database import create_database
     from server.application.migrations import upgrade_database
@@ -214,6 +359,134 @@ def test_fresh_and_historical_migrations_have_task1_schema_parity(tmp_path: Path
     fresh_signature = task1_schema_signature(create_database(database_url))
     historical_signature = task1_schema_signature(create_database(historical_url))
     assert fresh_signature == historical_signature
+
+
+def test_fresh_and_historical_task6_schema_matches_models(tmp_path: Path) -> None:
+    from server.application.database import create_database
+    from server.application.migrations import upgrade_database
+
+    fresh_url = f"sqlite:///{tmp_path / 'task6-fresh.db'}"
+    historical_url = f"sqlite:///{tmp_path / 'task6-historical.db'}"
+    upgrade_database(fresh_url)
+    upgrade_database(historical_url, "005_subject_mastery")
+    historical_database = create_database(historical_url)
+    with historical_database.engine.begin() as connection:
+        insert_revision_005_assignment_rows(connection)
+    upgrade_database(historical_url)
+
+    fresh_signature = task6_database_schema_signature(create_database(fresh_url))
+    historical_signature = task6_database_schema_signature(create_database(historical_url))
+    model_signature = task6_model_schema_signature()
+    assert fresh_signature == historical_signature
+    assert fresh_signature == model_signature
+
+
+def test_migration_006_populated_downgrade_preserves_revision_005_rows_and_schema(tmp_path: Path) -> None:
+    from server.application.database import create_database
+    from server.application.migrations import downgrade_database, upgrade_database
+
+    database_url = f"sqlite:///{tmp_path / 'task6-roundtrip.db'}"
+    upgrade_database(database_url, "005_subject_mastery")
+    database = create_database(database_url)
+    with database.engine.begin() as connection:
+        insert_revision_005_assignment_rows(connection)
+    revision_005_signature = task6_database_schema_signature(
+        database, ("assignments", "assignment_questions")
+    )
+
+    upgrade_database(database_url)
+    database = create_database(database_url)
+    now = "2026-07-14 01:00:00"
+    with database.engine.begin() as connection:
+        connection.execute(
+            text(
+                """
+                INSERT INTO papers (
+                    id, subject_id, title, description, duration_minutes, total_points,
+                    status, version, assembly_mode, assembly_blueprint, assembly_seed,
+                    shortages, created_by, created_at, updated_at
+                ) VALUES (
+                    'task6-paper', 'soil-mechanics', '迁移回滚试卷', '回滚时仅移除新实体', 60, 12,
+                    'published', 1, 'manual', '[]', 7, '[]', 'task6-teacher-user', :now, :now
+                )
+                """
+            ),
+            {"now": now},
+        )
+        connection.execute(
+            text(
+                """
+                INSERT INTO paper_questions (
+                    id, paper_id, question_id, section_title, sequence, points
+                ) VALUES (
+                    'task6-paper-question', 'task6-paper', 'task6-question', '一、简答题', 1, 12
+                )
+                """
+            )
+        )
+        connection.execute(
+            text(
+                """
+                UPDATE assignments
+                SET paper_id = 'task6-paper', duration_minutes = 60, show_answers_mode = 'after_close'
+                WHERE id = 'task6-assignment'
+                """
+            )
+        )
+        connection.execute(
+            text(
+                "UPDATE assignment_questions SET question_snapshot = :snapshot "
+                "WHERE id = 'task6-assignment-question'"
+            ),
+            {"snapshot": json.dumps({"text": "迁移快照", "correctAnswer": "答案"}, ensure_ascii=False)},
+        )
+
+    downgrade_database(database_url, "005_subject_mastery")
+    database = create_database(database_url)
+    inspector = inspect(database.engine)
+    assert {"papers", "paper_questions"}.isdisjoint(inspector.get_table_names())
+    assert task6_database_schema_signature(
+        database, ("assignments", "assignment_questions")
+    ) == revision_005_signature
+    with database.engine.connect() as connection:
+        assignment = connection.execute(
+            text(
+                "SELECT id, title, description, teacher_id, total_points, allow_resubmit, auto_grade, status "
+                "FROM assignments WHERE id = 'task6-assignment'"
+            )
+        ).one()
+        assignment_question = connection.execute(
+            text(
+                "SELECT id, assignment_id, question_id, sequence, points "
+                "FROM assignment_questions WHERE id = 'task6-assignment-question'"
+            )
+        ).one()
+        revision = connection.execute(text("SELECT version_num FROM alembic_version")).scalar_one()
+    assert assignment == (
+        "task6-assignment", "迁移保留作业", "保留的描述", "task6-teacher", 12.0, 0, 0, "published"
+    )
+    assert assignment_question == (
+        "task6-assignment-question", "task6-assignment", "task6-question", 1, 12.0
+    )
+    assert revision == "005_subject_mastery"
+
+    upgrade_database(database_url)
+    database = create_database(database_url)
+    with database.engine.connect() as connection:
+        upgraded_assignment = connection.execute(
+            text(
+                "SELECT title, paper_id, duration_minutes, show_answers_mode "
+                "FROM assignments WHERE id = 'task6-assignment'"
+            )
+        ).one()
+        upgraded_question = connection.execute(
+            text(
+                "SELECT question_id, sequence, points, question_snapshot "
+                "FROM assignment_questions WHERE id = 'task6-assignment-question'"
+            )
+        ).one()
+    assert upgraded_assignment == ("迁移保留作业", None, None, "after_submission")
+    assert upgraded_question == ("task6-question", 1, 12.0, None)
 
 
 def test_fresh_revision_003_schema_matches_frozen_signature(tmp_path: Path) -> None:

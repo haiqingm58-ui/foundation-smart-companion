@@ -16,11 +16,10 @@ from ..schemas.paper import (
 )
 
 
-def _row_candidates(session: Session, blueprint: Blueprint, row, selected_ids: set[str]) -> list[Question]:
+def _row_candidates(session: Session, blueprint: Blueprint, row) -> list[Question]:
     filters = [
         Question.subject_id == blueprint.subject_id,
         Question.status == "active",
-        Question.id.not_in(selected_ids),
     ]
     if blueprint._actor_id is None:
         filters.append(Question.created_by.is_(None))
@@ -56,24 +55,63 @@ def _seeded_shuffle(items: list[Question], seed: int, row_index: int) -> list[Qu
 
 
 def assemble_paper(session: Session, blueprint: Blueprint) -> AssemblyPreview:
-    selected_ids: set[str] = set()
     assembled: list[AssemblyQuestion] = []
     shortages: list[AssemblyShortage] = []
     coverage: Counter[str] = Counter()
     type_distribution: Counter[str] = Counter()
     difficulty_distribution: Counter[str] = Counter()
 
+    candidates_by_row: dict[int, list[Question]] = {}
+    questions_by_id: dict[str, Question] = {}
     for row_index, row in enumerate(blueprint.rows, start=1):
         candidates = _seeded_shuffle(
-            _row_candidates(session, blueprint, row, selected_ids), blueprint.seed, row_index
+            _row_candidates(session, blueprint, row), blueprint.seed, row_index
         )
-        selected = candidates[: row.count]
-        if len(selected) < row.count:
+        candidates_by_row[row_index] = candidates
+        questions_by_id.update((question.id, question) for question in candidates)
+
+    slots = [
+        (row_index, slot_index)
+        for row_index, row in enumerate(blueprint.rows, start=1)
+        for slot_index in range(1, row.count + 1)
+    ]
+    slots.sort(
+        key=lambda slot: (
+            len(candidates_by_row[slot[0]]),
+            slot[0],
+            slot[1],
+        )
+    )
+    question_to_slot: dict[str, tuple[int, int]] = {}
+    slot_to_question: dict[tuple[int, int], str] = {}
+
+    def augment(slot: tuple[int, int], seen_question_ids: set[str]) -> bool:
+        for question in candidates_by_row[slot[0]]:
+            if question.id in seen_question_ids:
+                continue
+            seen_question_ids.add(question.id)
+            owner = question_to_slot.get(question.id)
+            if owner is None or augment(owner, seen_question_ids):
+                question_to_slot[question.id] = slot
+                slot_to_question[slot] = question.id
+                return True
+        return False
+
+    for slot in slots:
+        augment(slot, set())
+
+    for row_index, row in enumerate(blueprint.rows, start=1):
+        selected = [
+            questions_by_id[slot_to_question[(row_index, slot_index)]]
+            for slot_index in range(1, row.count + 1)
+            if (row_index, slot_index) in slot_to_question
+        ]
+        if len(selected) != row.count:
             shortages.append(
                 AssemblyShortage(
                     row=row_index,
                     requested=row.count,
-                    available=len(candidates),
+                    available=len(selected),
                     missing=row.count - len(selected),
                     criteria={
                         "chapterIds": row.chapter_ids,
@@ -84,7 +122,6 @@ def assemble_paper(session: Session, blueprint: Blueprint) -> AssemblyPreview:
                 )
             )
         for question in selected:
-            selected_ids.add(question.id)
             point_ids = [link.knowledge_point_id for link in question.knowledge_point_links]
             coverage.update(point_ids)
             type_distribution[question.question_type] += 1
@@ -108,6 +145,6 @@ def assemble_paper(session: Session, blueprint: Blueprint) -> AssemblyPreview:
         coverage=dict(coverage),
         type_distribution=dict(type_distribution),
         difficulty_distribution=dict(difficulty_distribution),
-        duplicate_risk=len(assembled) - len(selected_ids),
+        duplicate_risk=len(assembled) - len({item.question_id for item in assembled}),
         shortages=shortages,
     )

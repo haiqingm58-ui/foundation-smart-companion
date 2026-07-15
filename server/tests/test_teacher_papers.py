@@ -327,6 +327,125 @@ def test_automatic_preview_is_seed_deterministic_and_reports_exact_shortage(teac
     }]
 
 
+def test_automatic_preview_globally_reserves_question_for_narrow_later_row(teacher_context) -> None:
+    client, database, _ = teacher_context
+    seed_question(
+        database,
+        "broad-general",
+        point_id="broad-general-point",
+        point_name="广义候选知识点",
+    )
+    seed_question(
+        database,
+        "broad-specific",
+        point_id="broad-specific-point",
+        point_name="狭义候选知识点",
+    )
+    response = client.post(
+        "/api/teacher/papers/generate-preview",
+        json={
+            "subjectId": "soil-mechanics",
+            "seed": 2,
+            "rows": [
+                {
+                    "chapterIds": [],
+                    "knowledgePointIds": [],
+                    "questionTypes": ["单项选择题"],
+                    "difficulties": ["基础"],
+                    "count": 1,
+                    "pointsEach": 4,
+                    "sectionTitle": "广义题",
+                },
+                {
+                    "chapterIds": [],
+                    "knowledgePointIds": ["broad-specific-point"],
+                    "questionTypes": ["单项选择题"],
+                    "difficulties": ["基础"],
+                    "count": 1,
+                    "pointsEach": 9,
+                    "sectionTitle": "限定题",
+                },
+            ],
+        },
+        headers=csrf(),
+    )
+    assert response.status_code == 200
+    data = response.json()["data"]
+    assert data["shortages"] == []
+    assert [
+        (item["questionId"], item["sectionTitle"], item["points"])
+        for item in data["questions"]
+    ] == [
+        ("broad-general", "广义题", 4.0),
+        ("broad-specific", "限定题", 9.0),
+    ]
+
+
+def test_automatic_preview_solves_multi_row_overlap_with_augmenting_paths(teacher_context) -> None:
+    client, database, _ = teacher_context
+    for suffix, point_name in (
+        ("alpha", "重叠知识点 A"),
+        ("beta", "重叠知识点 B"),
+        ("gamma", "重叠知识点 C"),
+    ):
+        seed_question(
+            database,
+            f"overlap-{suffix}",
+            point_id=f"overlap-{suffix}-point",
+            point_name=point_name,
+        )
+    response = client.post(
+        "/api/teacher/papers/generate-preview",
+        json={
+            "subjectId": "soil-mechanics",
+            "seed": 0,
+            "rows": [
+                {
+                    "chapterIds": [],
+                    "knowledgePointIds": [],
+                    "questionTypes": ["单项选择题"],
+                    "difficulties": ["基础"],
+                    "count": 1,
+                    "pointsEach": 3,
+                    "sectionTitle": "全部候选",
+                },
+                {
+                    "chapterIds": [],
+                    "knowledgePointIds": ["overlap-alpha-point", "overlap-beta-point"],
+                    "questionTypes": ["单项选择题"],
+                    "difficulties": ["基础"],
+                    "count": 1,
+                    "pointsEach": 5,
+                    "sectionTitle": "A 或 B",
+                },
+                {
+                    "chapterIds": [],
+                    "knowledgePointIds": ["overlap-alpha-point"],
+                    "questionTypes": ["单项选择题"],
+                    "difficulties": ["基础"],
+                    "count": 1,
+                    "pointsEach": 8,
+                    "sectionTitle": "仅 A",
+                },
+            ],
+        },
+        headers=csrf(),
+    )
+    assert response.status_code == 200
+    data = response.json()["data"]
+    assert data["shortages"] == []
+    assert len({item["questionId"] for item in data["questions"]}) == 3
+    by_section = {item["sectionTitle"]: item for item in data["questions"]}
+    assert by_section["仅 A"]["questionId"] == "overlap-alpha"
+    assert by_section["A 或 B"]["questionId"] == "overlap-beta"
+    assert by_section["全部候选"]["questionId"] == "overlap-gamma"
+    assert {section: item["points"] for section, item in by_section.items()} == {
+        "全部候选": 3.0,
+        "A 或 B": 5.0,
+        "仅 A": 8.0,
+    }
+
+
 def test_paper_ownership_copy_and_private_question_rules(teacher_context) -> None:
     from server.application.models import OperationLog
 
@@ -356,6 +475,20 @@ def test_paper_ownership_copy_and_private_question_rules(teacher_context) -> Non
         response = method(path, headers=csrf("teacher-2-csrf"))
         assert response.status_code == 404
         assert set(response.json()) == {"success", "message", "code", "requestId"}
+    denied_update = other.put(
+        f"/api/teacher/papers/{paper['id']}",
+        json=manual_paper_payload([shared_id], title="越权修改"),
+        headers=csrf("teacher-2-csrf"),
+    )
+    denied_publish = other.post(
+        f"/api/teacher/papers/{paper['id']}/publish",
+        json={"studentIds": ["student-2"], "classIds": []},
+        headers=csrf("teacher-2-csrf"),
+    )
+    for response in (denied_update, denied_publish):
+        assert response.status_code == 404
+        assert response.json()["code"] == "PAPER_NOT_FOUND"
+        assert set(response.json()) == {"success", "message", "code", "requestId"}
     private_question = client.post(
         "/api/teacher/papers",
         json=manual_paper_payload([private_other_id]),
@@ -370,6 +503,39 @@ def test_paper_ownership_copy_and_private_question_rules(teacher_context) -> Non
             )
         )
         assert copy_log.detail["sourcePaperId"] == paper["id"]
+
+
+def test_paper_update_and_delete_are_audited_transactionally(teacher_context) -> None:
+    from server.application.models import OperationLog, Paper
+
+    client, database, _ = teacher_context
+    question_id = seed_question(database, "paper-audit-question")
+    paper = create_manual_paper(client, [question_id], title="审计试卷")
+    updated = client.put(
+        f"/api/teacher/papers/{paper['id']}",
+        json=manual_paper_payload([question_id], title="审计试卷修订"),
+        headers=csrf(),
+    )
+    assert updated.status_code == 200
+    assert updated.json()["data"]["version"] == 2
+    deleted = client.delete(f"/api/teacher/papers/{paper['id']}", headers=csrf())
+    assert deleted.status_code == 200
+
+    with database.session() as session:
+        assert session.get(Paper, paper["id"]) is None
+        logs = session.scalars(
+            select(OperationLog)
+            .where(
+                OperationLog.target_id == paper["id"],
+                OperationLog.action.in_(["paper.update", "paper.delete"]),
+            )
+            .order_by(OperationLog.created_at, OperationLog.action)
+        ).all()
+        assert {log.action for log in logs} == {"paper.update", "paper.delete"}
+        update_log = next(log for log in logs if log.action == "paper.update")
+        delete_log = next(log for log in logs if log.action == "paper.delete")
+        assert update_log.detail == {"version": 2}
+        assert delete_log.detail == {}
 
 
 def test_publish_authorizes_students_and_classes_and_logs_targets(teacher_context) -> None:
@@ -464,6 +630,141 @@ def test_publish_rejects_zero_question_and_automatic_shortage_papers(teacher_con
     )
     assert shortage_publish.status_code == 409
     assert shortage_publish.json()["code"] == "PAPER_HAS_SHORTAGES"
+
+
+def test_upsert_cannot_forge_or_demote_server_owned_published_state(teacher_context) -> None:
+    from server.application.models import Paper
+
+    client, database, _ = teacher_context
+    forged_empty = client.post(
+        "/api/teacher/papers",
+        json=manual_paper_payload([], status="published", title="伪造空试卷"),
+        headers=csrf(),
+    )
+    assert forged_empty.status_code == 422
+    assert forged_empty.json()["code"] == "VALIDATION_ERROR"
+
+    empty = create_manual_paper(client, [], title="空试卷草稿")
+    forged_empty_update = client.put(
+        f"/api/teacher/papers/{empty['id']}",
+        json=manual_paper_payload([], status="published", title="伪造空试卷更新"),
+        headers=csrf(),
+    )
+    assert forged_empty_update.status_code == 422
+
+    shortage_payload = {
+        "subjectId": "soil-mechanics",
+        "title": "缺题试卷草稿",
+        "assemblyMode": "automatic",
+        "seed": 11,
+        "blueprintRows": [{
+            "chapterIds": ["不存在的章节"],
+            "knowledgePointIds": [],
+            "questionTypes": ["单项选择题"],
+            "difficulties": ["基础"],
+            "count": 1,
+            "pointsEach": 10,
+        }],
+    }
+    forged_shortage = client.post(
+        "/api/teacher/papers",
+        json={**shortage_payload, "status": "published"},
+        headers=csrf(),
+    )
+    assert forged_shortage.status_code == 422
+    shortage = client.post(
+        "/api/teacher/papers", json=shortage_payload, headers=csrf()
+    ).json()["data"]
+    assert shortage["shortages"][0]["missing"] == 1
+    forged_shortage_update = client.put(
+        f"/api/teacher/papers/{shortage['id']}",
+        json={**shortage_payload, "status": "published"},
+        headers=csrf(),
+    )
+    assert forged_shortage_update.status_code == 422
+
+    question_id = seed_question(database, "state-owned-question")
+    publishable = create_manual_paper(client, [question_id], title="正式发布状态")
+    published = client.post(
+        f"/api/teacher/papers/{publishable['id']}/publish",
+        json={"studentIds": ["student-1"], "classIds": []},
+        headers=csrf(),
+    )
+    assert published.status_code == 200
+    published_empty_update = client.put(
+        f"/api/teacher/papers/{publishable['id']}",
+        json=manual_paper_payload([], status="draft", title="不得清空已发布试卷"),
+        headers=csrf(),
+    )
+    assert published_empty_update.status_code == 409
+    assert published_empty_update.json()["code"] == "PUBLISHED_PAPER_CONTENT_INVALID"
+    published_shortage_update = client.put(
+        f"/api/teacher/papers/{publishable['id']}",
+        json={**shortage_payload, "status": "draft", "title": "不得缺题的已发布试卷"},
+        headers=csrf(),
+    )
+    assert published_shortage_update.status_code == 409
+    assert published_shortage_update.json()["code"] == "PUBLISHED_PAPER_CONTENT_INVALID"
+    edited = client.put(
+        f"/api/teacher/papers/{publishable['id']}",
+        json=manual_paper_payload(
+            [question_id], status="draft", title="已发布试卷内容修订"
+        ),
+        headers=csrf(),
+    )
+    assert edited.status_code == 200
+    assert edited.json()["data"]["status"] == "published"
+    with database.session() as session:
+        assert session.get(Paper, empty["id"]).status == "draft"
+        assert session.get(Paper, shortage["id"]).status == "draft"
+        assert session.get(Paper, publishable["id"]).status == "published"
+
+
+def test_paper_and_publication_titles_are_trimmed_and_blank_titles_are_atomic(teacher_context) -> None:
+    from server.application.models import Assignment, OperationLog, Paper
+
+    client, database, _ = teacher_context
+    blank_create = client.post(
+        "/api/teacher/papers",
+        json=manual_paper_payload([], title="   \t "),
+        headers=csrf(),
+    )
+    assert blank_create.status_code == 422
+    assert set(blank_create.json()) == {"success", "message", "code", "requestId"}
+
+    question_id = seed_question(database, "trimmed-title-question")
+    created = create_manual_paper(client, [question_id], title="  保留的试卷名  ")
+    assert created["title"] == "保留的试卷名"
+    blank_update = client.put(
+        f"/api/teacher/papers/{created['id']}",
+        json=manual_paper_payload([question_id], title=" \n "),
+        headers=csrf(),
+    )
+    assert blank_update.status_code == 422
+    blank_publish = client.post(
+        f"/api/teacher/papers/{created['id']}/publish",
+        json={"studentIds": ["student-1"], "classIds": [], "title": "   "},
+        headers=csrf(),
+    )
+    assert blank_publish.status_code == 422
+
+    trimmed_publish = client.post(
+        f"/api/teacher/papers/{created['id']}/publish",
+        json={"studentIds": ["student-1"], "classIds": [], "title": "  正式考试名  "},
+        headers=csrf(),
+    )
+    assert trimmed_publish.status_code == 200
+    with database.session() as session:
+        paper = session.get(Paper, created["id"])
+        assignments = session.scalars(select(Assignment).where(Assignment.paper_id == paper.id)).all()
+        publish_logs = session.scalars(
+            select(OperationLog).where(
+                OperationLog.action == "paper.publish", OperationLog.target_id == paper.id
+            )
+        ).all()
+        assert paper.title == "保留的试卷名"
+        assert [assignment.title for assignment in assignments] == ["正式考试名"]
+        assert len(publish_logs) == 1
 
 
 def test_publication_snapshot_is_rich_server_side_and_immutable_after_source_edit(teacher_context) -> None:

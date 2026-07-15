@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, PrivateAttr
+from pydantic import BaseModel, ConfigDict, Field, PrivateAttr, field_validator
 
 
 class PaperModel(BaseModel):
@@ -68,11 +68,20 @@ class PaperUpsert(PaperModel):
     title: str = Field(min_length=1, max_length=255)
     description: str = Field(default="", max_length=12000)
     duration_minutes: int | None = Field(default=None, alias="durationMinutes", ge=1, le=1440)
-    status: Literal["draft", "ready", "published", "archived"] = "draft"
+    status: Literal["draft", "ready", "archived"] = "draft"
     assembly_mode: Literal["manual", "automatic"] = Field(default="manual", alias="assemblyMode")
     seed: int | None = None
     blueprint_rows: list[BlueprintRow] = Field(default_factory=list, alias="blueprintRows", max_length=100)
     questions: list[PaperQuestionInput] = Field(default_factory=list, max_length=1000)
+
+    @field_validator("title", mode="before")
+    @classmethod
+    def normalize_title(cls, value):
+        if isinstance(value, str):
+            value = value.strip()
+            if not value:
+                raise ValueError("title cannot be blank")
+        return value
 
 
 class PaperPublishInput(PaperModel):
@@ -88,6 +97,15 @@ class PaperPublishInput(PaperModel):
     )
     allow_resubmit: bool = Field(default=False, alias="allowResubmit")
     auto_grade: bool = Field(default=True, alias="autoGrade")
+
+    @field_validator("title", mode="before")
+    @classmethod
+    def normalize_title(cls, value):
+        if isinstance(value, str):
+            value = value.strip()
+            if not value:
+                raise ValueError("title cannot be blank")
+        return value
 
 
 def dump_api(model: BaseModel) -> dict[str, Any]:

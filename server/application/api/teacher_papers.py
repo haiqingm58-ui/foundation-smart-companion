@@ -169,13 +169,20 @@ def _replace_questions(session, paper: Paper, questions: list[PaperQuestionInput
 
 
 def _apply_paper_body(session, paper: Paper, body: PaperUpsert, actor_id: str) -> None:
+    current_status = paper.status
     _validate_subject(session, body.subject_id)
     questions, shortages, blueprint_rows, seed = _resolved_questions(session, body, actor_id)
+    if current_status == "published" and (not questions or shortages):
+        raise APIError(
+            409,
+            "已发布试卷不能清空或保存缺题结果",
+            "PUBLISHED_PAPER_CONTENT_INVALID",
+        )
     paper.subject_id = body.subject_id
     paper.title = body.title.strip()
     paper.description = body.description.strip()
     paper.duration_minutes = body.duration_minutes
-    paper.status = body.status
+    paper.status = "published" if current_status == "published" else body.status
     paper.assembly_mode = body.assembly_mode
     paper.assembly_blueprint = blueprint_rows
     paper.assembly_seed = seed
