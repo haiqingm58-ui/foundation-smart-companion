@@ -79,3 +79,84 @@ $ git diff --check
 ## Concerns
 
 Concern count: `0`.
+
+## Review Remediation
+
+### Status
+
+`DONE`
+
+- Review baseline: `c260185` (`feat: add random practice and formal exam APIs`)
+- Findings addressed: Critical 1, Important 7, Minor 2.
+
+### Security And Snapshot Changes
+
+- Replaced key-deletion snapshot sanitization with an explicit student-safe projection. Student payloads now contain only question identity, prompt, safe option labels/text, ordinary display metadata, and answer-display fields. They never contain `sourceMetadata`, provenance, source answers, attachments, grading-only metadata, or unknown nested source fields.
+- Kept protected grading feedback separate from result rendering. Per-question feedback, scores, criteria, and explanations are withheld whenever `showAnswers` is false. `never`, unclosed `after_close`, and pre-submit views do not disclose answer-bearing fields. `after_submission` and closed `after_close` reveal the solution fields deliberately.
+- Added direct tests using imported-snapshot-shaped `sourceMetadata.sourceAnswer` and nested provenance values across practice, formal start/resume, `never`, `after_submission`, and `after_close` boundaries.
+
+### Lifecycle, Grading, And Validation Changes
+
+- Added unique submission attempt and answer constraints plus a portable SQLite/PostgreSQL partial unique index enforcing one in-progress formal attempt per assignment/student. Starts catch conflicts and resume the committed attempt; first-answer autosaves upsert safely.
+- Made practice and formal submit operations conditional-state transitions. Parallel submits and response-loss retries return the committed result without duplicate practice attempts, mastery mutations, grades, or submission answers.
+- Added `formal_grading.recalculate_formal_average`, shared by automatic formal grading and teacher manual grading. It persists the latest graded attempt per published/closed assignment and writes zero when there are no valid graded formal results.
+- Honored `Assignment.auto_grade=False`: formal submissions remain pending review without automatic per-question scores or formal-average updates.
+- Made `Submission.submitted_at` nullable in the ORM and revision 007. A started attempt has no submission timestamp. Teacher assignment completion, averages, queues, and grading now exclude/reject `in_progress` rows.
+- Validated autosaves against immutable snapshots with a 16KB serialized JSON maximum. Null clears are allowed; invalid choice labels, duplicate multiple-choice labels, non-boolean judgement values, invalid fill/text shapes, over-limit text, and oversized values are rejected through the standard error envelope.
+- Required timezone-aware publication/legacy assignment dates and normalized accepted values to UTC. Naive inputs fail validation before direct datetime comparison.
+- Correct-history selection now uses oldest-first ordering once unseen and incorrect questions are exhausted, with seeded deterministic ties.
+
+### Migration And IDOR Changes
+
+- Revision 007 now adds/removes the new submission uniqueness/indexes and safely round-trips `submitted_at` nullability. The migration test seeds a populated revision-006 submission and answer, verifies upgrade preservation, then downgrades to revision 006 and verifies data and schema restoration.
+- Added a second authenticated student regression that exercises foreign practice GET/autosave/submit and formal autosave/submit/result routes, plus a real non-target assignment. All return the existing 404 ownership envelope.
+
+### Review TDD Evidence
+
+The parallel-start regression initially failed because a query-triggered autoflush inserted the competing submission before the `IntegrityError` handler:
+
+```text
+$ server/.venv/bin/pytest server/tests/test_student_assessment.py::test_parallel_formal_starts_persist_one_in_progress_attempt -q
+F                                                                        [100%]
+1 failed in 0.96s
+```
+
+The trace identified `_assignment_questions()` as the query that autoflushed the pending submission. Snapshot preparation now runs before attaching the new row, so the insert is committed inside the conflict handler.
+
+Green concurrency checks:
+
+```text
+$ server/.venv/bin/pytest server/tests/test_student_assessment.py::test_parallel_formal_starts_persist_one_in_progress_attempt -q
+.                                                                        [100%]
+1 passed in 0.61s
+
+$ server/.venv/bin/pytest server/tests/test_student_assessment.py::test_parallel_first_autosaves_upsert_one_answer -q
+.                                                                        [100%]
+1 passed in 0.64s
+
+$ server/.venv/bin/pytest server/tests/test_student_assessment.py::test_parallel_submits_commit_once_and_return_committed_result -q
+.                                                                        [100%]
+1 passed in 0.65s
+```
+
+### Review Verification
+
+```text
+$ server/.venv/bin/pytest server/tests/test_student_assessment.py server/tests/test_student.py server/tests/test_teacher.py server/tests/test_teacher_papers.py server/tests/test_migrations.py -q
+......................................................................   [100%]
+70 passed in 12.54s
+```
+
+```text
+$ server/.venv/bin/pytest server/tests -q
+........................................................................ [ 42%]
+.............................s.......................................... [ 84%]
+..........................                                               [100%]
+169 passed, 1 skipped in 25.20s
+```
+
+Compilation of all changed Python modules and `git diff --check` completed with no output and exit code 0.
+
+### Remaining Concerns
+
+The available test environment is SQLite. The migration and ORM define PostgreSQL-compatible partial-index clauses, and the concurrency regression uses the production-supported SQLite engine. No PostgreSQL service was configured for a live harness run.

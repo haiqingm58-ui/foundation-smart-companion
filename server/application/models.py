@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from typing import Any
 
-from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Integer, JSON, String, Text, UniqueConstraint, event, inspect, select, update
+from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Index, Integer, JSON, String, Text, UniqueConstraint, event, inspect, select, text, update
 from sqlalchemy.ext.associationproxy import association_proxy
 from sqlalchemy.orm.attributes import set_committed_value
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column, relationship
@@ -436,6 +436,17 @@ class AssignmentTarget(Base):
 
 class Submission(Base):
     __tablename__ = "submissions"
+    __table_args__ = (
+        UniqueConstraint("assignment_id", "student_id", "attempt_number", name="uq_submission_assignment_student_attempt"),
+        Index(
+            "uq_submission_one_in_progress",
+            "assignment_id",
+            "student_id",
+            unique=True,
+            sqlite_where=text("status = 'in_progress'"),
+            postgresql_where=text("status = 'in_progress'"),
+        ),
+    )
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
     assignment_id: Mapped[str] = mapped_column(ForeignKey("assignments.id", ondelete="CASCADE"), nullable=False, index=True)
@@ -445,13 +456,14 @@ class Submission(Base):
     score: Mapped[float | None] = mapped_column(Float)
     feedback: Mapped[str] = mapped_column(Text, default="", nullable=False)
     started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), index=True)
-    submitted_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, nullable=False)
+    submitted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True, index=True)
     graded_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     graded_by: Mapped[str | None] = mapped_column(ForeignKey("users.id"))
 
 
 class SubmissionAnswer(Base):
     __tablename__ = "submission_answers"
+    __table_args__ = (UniqueConstraint("submission_id", "question_id", name="uq_submission_answer_question"),)
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
     submission_id: Mapped[str] = mapped_column(ForeignKey("submissions.id", ondelete="CASCADE"), nullable=False, index=True)

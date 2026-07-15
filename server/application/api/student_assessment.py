@@ -5,7 +5,8 @@ from time import time_ns
 from uuid import uuid4
 
 from fastapi import APIRouter, Depends, Request
-from sqlalchemy import func, select
+from sqlalchemy import func, select, update
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import selectinload
 
 from ..errors import APIError
@@ -19,12 +20,12 @@ from ..models import (
     Question,
     Submission,
     SubmissionAnswer,
-    Student,
 )
 from ..schemas.practice import AnswerSave, PracticeSessionCreate
 from ..services.grading import grade_objective
 from ..services.mastery import MasteryAllocation, apply_mastery
-from ..services.practice_selection import question_snapshot, sanitize_snapshot, select_practice_questions
+from ..services.formal_grading import recalculate_formal_average
+from ..services.practice_selection import question_snapshot, sanitize_snapshot, select_practice_questions, validate_student_answer
 from .dependencies import AuthContext, require_student
 from .student import student_for
 
@@ -72,11 +73,7 @@ def _practice_payload(record: PracticeSession) -> dict:
                 **sanitize_snapshot(item.grading_snapshot, include_solutions=reveal),
                 "answer": item.answer,
                 "status": item.status,
-                "score": item.score,
-                "maxScore": item.max_score,
-                "criteriaScores": item.criteria_scores,
-                "confidence": item.confidence,
-                "feedback": item.feedback,
+                **({"score": item.score, "maxScore": item.max_score, "criteriaScores": item.criteria_scores, "confidence": item.confidence, "feedback": item.feedback} if reveal else {}),
                 "savedAt": item.saved_at,
             }
             for item in record.questions
@@ -136,6 +133,7 @@ def save_practice_answer(session_id: str, question_id: str, body: AnswerSave, re
         item = next((item for item in record.questions if item.question_id == question_id), None)
         if not item:
             raise APIError(404, "题目不属于该练习", "PRACTICE_QUESTION_NOT_FOUND")
+        validate_student_answer(item.grading_snapshot, body.answer)
         item.answer = body.answer
         item.status = "answered"
         item.saved_at = now()
@@ -149,8 +147,21 @@ def submit_practice_session(session_id: str, request: Request, auth: AuthContext
     with request.app.state.database.session() as session:
         student = student_for(session, auth.user.id)
         record = _session_for(session, session_id, student.id)
-        if record.status != "in_progress":
-            raise APIError(409, "练习已提交", "PRACTICE_SESSION_CLOSED")
+        if record.status in {"graded", "pending_review"}:
+            return request.app.state.success(request, _practice_payload(record), "练习已提交")
+        claimed = session.execute(
+            update(PracticeSession)
+            .where(PracticeSession.id == record.id, PracticeSession.student_id == student.id, PracticeSession.status == "in_progress")
+            .values(status="submitting")
+        )
+        if not claimed.rowcount:
+            session.expire(record)
+            session.refresh(record)
+            if record.status in {"graded", "pending_review"}:
+                return request.app.state.success(request, _practice_payload(record), "练习已提交")
+            raise APIError(409, "练习正在提交", "PRACTICE_SESSION_SUBMITTING")
+        session.expire(record)
+        session.refresh(record)
         pending = False
         total_score = 0.0
         total_points = 0.0
@@ -195,7 +206,7 @@ def _assignment_for(session, assignment_id: str, student_id: str) -> Assignment:
     record = session.scalar(
         select(Assignment)
         .join(AssignmentTarget, AssignmentTarget.assignment_id == Assignment.id)
-        .where(Assignment.id == assignment_id, AssignmentTarget.student_id == student_id, Assignment.status == "published")
+        .where(Assignment.id == assignment_id, AssignmentTarget.student_id == student_id, Assignment.status.in_(("published", "closed")))
     )
     if not record:
         raise APIError(404, "试卷不存在或无权访问", "ASSIGNMENT_NOT_FOUND")
@@ -210,6 +221,8 @@ def _deadline(assignment: Assignment, submission: Submission | None = None) -> d
 
 
 def _ensure_assignment_open(assignment: Assignment, submission: Submission | None = None) -> None:
+    if assignment.status != "published":
+        raise APIError(409, "试卷已关闭", "ASSIGNMENT_CLOSED")
     current = now()
     starts_at = aware(assignment.starts_at)
     if starts_at and current < starts_at:
@@ -236,9 +249,11 @@ def _formal_questions_payload(session, assignment: Assignment, submission: Submi
         {
             **sanitize_snapshot(item.question_snapshot or {}, include_solutions=reveal),
             "answer": answers[item.question_id].answer if item.question_id in answers else None,
-            "score": answers[item.question_id].score if item.question_id in answers else None,
-            "status": "pending_review" if item.question_id in answers and answers[item.question_id].score is None and submission.status == "pending_review" else None,
-            "feedback": answers[item.question_id].feedback if item.question_id in answers else None,
+            **({
+                "score": answers[item.question_id].score if item.question_id in answers else None,
+                "status": "pending_review" if item.question_id in answers and answers[item.question_id].score is None and submission.status == "pending_review" else None,
+                "feedback": answers[item.question_id].feedback if item.question_id in answers else None,
+            } if reveal else {}),
         }
         for item in _assignment_questions(session, assignment)
     ]
@@ -274,7 +289,7 @@ def list_formal_papers(request: Request, auth: AuthContext = Depends(require_stu
         assignments = session.scalars(
             select(Assignment)
             .join(AssignmentTarget, AssignmentTarget.assignment_id == Assignment.id)
-            .where(AssignmentTarget.student_id == student.id, Assignment.status == "published")
+            .where(AssignmentTarget.student_id == student.id, Assignment.status.in_(("published", "closed")))
             .order_by(Assignment.created_at.desc())
         ).all()
         items = []
@@ -304,9 +319,17 @@ def start_formal_paper(assignment_id: str, request: Request, auth: AuthContext =
         if len(completed) >= (2 if assignment.allow_resubmit else 1):
             raise APIError(409, "已达到可提交次数上限", "ATTEMPT_LIMIT_REACHED")
         submission = Submission(id=str(uuid4()), assignment_id=assignment.id, student_id=student.id, attempt_number=len(completed) + 1, status="in_progress", started_at=now())
-        session.add(submission)
         _assignment_questions(session, assignment)
-        session.commit()
+        session.add(submission)
+        try:
+            session.commit()
+        except IntegrityError:
+            session.rollback()
+            active = session.scalar(select(Submission).where(Submission.assignment_id == assignment.id, Submission.student_id == student.id, Submission.status == "in_progress"))
+            if not active:
+                raise APIError(409, "试卷启动冲突，请重试", "SUBMISSION_START_CONFLICT")
+            payload = {"submissionId": active.id, "attemptNumber": active.attempt_number, "resumed": True, "countdown": _countdown(assignment, active), "questions": _formal_questions_payload(session, assignment, active, reveal=False)}
+            return request.app.state.success(request, payload)
         payload = {"submissionId": submission.id, "attemptNumber": submission.attempt_number, "resumed": False, "countdown": _countdown(assignment, submission), "questions": _formal_questions_payload(session, assignment, submission, reveal=False)}
     return request.app.state.success(request, payload, "试卷已开始")
 
@@ -322,31 +345,24 @@ def save_formal_answer(submission_id: str, question_id: str, body: AnswerSave, r
         item = session.scalar(select(AssignmentQuestion).where(AssignmentQuestion.assignment_id == assignment.id, AssignmentQuestion.question_id == question_id))
         if not item:
             raise APIError(404, "题目不属于该试卷", "SUBMISSION_QUESTION_NOT_FOUND")
+        validate_student_answer(item.question_snapshot or {}, body.answer)
         answer = session.scalar(select(SubmissionAnswer).where(SubmissionAnswer.submission_id == submission.id, SubmissionAnswer.question_id == question_id))
         if not answer:
             answer = SubmissionAnswer(id=str(uuid4()), submission_id=submission.id, question_id=question_id, answer=body.answer)
             session.add(answer)
         else:
             answer.answer = body.answer
-        session.commit()
+        try:
+            session.commit()
+        except IntegrityError:
+            session.rollback()
+            answer = session.scalar(select(SubmissionAnswer).where(SubmissionAnswer.submission_id == submission_id, SubmissionAnswer.question_id == question_id))
+            if not answer:
+                raise APIError(409, "答案保存冲突，请重试", "SUBMISSION_ANSWER_CONFLICT")
+            answer.answer = body.answer
+            session.commit()
         payload = {"submissionId": submission.id, "questionId": question_id, "answer": answer.answer}
     return request.app.state.success(request, payload)
-
-
-def _recalculate_formal_average(session, student_id: str) -> None:
-    submissions = session.execute(
-        select(Submission, Assignment)
-        .join(Assignment, Assignment.id == Submission.assignment_id)
-        .where(Submission.student_id == student_id, Submission.status == "graded", Assignment.status == "published", Submission.score.is_not(None))
-    ).all()
-    latest: dict[str, tuple[Submission, Assignment]] = {}
-    for submission, assignment in submissions:
-        if assignment.id not in latest or submission.attempt_number > latest[assignment.id][0].attempt_number:
-            latest[assignment.id] = (submission, assignment)
-    scores = [submission.score / assignment.total_points * 100 for submission, assignment in latest.values() if assignment.total_points]
-    if scores:
-        student = session.get(Student, student_id)
-        student.average_score = sum(scores) / len(scores)
 
 
 @router.post("/submissions/{submission_id}/submit")
@@ -354,9 +370,24 @@ def submit_formal_paper(submission_id: str, request: Request, auth: AuthContext 
     with request.app.state.database.session() as session:
         student = student_for(session, auth.user.id)
         submission, assignment = _submission_for(session, submission_id, student.id)
-        if submission.status != "in_progress":
-            raise APIError(409, "试卷已提交", "SUBMISSION_CLOSED")
+        if submission.status in {"graded", "pending_review"}:
+            payload = {"submissionId": submission.id, "status": submission.status, "score": submission.score, "maxScore": assignment.total_points, "countdown": _countdown(assignment, submission)}
+            return request.app.state.success(request, payload, "试卷已提交")
         _ensure_assignment_open(assignment, submission)
+        claimed = session.execute(
+            update(Submission)
+            .where(Submission.id == submission.id, Submission.student_id == student.id, Submission.status == "in_progress")
+            .values(status="submitting")
+        )
+        if not claimed.rowcount:
+            session.expire(submission)
+            session.refresh(submission)
+            if submission.status in {"graded", "pending_review"}:
+                payload = {"submissionId": submission.id, "status": submission.status, "score": submission.score, "maxScore": assignment.total_points, "countdown": _countdown(assignment, submission)}
+                return request.app.state.success(request, payload, "试卷已提交")
+            raise APIError(409, "试卷正在提交", "SUBMISSION_SUBMITTING")
+        session.expire(submission)
+        session.refresh(submission)
         answers = {item.question_id: item for item in session.scalars(select(SubmissionAnswer).where(SubmissionAnswer.submission_id == submission.id))}
         score = 0.0
         pending = False
@@ -366,20 +397,27 @@ def submit_formal_paper(submission_id: str, request: Request, auth: AuthContext 
                 answer = SubmissionAnswer(id=str(uuid4()), submission_id=submission.id, question_id=item.question_id, answer=None)
                 session.add(answer)
             result = grade_objective(item.question_snapshot or {}, answer.answer)
-            answer.score = result.score
-            answer.criteria_scores = result.criteria_scores
-            answer.confidence = result.confidence
-            answer.feedback = result.feedback
-            if result.score is None:
+            if not assignment.auto_grade:
+                answer.score = None
+                answer.criteria_scores = {}
+                answer.confidence = None
+                answer.feedback = None
                 pending = True
             else:
-                score += result.score
+                answer.score = result.score
+                answer.criteria_scores = result.criteria_scores
+                answer.confidence = result.confidence
+                answer.feedback = result.feedback
+                if result.score is None:
+                    pending = True
+                else:
+                    score += result.score
         submission.score = score
         submission.status = "pending_review" if pending else "graded"
         submission.submitted_at = now()
         submission.graded_at = now() if not pending else None
         if submission.status == "graded":
-            _recalculate_formal_average(session, student.id)
+            recalculate_formal_average(session, student.id)
         session.commit()
         payload = {"submissionId": submission.id, "status": submission.status, "score": submission.score, "maxScore": assignment.total_points, "countdown": _countdown(assignment, submission)}
     return request.app.state.success(request, payload, "试卷已提交")
@@ -392,6 +430,9 @@ def formal_result(submission_id: str, request: Request, auth: AuthContext = Depe
         submission, assignment = _submission_for(session, submission_id, student.id)
         if submission.status == "in_progress":
             raise APIError(409, "提交后才能查看结果", "SUBMISSION_NOT_FINISHED")
-        reveal = assignment.show_answers_mode == "after_submission" or (assignment.show_answers_mode == "after_close" and _deadline(assignment, submission) is not None and now() >= _deadline(assignment, submission))
+        reveal = assignment.show_answers_mode == "after_submission" or (
+            assignment.show_answers_mode == "after_close"
+            and (assignment.status == "closed" or (_deadline(assignment, submission) is not None and now() >= _deadline(assignment, submission)))
+        )
         payload = {"submissionId": submission.id, "assignmentId": assignment.id, "status": submission.status, "score": submission.score, "maxScore": assignment.total_points, "showAnswers": reveal, "questions": _formal_questions_payload(session, assignment, submission, reveal=reveal)}
     return request.app.state.success(request, payload)

@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class TeacherModel(BaseModel):
@@ -40,6 +40,15 @@ class AssignmentInput(TeacherModel):
     allowResubmit: bool = False
     autoGrade: bool = True
     status: str = Field(default="draft", pattern="^(draft|published|closed)$")
+
+    @field_validator("startsAt", "dueAt")
+    @classmethod
+    def require_aware_utc(cls, value: datetime | None) -> datetime | None:
+        if value is None:
+            return None
+        if value.tzinfo is None or value.utcoffset() is None:
+            raise ValueError("timestamps must include an offset")
+        return value.astimezone(timezone.utc)
 
 
 class GradeInput(TeacherModel):

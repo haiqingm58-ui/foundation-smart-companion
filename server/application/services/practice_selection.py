@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from copy import deepcopy
 from datetime import datetime
+import json
 from random import Random
 from typing import Any
 
@@ -12,15 +13,75 @@ from ..errors import APIError
 from ..models import KnowledgePoint, PracticeAttempt, PracticeSession, PracticeSessionQuestion, Question, QuestionKnowledgePoint, Subject
 
 
-SOLUTION_FIELDS = {"correctAnswer", "correct_answer", "rubric", "explanation"}
+MAX_STUDENT_ANSWER_BYTES = 16 * 1024
+
+
+def student_safe_snapshot(snapshot: dict[str, Any], include_solutions: bool = False) -> dict[str, Any]:
+    """Project a private snapshot to fields that are intentionally student-visible."""
+    options = snapshot.get("options") if isinstance(snapshot.get("options"), list) else []
+    payload: dict[str, Any] = {
+        "id": snapshot.get("id"),
+        "subjectId": snapshot.get("subjectId"),
+        "text": snapshot.get("text", ""),
+        "questionType": snapshot.get("questionType"),
+        "options": [
+            {"label": item.get("label"), "text": item.get("text")}
+            for item in options
+            if isinstance(item, dict) and isinstance(item.get("label"), str) and isinstance(item.get("text"), str)
+        ],
+        "difficulty": snapshot.get("difficulty"),
+        "chapter": snapshot.get("chapter"),
+        "knowledgePointIds": list(snapshot.get("knowledgePointIds") or []),
+        "answerWordLimit": snapshot.get("answerWordLimit"),
+        "sequence": snapshot.get("sequence"),
+        "sectionTitle": snapshot.get("sectionTitle"),
+        "points": snapshot.get("points"),
+    }
+    if include_solutions:
+        payload.update({
+            "correctAnswer": deepcopy(snapshot.get("correctAnswer")),
+            "explanation": snapshot.get("explanation"),
+            "rubric": deepcopy(snapshot.get("rubric") or []),
+        })
+    return {key: value for key, value in payload.items() if value is not None}
 
 
 def sanitize_snapshot(snapshot: dict[str, Any], include_solutions: bool = False) -> dict[str, Any]:
-    payload = deepcopy(snapshot)
-    if not include_solutions:
-        for field in SOLUTION_FIELDS:
-            payload.pop(field, None)
-    return payload
+    """Backward-compatible name for the explicit student-safe projection."""
+    return student_safe_snapshot(snapshot, include_solutions)
+
+
+def validate_student_answer(snapshot: dict[str, Any], answer: Any) -> None:
+    try:
+        size = len(json.dumps(answer, ensure_ascii=False, separators=(",", ":")).encode("utf-8"))
+    except (TypeError, ValueError) as exc:
+        raise APIError(422, "答案必须是有效 JSON", "ANSWER_INVALID") from exc
+    if size > MAX_STUDENT_ANSWER_BYTES:
+        raise APIError(413, "答案不能超过 16KB", "ANSWER_TOO_LARGE")
+    if answer is None:
+        return
+    question_type = snapshot.get("questionType")
+    labels = {
+        str(option.get("label")).strip()
+        for option in snapshot.get("options", [])
+        if isinstance(option, dict) and isinstance(option.get("label"), str)
+    }
+    if question_type == "单项选择题":
+        if not isinstance(answer, str) or answer.strip() not in labels:
+            raise APIError(422, "请选择一个有效选项", "ANSWER_INVALID_SINGLE_CHOICE")
+    elif question_type == "多项选择题":
+        if not isinstance(answer, list) or not answer or not all(isinstance(item, str) and item.strip() in labels for item in answer) or len({item.strip() for item in answer}) != len(answer):
+            raise APIError(422, "请选择不重复的有效选项", "ANSWER_INVALID_MULTIPLE_CHOICE")
+    elif question_type == "判断题":
+        if type(answer) is not bool:
+            raise APIError(422, "判断题答案必须为布尔值", "ANSWER_INVALID_BOOLEAN")
+    elif question_type == "填空题":
+        if not isinstance(answer, str) or not answer.strip():
+            raise APIError(422, "填空题答案必须是非空文本", "ANSWER_INVALID_FILL")
+    elif question_type in {"简答题", "计算题"}:
+        limit = snapshot.get("answerWordLimit") or 2000
+        if not isinstance(answer, str) or len(answer.strip()) > int(limit):
+            raise APIError(422, "答案文本无效或超过字数限制", "ANSWER_INVALID_TEXT")
 
 
 def question_snapshot(question: Question, *, sequence: int | None = None, points: float | None = None) -> dict[str, Any]:
@@ -100,6 +161,6 @@ def select_practice_questions(
     randomized = {question.id: randomizer.random() for question in questions}
     def rank(question: Question) -> tuple[int, float, float, str]:
         status, attempted_at = history.get(question.id, (0, datetime.min))
-        recency = attempted_at.timestamp() if status and attempted_at.tzinfo else (attempted_at.timestamp() if status else 0)
-        return status, -recency if status == 2 else randomized[question.id], randomized[question.id], question.id
+        recency = attempted_at.timestamp() if status else 0
+        return status, recency if status == 2 else randomized[question.id], randomized[question.id], question.id
     return sorted(questions, key=rank)[:count]

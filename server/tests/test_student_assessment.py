@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
+from concurrent.futures import ThreadPoolExecutor
 from time import time_ns
 
 import pytest
 from fastapi.testclient import TestClient
+from pydantic import ValidationError
 from sqlalchemy import select
 
 from server.tests.test_student import student_context
@@ -89,7 +91,7 @@ def _practice(client, **body):
     return response.json()["data"]
 
 
-def _assignment(database, *, due_at=None, starts_at=None, show_answers_mode="after_submission", allow_resubmit=False, subjective=False, student_id="student-profile"):
+def _assignment(database, *, due_at=None, starts_at=None, show_answers_mode="after_submission", allow_resubmit=False, subjective=False, student_id="student-profile", auto_grade=True):
     from server.application.models import Assignment, AssignmentQuestion, AssignmentTarget, Student, Teacher, User
 
     assignment_id = f"assignment-{show_answers_mode}-{int(subjective)}-{int(allow_resubmit)}-{time_ns()}"
@@ -102,6 +104,7 @@ def _assignment(database, *, due_at=None, starts_at=None, show_answers_mode="aft
         "correctAnswer": None if subjective else "A",
         "explanation": "正式解析",
         "rubric": [{"criterion": "过程"}],
+        "sourceMetadata": {"sourceAnswer": "A", "nested": {"answer": "A", "provenance": "private"}},
         "knowledgePointIds": ["soil-kp-1"],
         "points": 10,
         "sequence": 1,
@@ -121,7 +124,7 @@ def _assignment(database, *, due_at=None, starts_at=None, show_answers_mode="aft
         session.add(Assignment(
             id=assignment_id, title="正式测验", teacher_id="teacher-any", total_points=10,
             starts_at=starts_at, due_at=due_at, duration_minutes=30,
-            show_answers_mode=show_answers_mode, allow_resubmit=allow_resubmit, auto_grade=True, status="published",
+            show_answers_mode=show_answers_mode, allow_resubmit=allow_resubmit, auto_grade=auto_grade, status="published",
         ))
         session.add(AssignmentTarget(id=f"target-{assignment_id}", assignment_id=assignment_id, student_id=student_id))
         session.add(AssignmentQuestion(id=f"aq-{assignment_id}", assignment_id=assignment_id, question_id="soil-question-00", sequence=1, points=10, question_snapshot=snapshot))
@@ -243,7 +246,7 @@ def test_migration_007_preserves_existing_submission_history(tmp_path) -> None:
     from sqlalchemy import text
 
     from server.application.database import create_database
-    from server.application.migrations import upgrade_database
+    from server.application.migrations import downgrade_database, upgrade_database
 
     database_url = f"sqlite:///{tmp_path / 'assessment-migration.db'}"
     upgrade_database(database_url, "006_papers_and_snapshots")
@@ -251,7 +254,233 @@ def test_migration_007_preserves_existing_submission_history(tmp_path) -> None:
     with database.engine.begin() as connection:
         connection.execute(text("INSERT INTO users (id, username, password_hash, password_algorithm, role, role_label, name, status, college, school, must_change_password, created_at, updated_at) VALUES ('migration-user', 'migration-user', 'hash', 'argon2', 'student', '学生', '迁移学生', 'active', '学院', '学校', 0, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"))
         connection.execute(text("INSERT INTO students (id, user_id, student_no, progress, average_score, created_at) VALUES ('migration-student', 'migration-user', 'MS1', 0, 0, CURRENT_TIMESTAMP)"))
+        connection.execute(text("INSERT INTO users (id, username, password_hash, password_algorithm, role, role_label, name, status, college, school, must_change_password, created_at, updated_at) VALUES ('migration-teacher-user', 'migration-teacher', 'hash', 'argon2', 'teacher', '教师', '迁移教师', 'active', '学院', '学校', 0, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"))
+        connection.execute(text("INSERT INTO teachers (id, user_id, teacher_no, college, course, created_at) VALUES ('migration-teacher', 'migration-teacher-user', 'MT1', '学院', '课程', CURRENT_TIMESTAMP)"))
+        connection.execute(text("INSERT INTO questions (id, text, question_type, options, rubric, difficulty, points, attachments, grading_mode, status, source_metadata, source, created_at, updated_at) VALUES ('migration-question', '迁移题目', '简答题', '[]', '[]', '基础', 10, '[]', 'manual', 'review_required', '{}', 'legacy', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)"))
+        connection.execute(text("INSERT INTO assignments (id, title, description, teacher_id, total_points, allow_resubmit, auto_grade, status, created_at) VALUES ('migration-assignment', '迁移作业', '', 'migration-teacher', 10, 0, 0, 'published', CURRENT_TIMESTAMP)"))
+        connection.execute(text("INSERT INTO submissions (id, assignment_id, student_id, attempt_number, status, score, feedback, submitted_at) VALUES ('migration-submission', 'migration-assignment', 'migration-student', 1, 'graded', 8, '保留反馈', CURRENT_TIMESTAMP)"))
+        connection.execute(text("INSERT INTO submission_answers (id, submission_id, question_id, answer, score, criteria_scores, confidence, feedback) VALUES ('migration-answer', 'migration-submission', 'migration-question', '\"旧答案\"', 8, '{}', 1, '保留答案反馈')"))
     upgrade_database(database_url)
     with database.engine.connect() as connection:
         assert connection.execute(text("SELECT student_no FROM students WHERE id = 'migration-student'")).scalar_one() == "MS1"
+        assert connection.execute(text("SELECT feedback FROM submissions WHERE id = 'migration-submission'")).scalar_one() == "保留反馈"
+        assert connection.execute(text("SELECT answer FROM submission_answers WHERE id = 'migration-answer'")).scalar_one() == '"旧答案"'
         assert {"practice_sessions", "practice_session_questions"}.issubset(set(connection.dialect.get_table_names(connection)))
+    downgrade_database(database_url, "006_papers_and_snapshots")
+    legacy = create_database(database_url)
+    with legacy.engine.connect() as connection:
+        assert connection.execute(text("SELECT score FROM submissions WHERE id = 'migration-submission'")).scalar_one() == 8
+        assert "started_at" not in {column["name"] for column in __import__("sqlalchemy", fromlist=["inspect"]).inspect(legacy.engine).get_columns("submissions")}
+        assert {"practice_sessions", "practice_session_questions"}.isdisjoint(set(connection.dialect.get_table_names(connection)))
+
+
+@pytest.mark.parametrize("mode", ["never", "after_close"])
+def test_student_safe_snapshot_never_leaks_private_import_fields(assessment_context, mode: str) -> None:
+    client, database = assessment_context
+    assignment_id = _assignment(database, show_answers_mode=mode)
+    practice = _practice(client)
+    start = client.post(f"/api/student/assignments/{assignment_id}/start", headers=CSRF).json()["data"]
+    for question in (practice["questions"][0], start["questions"][0]):
+        rendered = str(question)
+        assert "sourceMetadata" not in question
+        assert "sourceAnswer" not in rendered
+        assert "provenance" not in rendered
+        assert "correctAnswer" not in question
+        assert "explanation" not in question
+        assert "rubric" not in question
+    client.put(f"/api/student/submissions/{start['submissionId']}/answers/{start['questions'][0]['id']}", json={"answer": "A"}, headers=CSRF)
+    client.post(f"/api/student/submissions/{start['submissionId']}/submit", headers=CSRF)
+    result = client.get(f"/api/student/submissions/{start['submissionId']}/result").json()["data"]
+    assert result["showAnswers"] is False
+    assert "feedback" not in result["questions"][0]
+    assert "explanation" not in result["questions"][0]
+
+
+def test_after_submission_reveals_and_autograde_false_stays_pending(assessment_context) -> None:
+    client, database = assessment_context
+    revealed_id = _assignment(database, show_answers_mode="after_submission")
+    revealed = client.post(f"/api/student/assignments/{revealed_id}/start", headers=CSRF).json()["data"]
+    client.put(f"/api/student/submissions/{revealed['submissionId']}/answers/{revealed['questions'][0]['id']}", json={"answer": "A"}, headers=CSRF)
+    client.post(f"/api/student/submissions/{revealed['submissionId']}/submit", headers=CSRF)
+    assert client.get(f"/api/student/submissions/{revealed['submissionId']}/result").json()["data"]["questions"][0]["explanation"] == "正式解析"
+    manual_id = _assignment(database, auto_grade=False)
+    manual = client.post(f"/api/student/assignments/{manual_id}/start", headers=CSRF).json()["data"]
+    client.put(f"/api/student/submissions/{manual['submissionId']}/answers/{manual['questions'][0]['id']}", json={"answer": "A"}, headers=CSRF)
+    assert client.post(f"/api/student/submissions/{manual['submissionId']}/submit", headers=CSRF).json()["data"]["status"] == "pending_review"
+
+
+@pytest.mark.parametrize("answer", [{"label": "A"}, "Z", ["A", "A"], ["A"], "x" * 17000])
+def test_autosave_rejects_invalid_or_oversized_answers(assessment_context, answer) -> None:
+    client, _database = assessment_context
+    practice = _practice(client)
+    response = client.put(f"/api/student/practice-sessions/{practice['id']}/answers/{practice['questions'][0]['id']}", json={"answer": answer}, headers=CSRF)
+    assert response.status_code in {413, 422}
+    assert response.json()["success"] is False
+    assert client.put(f"/api/student/practice-sessions/{practice['id']}/answers/{practice['questions'][0]['id']}", json={"answer": None}, headers=CSRF).status_code == 200
+
+
+def test_migration_007_constraints_and_nullable_start_state(tmp_path) -> None:
+    from sqlalchemy import inspect
+    from server.application.database import create_database
+    from server.application.migrations import upgrade_database
+
+    database_url = f"sqlite:///{tmp_path / 'constraints.db'}"
+    upgrade_database(database_url)
+    inspector = inspect(create_database(database_url).engine)
+    assert "submitted_at" in {column["name"] for column in inspector.get_columns("submissions") if column["nullable"]}
+    assert ("assignment_id", "student_id", "attempt_number") in {tuple(item["column_names"]) for item in inspector.get_unique_constraints("submissions")}
+    assert ("submission_id", "question_id") in {tuple(item["column_names"]) for item in inspector.get_unique_constraints("submission_answers")}
+    assert "uq_submission_one_in_progress" in {item["name"] for item in inspector.get_indexes("submissions")}
+
+
+def test_after_close_boundary_and_all_student_object_routes_are_idor_safe(assessment_context) -> None:
+    from server.application.models import SessionToken
+    from server.application.security import token_digest
+
+    client, database = assessment_context
+    after_close_id = _assignment(database, show_answers_mode="after_close")
+    _assignment(database, student_id="other-student")
+    formal = client.post(f"/api/student/assignments/{after_close_id}/start", headers=CSRF).json()["data"]
+    client.put(f"/api/student/submissions/{formal['submissionId']}/answers/{formal['questions'][0]['id']}", json={"answer": "A"}, headers=CSRF)
+    client.post(f"/api/student/submissions/{formal['submissionId']}/submit", headers=CSRF)
+    assert client.get(f"/api/student/submissions/{formal['submissionId']}/result").json()["data"]["showAnswers"] is False
+    with database.session() as session:
+        session.execute(select(__import__("server.application.models", fromlist=["Assignment"]).Assignment).where(__import__("server.application.models", fromlist=["Assignment"]).Assignment.id == after_close_id)).scalar_one().status = "closed"
+        session.add(SessionToken(id="other-session", user_id="other-student-user", token_hash=token_digest("other-token"), csrf_hash=token_digest("other-csrf"), expires_at=datetime.now(timezone.utc) + timedelta(hours=1)))
+        session.commit()
+    assert client.get(f"/api/student/submissions/{formal['submissionId']}/result").json()["data"]["showAnswers"] is True
+    practice = _practice(client)
+    other = TestClient(client.app)
+    other.cookies.set("foundation_session", "other-token")
+    other.cookies.set("foundation_csrf", "other-csrf")
+    other_headers = {"X-CSRF-Token": "other-csrf"}
+    assert other.get(f"/api/student/practice-sessions/{practice['id']}").status_code == 404
+    assert other.put(f"/api/student/practice-sessions/{practice['id']}/answers/{practice['questions'][0]['id']}", json={"answer": "A"}, headers=other_headers).status_code == 404
+    assert other.post(f"/api/student/practice-sessions/{practice['id']}/submit", headers=other_headers).status_code == 404
+    assert other.put(f"/api/student/submissions/{formal['submissionId']}/answers/{formal['questions'][0]['id']}", json={"answer": "A"}, headers=other_headers).status_code == 404
+    assert other.post(f"/api/student/submissions/{formal['submissionId']}/submit", headers=other_headers).status_code == 404
+    assert other.get(f"/api/student/submissions/{formal['submissionId']}/result").status_code == 404
+
+
+def test_teacher_manual_grade_recalculates_average_and_hides_in_progress(assessment_context) -> None:
+    from server.application.models import SessionToken, Student
+    from server.application.security import token_digest
+
+    client, database = assessment_context
+    completed_id = _assignment(database)
+    completed = client.post(f"/api/student/assignments/{completed_id}/start", headers=CSRF).json()["data"]
+    client.put(f"/api/student/submissions/{completed['submissionId']}/answers/{completed['questions'][0]['id']}", json={"answer": "A"}, headers=CSRF)
+    client.post(f"/api/student/submissions/{completed['submissionId']}/submit", headers=CSRF)
+    pending_id = _assignment(database, auto_grade=False)
+    pending = client.post(f"/api/student/assignments/{pending_id}/start", headers=CSRF).json()["data"]
+    with database.session() as session:
+        session.add(SessionToken(id="formal-teacher-session", user_id="formal-teacher-user", token_hash=token_digest("formal-teacher-token"), csrf_hash=token_digest("formal-teacher-csrf"), expires_at=datetime.now(timezone.utc) + timedelta(hours=1)))
+        session.commit()
+    teacher = TestClient(client.app)
+    teacher.cookies.set("foundation_session", "formal-teacher-token")
+    teacher.cookies.set("foundation_csrf", "formal-teacher-csrf")
+    headers = {"X-CSRF-Token": "formal-teacher-csrf"}
+    assert pending["submissionId"] not in {item["id"] for item in teacher.get("/api/teacher/submissions").json()["data"]["items"]}
+    client.put(f"/api/student/submissions/{pending['submissionId']}/answers/{pending['questions'][0]['id']}", json={"answer": "A"}, headers=CSRF)
+    client.post(f"/api/student/submissions/{pending['submissionId']}/submit", headers=CSRF)
+    assert teacher.put(f"/api/teacher/submissions/{pending['submissionId']}/grade", json={"score": 5, "feedback": "人工评分"}, headers=headers).status_code == 200
+    with database.session() as session:
+        assert session.get(Student, "student-profile").average_score == 75
+
+
+def test_submit_retries_are_idempotent_without_duplicate_history_or_answers(assessment_context) -> None:
+    from server.application.models import PracticeAttempt, SubmissionAnswer
+
+    client, database = assessment_context
+    practice = _practice(client)
+    client.put(f"/api/student/practice-sessions/{practice['id']}/answers/{practice['questions'][0]['id']}", json={"answer": "A"}, headers=CSRF)
+    first_practice = client.post(f"/api/student/practice-sessions/{practice['id']}/submit", headers=CSRF)
+    retry_practice = client.post(f"/api/student/practice-sessions/{practice['id']}/submit", headers=CSRF)
+    assert retry_practice.status_code == 200
+    assert retry_practice.json()["data"]["id"] == first_practice.json()["data"]["id"]
+    formal_id = _assignment(database)
+    formal = client.post(f"/api/student/assignments/{formal_id}/start", headers=CSRF).json()["data"]
+    client.put(f"/api/student/submissions/{formal['submissionId']}/answers/{formal['questions'][0]['id']}", json={"answer": "A"}, headers=CSRF)
+    assert client.post(f"/api/student/submissions/{formal['submissionId']}/submit", headers=CSRF).status_code == 200
+    assert client.post(f"/api/student/submissions/{formal['submissionId']}/submit", headers=CSRF).status_code == 200
+    with database.session() as session:
+        assert len(session.scalars(select(PracticeAttempt).where(PracticeAttempt.student_id == "student-profile")).all()) == len(practice["questions"])
+        assert len(session.scalars(select(SubmissionAnswer).where(SubmissionAnswer.submission_id == formal["submissionId"])).all()) == 1
+
+
+def test_publication_times_require_offsets_and_normalize_to_utc() -> None:
+    from server.application.schemas.paper import PaperPublishInput
+
+    payload = PaperPublishInput.model_validate({
+        "studentIds": ["student-profile"],
+        "startsAt": "2026-07-15T16:00:00+08:00",
+        "dueAt": "2026-07-15T17:00:00+08:00",
+    })
+    assert payload.starts_at.isoformat() == "2026-07-15T08:00:00+00:00"
+    assert payload.due_at.isoformat() == "2026-07-15T09:00:00+00:00"
+    with pytest.raises(ValidationError):
+        PaperPublishInput.model_validate({"studentIds": ["student-profile"], "startsAt": "2026-07-15T16:00:00"})
+
+
+def test_parallel_formal_starts_persist_one_in_progress_attempt(assessment_context) -> None:
+    from server.application.models import Submission
+
+    client, database = assessment_context
+    assignment_id = _assignment(database)
+
+    def start_once():
+        request_client = TestClient(client.app)
+        request_client.cookies.set("foundation_session", "student-token")
+        request_client.cookies.set("foundation_csrf", "student-csrf")
+        return request_client.post(f"/api/student/assignments/{assignment_id}/start", headers=CSRF)
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        responses = list(pool.map(lambda _unused: start_once(), range(2)))
+    assert all(response.status_code == 200 for response in responses)
+    assert len({response.json()["data"]["submissionId"] for response in responses}) == 1
+    with database.session() as session:
+        assert len(session.scalars(select(Submission).where(Submission.assignment_id == assignment_id, Submission.status == "in_progress")).all()) == 1
+
+
+def test_parallel_first_autosaves_upsert_one_answer(assessment_context) -> None:
+    from server.application.models import SubmissionAnswer
+
+    client, database = assessment_context
+    assignment_id = _assignment(database)
+    started = client.post(f"/api/student/assignments/{assignment_id}/start", headers=CSRF).json()["data"]
+
+    def save_once():
+        request_client = TestClient(client.app)
+        request_client.cookies.set("foundation_session", "student-token")
+        request_client.cookies.set("foundation_csrf", "student-csrf")
+        return request_client.put(f"/api/student/submissions/{started['submissionId']}/answers/{started['questions'][0]['id']}", json={"answer": "A"}, headers=CSRF)
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        responses = list(pool.map(lambda _unused: save_once(), range(2)))
+    assert all(response.status_code == 200 for response in responses)
+    with database.session() as session:
+        assert len(session.scalars(select(SubmissionAnswer).where(SubmissionAnswer.submission_id == started["submissionId"])).all()) == 1
+
+
+def test_parallel_submits_commit_once_and_return_committed_result(assessment_context) -> None:
+    from server.application.models import PracticeAttempt, SubmissionAnswer
+
+    client, database = assessment_context
+    practice = _practice(client)
+    formal_id = _assignment(database)
+    formal = client.post(f"/api/student/assignments/{formal_id}/start", headers=CSRF).json()["data"]
+
+    def submit(path: str):
+        request_client = TestClient(client.app)
+        request_client.cookies.set("foundation_session", "student-token")
+        request_client.cookies.set("foundation_csrf", "student-csrf")
+        return request_client.post(path, headers=CSRF)
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        practice_responses = list(pool.map(lambda _unused: submit(f"/api/student/practice-sessions/{practice['id']}/submit"), range(2)))
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        formal_responses = list(pool.map(lambda _unused: submit(f"/api/student/submissions/{formal['submissionId']}/submit"), range(2)))
+    assert all(response.status_code == 200 for response in practice_responses + formal_responses)
+    with database.session() as session:
+        assert len(session.scalars(select(PracticeAttempt).where(PracticeAttempt.student_id == "student-profile")).all()) == len(practice["questions"])
+        assert len(session.scalars(select(SubmissionAnswer).where(SubmissionAnswer.submission_id == formal["submissionId"])).all()) == 1

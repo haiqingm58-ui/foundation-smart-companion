@@ -61,11 +61,35 @@ def upgrade() -> None:
         )
         op.create_index("ix_practice_session_questions_session_id", "practice_session_questions", ["session_id"])
         op.create_index("ix_practice_session_questions_question_id", "practice_session_questions", ["question_id"])
-    columns = {column["name"] for column in inspect(bind).get_columns("submissions")}
-    if "started_at" not in columns:
-        with op.batch_alter_table("submissions") as batch_op:
+    submission_inspector = inspect(bind)
+    columns = {column["name"] for column in submission_inspector.get_columns("submissions")}
+    submission_uniques = {constraint["name"] for constraint in submission_inspector.get_unique_constraints("submissions")}
+    submission_indexes = {index["name"] for index in submission_inspector.get_indexes("submissions")}
+    with op.batch_alter_table("submissions") as batch_op:
+        if "started_at" not in columns:
             batch_op.add_column(sa.Column("started_at", sa.DateTime(timezone=True), nullable=True))
             batch_op.create_index("ix_submissions_started_at", ["started_at"])
+        if "submitted_at" in columns:
+            batch_op.alter_column("submitted_at", existing_type=sa.DateTime(timezone=True), nullable=True)
+        if "uq_submission_assignment_student_attempt" not in submission_uniques:
+            batch_op.create_unique_constraint(
+                "uq_submission_assignment_student_attempt",
+                ["assignment_id", "student_id", "attempt_number"],
+            )
+    if "uq_submission_one_in_progress" not in submission_indexes:
+        op.create_index(
+            "uq_submission_one_in_progress",
+            "submissions",
+            ["assignment_id", "student_id"],
+            unique=True,
+            sqlite_where=sa.text("status = 'in_progress'"),
+            postgresql_where=sa.text("status = 'in_progress'"),
+        )
+    answer_inspector = inspect(bind)
+    answer_uniques = {constraint["name"] for constraint in answer_inspector.get_unique_constraints("submission_answers")}
+    if "uq_submission_answer_question" not in answer_uniques:
+        with op.batch_alter_table("submission_answers") as batch_op:
+            batch_op.create_unique_constraint("uq_submission_answer_question", ["submission_id", "question_id"])
 
 
 def downgrade() -> None:
@@ -73,11 +97,26 @@ def downgrade() -> None:
     if inspect(bind).has_table("submissions"):
         columns = {column["name"] for column in inspect(bind).get_columns("submissions")}
         indexes = {index["name"] for index in inspect(bind).get_indexes("submissions")}
+        uniques = {constraint["name"] for constraint in inspect(bind).get_unique_constraints("submissions")}
+        if "submitted_at" in columns:
+            bind.execute(sa.text("UPDATE submissions SET submitted_at = COALESCE(submitted_at, started_at, CURRENT_TIMESTAMP)"))
         if "started_at" in columns:
             with op.batch_alter_table("submissions") as batch_op:
+                if "uq_submission_assignment_student_attempt" in uniques:
+                    batch_op.drop_constraint("uq_submission_assignment_student_attempt", type_="unique")
                 if "ix_submissions_started_at" in indexes:
                     batch_op.drop_index("ix_submissions_started_at")
                 batch_op.drop_column("started_at")
+        if "uq_submission_one_in_progress" in indexes:
+            op.drop_index("uq_submission_one_in_progress", table_name="submissions")
+        if "submitted_at" in columns:
+            with op.batch_alter_table("submissions") as batch_op:
+                batch_op.alter_column("submitted_at", existing_type=sa.DateTime(timezone=True), nullable=False)
+    if inspect(bind).has_table("submission_answers"):
+        uniques = {constraint["name"] for constraint in inspect(bind).get_unique_constraints("submission_answers")}
+        if "uq_submission_answer_question" in uniques:
+            with op.batch_alter_table("submission_answers") as batch_op:
+                batch_op.drop_constraint("uq_submission_answer_question", type_="unique")
     for table_name in ("practice_session_questions", "practice_sessions"):
         if inspect(bind).has_table(table_name):
             op.drop_table(table_name)

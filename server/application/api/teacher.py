@@ -31,6 +31,7 @@ from ..services.audit import add_log
 from ..services.storage import chunk_text, extract_text, save_upload
 from ..services.question_imports import build_question_import_template, parse_question_import
 from ..services.question_service import create_question
+from ..services.formal_grading import recalculate_formal_average
 from .auth import client_ip
 from .dependencies import AuthContext, require_teacher
 
@@ -73,13 +74,13 @@ def dashboard(request: Request, auth: AuthContext = Depends(require_teacher)):
         assignment_total = session.scalar(select(func.count(Assignment.id)).where(Assignment.teacher_id == teacher.id)) or 0
         pending_grading = session.scalar(
             select(func.count(Submission.id)).join(Assignment).where(
-                Assignment.teacher_id == teacher.id, Submission.status == "submitted"
+                Assignment.teacher_id == teacher.id, Submission.status.in_(("submitted", "pending_review"))
             )
         ) or 0
         assignment_ids = session.scalars(select(Assignment.id).where(Assignment.teacher_id == teacher.id)).all()
         target_total = session.scalar(select(func.count(AssignmentTarget.id)).where(AssignmentTarget.assignment_id.in_(assignment_ids))) if assignment_ids else 0
         submitted_total = session.scalar(
-            select(func.count(func.distinct(Submission.student_id))).where(Submission.assignment_id.in_(assignment_ids))
+            select(func.count(func.distinct(Submission.student_id))).where(Submission.assignment_id.in_(assignment_ids), Submission.status != "in_progress")
         ) if assignment_ids else 0
         completion_rate = round((submitted_total or 0) / target_total * 100, 1) if target_total else 0
     return request.app.state.success(
@@ -303,9 +304,9 @@ def assignments(request: Request, auth: AuthContext = Depends(require_teacher)):
         for item in records:
             target_count = session.scalar(select(func.count(AssignmentTarget.id)).where(AssignmentTarget.assignment_id == item.id)) or 0
             submitted_count = session.scalar(
-                select(func.count(func.distinct(Submission.student_id))).where(Submission.assignment_id == item.id)
+                select(func.count(func.distinct(Submission.student_id))).where(Submission.assignment_id == item.id, Submission.status != "in_progress")
             ) or 0
-            average_score = session.scalar(select(func.avg(Submission.score)).where(Submission.assignment_id == item.id, Submission.score.is_not(None)))
+            average_score = session.scalar(select(func.avg(Submission.score)).where(Submission.assignment_id == item.id, Submission.score.is_not(None), Submission.status != "in_progress"))
             items.append({
                 "id": item.id, "title": item.title, "description": item.description,
                 "startsAt": item.starts_at, "dueAt": item.due_at, "totalPoints": item.total_points,
@@ -325,7 +326,7 @@ def submissions(request: Request, status: str | None = None, auth: AuthContext =
             .join(Assignment, Assignment.id == Submission.assignment_id)
             .join(Student, Student.id == Submission.student_id)
             .join(User, User.id == Student.user_id)
-            .where(Assignment.teacher_id == teacher.id)
+            .where(Assignment.teacher_id == teacher.id, Submission.status != "in_progress")
             .order_by(Submission.submitted_at.desc())
         )
         if status:
@@ -355,6 +356,8 @@ def grade_submission(submission_id: str, body: GradeInput, request: Request, aut
         if not row:
             raise APIError(404, "提交记录不存在或不属于当前教师", "SUBMISSION_NOT_FOUND")
         submission, assignment = row
+        if submission.status == "in_progress":
+            raise APIError(409, "学生尚未提交，不能批改", "SUBMISSION_IN_PROGRESS")
         if body.score > assignment.total_points:
             raise APIError(422, "得分不能超过作业总分", "GRADE_EXCEEDS_TOTAL")
         submission.score = body.score
@@ -362,6 +365,7 @@ def grade_submission(submission_id: str, body: GradeInput, request: Request, aut
         submission.status = "graded"
         submission.graded_at = datetime.now(timezone.utc)
         submission.graded_by = auth.user.id
+        recalculate_formal_average(session, submission.student_id)
         add_log(session, auth.user.id, "submission.grade", "submission", submission.id, {"score": body.score}, client_ip(request))
         session.commit()
     return request.app.state.success(request, {"id": submission_id, "score": body.score, "status": "graded"}, "批改已保存")
