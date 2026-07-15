@@ -239,3 +239,53 @@ Compilation of changed modules and `git diff --check` completed with no output a
 ### Remaining Concerns
 
 SQLite barrier races are verified. `FOUNDATION_TEST_POSTGRES_URL` was not configured, so no live PostgreSQL harness run was possible; the same lock-aware code path is used through SQLAlchemy.
+
+## Final Controller Verification
+
+### Status
+
+`DONE_WITH_CONCERNS`
+
+- Added explicit pre-lock concurrency checkpoints used only when an internal app-state test hook is installed.
+- Both autosave-first cases now wait until submit reaches the same row-lock boundary before releasing autosave.
+- Both submit-first cases now cover first and existing answers, wait until autosave reaches the lock boundary, and verify the exact persisted answer and score.
+- Added exact start, due, duration, and `after_close` route-boundary tests.
+- Added unknown session/assignment/submission and foreign-question tests with exact error codes and the standard error envelope.
+
+```text
+$ server/.venv/bin/pytest server/tests/test_student_assessment.py -q -k 'barrier or exact_start_due_duration or unknown_and_foreign'
+......                                                                   [100%]
+6 passed, 30 deselected in 1.72s
+
+$ server/.venv/bin/pytest server/tests/test_student_assessment.py server/tests/test_student.py server/tests/test_teacher.py server/tests/test_teacher_papers.py server/tests/test_migrations.py -q
+........................................................................ [ 84%]
+.............                                                            [100%]
+85 passed in 16.62s
+
+$ server/.venv/bin/pytest server/tests -q
+........................................................................ [ 38%]
+.............................s.......................................... [ 77%]
+.........................................                                [100%]
+184 passed, 1 skipped in 29.77s
+
+$ server/.venv/bin/python -m compileall -q server/application/api/student_assessment.py server/tests/test_student_assessment.py
+[no output, exit 0]
+
+$ git diff --check
+[no output, exit 0]
+```
+
+Remaining concern: no live PostgreSQL URL is configured in this workspace, so the optional PostgreSQL concurrency harness remains skipped. The production path uses the same SQLAlchemy row-lock and conditional-update implementation.
+
+### Final review follow-up
+
+Reset the mocked clock to the global due timestamp before the due-boundary start request, so the test now proves equality rather than merely a post-deadline rejection.
+
+```text
+$ server/.venv/bin/pytest server/tests/test_student_assessment.py -q -k 'boundary or unknown_and_foreign'
+..                                                                       [100%]
+2 passed, 34 deselected in 0.88s
+
+$ git diff --check
+[no output, exit 0]
+```

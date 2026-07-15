@@ -784,6 +784,7 @@ def test_formal_routes_enforce_exact_start_due_duration_and_after_close_boundari
     )
     assert at_due.json()["data"]["showAnswers"] is True
 
+    monkeypatch.setattr(assessment_api, "now", lambda: base)
     due_now_assignment = _assignment(database, due_at=base)
     due_now = client.post(
         f"/api/student/assignments/{due_now_assignment}/start", headers=CSRF
