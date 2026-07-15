@@ -558,7 +558,7 @@ def test_barrier_autosave_then_submit_grades_the_committed_answer(assessment_con
     submission_id, question_id = started["submissionId"], started["questions"][0]["id"]
     if existing_answer:
         assert client.put(f"/api/student/submissions/{submission_id}/answers/{question_id}", json={"answer": "B"}, headers=CSRF).status_code == 200
-    entered, release = Event(), Event()
+    entered, competing_at_lock, release = Event(), Event(), Event()
     original_validate = assessment_api.validate_student_answer
 
     def wait_after_claim(snapshot, answer):
@@ -567,6 +567,12 @@ def test_barrier_autosave_then_submit_grades_the_committed_answer(assessment_con
         return original_validate(snapshot, answer)
 
     monkeypatch.setattr(assessment_api, "validate_student_answer", wait_after_claim)
+
+    def checkpoint(event, checkpoint_submission_id):
+        if event == "formal_submit_before_lock" and checkpoint_submission_id == submission_id:
+            competing_at_lock.set()
+
+    monkeypatch.setattr(client.app.state, "assessment_concurrency_hook", checkpoint, raising=False)
 
     def request_client():
         result = TestClient(client.app)
@@ -578,6 +584,7 @@ def test_barrier_autosave_then_submit_grades_the_committed_answer(assessment_con
         autosave = pool.submit(lambda: request_client().put(f"/api/student/submissions/{submission_id}/answers/{question_id}", json={"answer": "A"}, headers=CSRF))
         assert entered.wait(5)
         submit = pool.submit(lambda: request_client().post(f"/api/student/submissions/{submission_id}/submit", headers=CSRF))
+        assert competing_at_lock.wait(5)
         release.set()
         autosave_response, submit_response = autosave.result(10), submit.result(10)
     assert autosave_response.status_code == 200
@@ -592,7 +599,8 @@ def test_barrier_autosave_then_submit_grades_the_committed_answer(assessment_con
         assert answers[0].score == 10
 
 
-def test_barrier_submit_then_autosave_returns_closed_without_lock_error(assessment_context, monkeypatch) -> None:
+@pytest.mark.parametrize("existing_answer", [False, True])
+def test_barrier_submit_then_autosave_returns_closed_without_lock_error(assessment_context, monkeypatch, existing_answer: bool) -> None:
     import server.application.api.student_assessment as assessment_api
     from server.application.models import SubmissionAnswer
 
@@ -600,7 +608,14 @@ def test_barrier_submit_then_autosave_returns_closed_without_lock_error(assessme
     assignment_id = _assignment(database)
     started = client.post(f"/api/student/assignments/{assignment_id}/start", headers=CSRF).json()["data"]
     submission_id, question_id = started["submissionId"], started["questions"][0]["id"]
-    entered, release = Event(), Event()
+    if existing_answer:
+        saved = client.put(
+            f"/api/student/submissions/{submission_id}/answers/{question_id}",
+            json={"answer": "A"},
+            headers=CSRF,
+        )
+        assert saved.status_code == 200
+    entered, competing_at_lock, release = Event(), Event(), Event()
     original_grade = assessment_api.grade_objective
 
     def wait_after_submit_claim(snapshot, answer):
@@ -609,6 +624,12 @@ def test_barrier_submit_then_autosave_returns_closed_without_lock_error(assessme
         return original_grade(snapshot, answer)
 
     monkeypatch.setattr(assessment_api, "grade_objective", wait_after_submit_claim)
+
+    def checkpoint(event, checkpoint_submission_id):
+        if event == "formal_autosave_before_lock" and checkpoint_submission_id == submission_id:
+            competing_at_lock.set()
+
+    monkeypatch.setattr(client.app.state, "assessment_concurrency_hook", checkpoint, raising=False)
 
     def request_client():
         result = TestClient(client.app)
@@ -619,14 +640,20 @@ def test_barrier_submit_then_autosave_returns_closed_without_lock_error(assessme
     with ThreadPoolExecutor(max_workers=2) as pool:
         submit = pool.submit(lambda: request_client().post(f"/api/student/submissions/{submission_id}/submit", headers=CSRF))
         assert entered.wait(5)
-        autosave = pool.submit(lambda: request_client().put(f"/api/student/submissions/{submission_id}/answers/{question_id}", json={"answer": "A"}, headers=CSRF))
+        autosave = pool.submit(lambda: request_client().put(f"/api/student/submissions/{submission_id}/answers/{question_id}", json={"answer": "B"}, headers=CSRF))
+        assert competing_at_lock.wait(5)
         release.set()
         submit_response, autosave_response = submit.result(10), autosave.result(10)
     assert submit_response.status_code == 200
     assert autosave_response.status_code == 409
     assert autosave_response.json()["code"] == "SUBMISSION_CLOSED"
     with database.session() as session:
-        assert session.scalar(select(SubmissionAnswer).where(SubmissionAnswer.submission_id == submission_id)) is not None
+        answers = session.scalars(
+            select(SubmissionAnswer).where(SubmissionAnswer.submission_id == submission_id)
+        ).all()
+        assert len(answers) == 1
+        assert answers[0].answer == ("A" if existing_answer else None)
+        assert answers[0].score == (10 if existing_answer else 0)
 
 
 @pytest.mark.parametrize("question_type,valid,invalid", [
@@ -680,3 +707,147 @@ def test_allowed_resubmission_uses_latest_graded_attempt_for_average(assessment_
     assert client.post(f"/api/student/assignments/{assignment_id}/start", headers=CSRF).status_code == 409
     with database.session() as session:
         assert session.get(Student, "student-profile").average_score == 0
+
+
+def test_formal_routes_enforce_exact_start_due_duration_and_after_close_boundaries(
+    assessment_context, monkeypatch
+) -> None:
+    import server.application.api.student_assessment as assessment_api
+
+    client, database = assessment_context
+    base = datetime(2026, 7, 15, 9, 0, tzinfo=timezone.utc)
+
+    starts_at = base
+    due_at = base + timedelta(hours=2)
+    assignment_id = _assignment(database, starts_at=starts_at, due_at=due_at)
+    monkeypatch.setattr(assessment_api, "now", lambda: base - timedelta(microseconds=1))
+    before = client.post(f"/api/student/assignments/{assignment_id}/start", headers=CSRF)
+    assert before.status_code == 409
+    assert before.json()["code"] == "ASSIGNMENT_NOT_OPEN"
+
+    monkeypatch.setattr(assessment_api, "now", lambda: base)
+    started = client.post(f"/api/student/assignments/{assignment_id}/start", headers=CSRF)
+    assert started.status_code == 200
+    submission_id = started.json()["data"]["submissionId"]
+    question_id = started.json()["data"]["questions"][0]["id"]
+
+    monkeypatch.setattr(
+        assessment_api,
+        "now",
+        lambda: base + timedelta(minutes=30) - timedelta(microseconds=1),
+    )
+    just_before_duration = client.put(
+        f"/api/student/submissions/{submission_id}/answers/{question_id}",
+        json={"answer": "A"},
+        headers=CSRF,
+    )
+    assert just_before_duration.status_code == 200
+
+    monkeypatch.setattr(assessment_api, "now", lambda: base + timedelta(minutes=30))
+    at_duration = client.put(
+        f"/api/student/submissions/{submission_id}/answers/{question_id}",
+        json={"answer": "B"},
+        headers=CSRF,
+    )
+    assert at_duration.status_code == 409
+    assert at_duration.json()["code"] == "ASSIGNMENT_CLOSED"
+
+    closed_assignment = _assignment(
+        database,
+        due_at=base + timedelta(hours=1),
+        show_answers_mode="after_close",
+    )
+    monkeypatch.setattr(assessment_api, "now", lambda: base)
+    closed_started = client.post(
+        f"/api/student/assignments/{closed_assignment}/start", headers=CSRF
+    ).json()["data"]
+    client.put(
+        f"/api/student/submissions/{closed_started['submissionId']}/answers/{closed_started['questions'][0]['id']}",
+        json={"answer": "A"},
+        headers=CSRF,
+    )
+    client.post(
+        f"/api/student/submissions/{closed_started['submissionId']}/submit", headers=CSRF
+    )
+    monkeypatch.setattr(
+        assessment_api,
+        "now",
+        lambda: base + timedelta(hours=1) - timedelta(microseconds=1),
+    )
+    before_due = client.get(
+        f"/api/student/submissions/{closed_started['submissionId']}/result"
+    )
+    assert before_due.json()["data"]["showAnswers"] is False
+    monkeypatch.setattr(assessment_api, "now", lambda: base + timedelta(hours=1))
+    at_due = client.get(
+        f"/api/student/submissions/{closed_started['submissionId']}/result"
+    )
+    assert at_due.json()["data"]["showAnswers"] is True
+
+    due_now_assignment = _assignment(database, due_at=base)
+    due_now = client.post(
+        f"/api/student/assignments/{due_now_assignment}/start", headers=CSRF
+    )
+    assert due_now.status_code == 409
+    assert due_now.json()["code"] == "ASSIGNMENT_CLOSED"
+
+
+def test_unknown_and_foreign_question_routes_keep_not_found_error_envelope(
+    assessment_context,
+) -> None:
+    client, database = assessment_context
+
+    def assert_not_found(response, code):
+        assert response.status_code == 404
+        body = response.json()
+        assert set(body) == {"success", "message", "code", "requestId"}
+        assert body["success"] is False
+        assert body["code"] == code
+
+    assert_not_found(
+        client.get("/api/student/practice-sessions/missing-session"),
+        "PRACTICE_SESSION_NOT_FOUND",
+    )
+    assert_not_found(
+        client.post("/api/student/practice-sessions/missing-session/submit", headers=CSRF),
+        "PRACTICE_SESSION_NOT_FOUND",
+    )
+    practice = _practice(client)
+    assert_not_found(
+        client.put(
+            f"/api/student/practice-sessions/{practice['id']}/answers/other-question",
+            json={"answer": "A"},
+            headers=CSRF,
+        ),
+        "PRACTICE_QUESTION_NOT_FOUND",
+    )
+
+    assert_not_found(
+        client.post("/api/student/assignments/missing-assignment/start", headers=CSRF),
+        "ASSIGNMENT_NOT_FOUND",
+    )
+    assignment_id = _assignment(database)
+    started = client.post(
+        f"/api/student/assignments/{assignment_id}/start", headers=CSRF
+    ).json()["data"]
+    submission_id = started["submissionId"]
+    assert_not_found(
+        client.put(
+            f"/api/student/submissions/{submission_id}/answers/other-question",
+            json={"answer": "A"},
+            headers=CSRF,
+        ),
+        "SUBMISSION_QUESTION_NOT_FOUND",
+    )
+    for verb, path in (
+        ("put", "/api/student/submissions/missing-submission/answers/soil-question-00"),
+        ("post", "/api/student/submissions/missing-submission/submit"),
+        ("get", "/api/student/submissions/missing-submission/result"),
+    ):
+        if verb == "put":
+            response = client.put(path, json={"answer": "A"}, headers=CSRF)
+        elif verb == "post":
+            response = client.post(path, headers=CSRF)
+        else:
+            response = client.get(path)
+        assert_not_found(response, "SUBMISSION_NOT_FOUND")

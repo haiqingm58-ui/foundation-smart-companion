@@ -37,6 +37,12 @@ def now() -> datetime:
     return datetime.now(timezone.utc)
 
 
+def _concurrency_checkpoint(request: Request, event: str, submission_id: str) -> None:
+    hook = getattr(request.app.state, "assessment_concurrency_hook", None)
+    if callable(hook):
+        hook(event, submission_id)
+
+
 def aware(value: datetime | None) -> datetime | None:
     if value is None or value.tzinfo is not None:
         return value
@@ -345,6 +351,7 @@ def start_formal_paper(assignment_id: str, request: Request, auth: AuthContext =
 def save_formal_answer(submission_id: str, question_id: str, body: AnswerSave, request: Request, auth: AuthContext = Depends(require_student)):
     with request.app.state.database.session() as session:
         student = student_for(session, auth.user.id)
+        _concurrency_checkpoint(request, "formal_autosave_before_lock", submission_id)
         submission, assignment = _submission_for(session, submission_id, student.id, lock=True)
         if submission.status != "in_progress":
             raise APIError(409, "试卷已提交，不能继续保存答案", "SUBMISSION_CLOSED")
@@ -386,6 +393,7 @@ def save_formal_answer(submission_id: str, question_id: str, body: AnswerSave, r
 def submit_formal_paper(submission_id: str, request: Request, auth: AuthContext = Depends(require_student)):
     with request.app.state.database.session() as session:
         student = student_for(session, auth.user.id)
+        _concurrency_checkpoint(request, "formal_submit_before_lock", submission_id)
         submission, assignment = _submission_for(session, submission_id, student.id, lock=True)
         if submission.status in {"graded", "pending_review"}:
             payload = {"submissionId": submission.id, "status": submission.status, "score": submission.score, "maxScore": assignment.total_points, "countdown": _countdown(assignment, submission)}
