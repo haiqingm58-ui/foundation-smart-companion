@@ -11,6 +11,28 @@ function readDraft(key) {
 }
 
 
+export function firstDraftIndex(prefix, questions = []) {
+  return questions.findIndex((question) => readDraft(`${prefix}:${question.id}`) !== undefined);
+}
+
+
+export async function flushStoredAnswerDrafts(prefix, questions = [], save) {
+  for (let index = 0; index < questions.length; index += 1) {
+    const question = questions[index];
+    const key = `${prefix}:${question.id}`;
+    const value = readDraft(key);
+    if (value === undefined) continue;
+    try {
+      await save(question.id, value);
+      window.localStorage.removeItem(key);
+    } catch {
+      return { ok: false, index, questionId: question.id };
+    }
+  }
+  return { ok: true, index: -1, questionId: null };
+}
+
+
 export function useAnswerAutosave({ storageKey, initialValue, save }) {
   const [value, setValue] = useState(() => readDraft(storageKey) ?? initialValue ?? null);
   const [status, setStatus] = useState(() => readDraft(storageKey) === undefined ? "idle" : "retry");

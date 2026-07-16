@@ -8,7 +8,15 @@ function isoOrNull(value) {
 }
 
 
+function createPublicationKey() {
+  const token = globalThis.crypto?.randomUUID?.()
+    || `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  return `publish-${token}`;
+}
+
+
 export function PublicationDialog({ paper, classes = [], students = [], onClose, onPublished }) {
+  const [publicationKey] = useState(createPublicationKey);
   const [classIds, setClassIds] = useState([]);
   const [studentIds, setStudentIds] = useState([]);
   const [startsAt, setStartsAt] = useState("");
@@ -32,7 +40,7 @@ export function PublicationDialog({ paper, classes = [], students = [], onClose,
     try {
       const result = await teacherApi.publishPaper(paper.id, {
         classIds, studentIds, startsAt: isoOrNull(startsAt), dueAt: isoOrNull(dueAt), durationMinutes: Number(durationMinutes),
-        showAnswersMode, allowResubmit, autoGrade,
+        showAnswersMode, allowResubmit, autoGrade, publicationKey,
       });
       onPublished?.(result);
     } catch (reason) {

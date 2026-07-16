@@ -193,7 +193,8 @@ def merge_knowledge_point(point_id: str, body: KnowledgePointMergeInput, request
 @router.get("/questions")
 def questions(
     request: Request, subjectId: str | None = None, chapter: str | None = None, knowledgePointId: str | None = None,
-    questionType: str | None = None, difficulty: str | None = None, source: str | None = None, keyword: str = "", search: str = "",
+    questionType: str | None = None, difficulty: str | None = None, source: str | None = None,
+    status: str | None = Query(None, pattern="^(active|inactive|review_required)$"), keyword: str = "", search: str = "",
     page: int = Query(1, ge=1), pageSize: int = Query(20, ge=1, le=100), auth: AuthContext = Depends(require_teacher),
 ):
     with request.app.state.database.session() as session:
@@ -213,6 +214,8 @@ def questions(
             filters.append(Question.difficulty == difficulty)
         if source:
             filters.append(Question.source == source)
+        if status:
+            filters.append(Question.status == status)
         base = select(Question).where(*filters)
         if knowledgePointId:
             base = base.join(QuestionKnowledgePoint, QuestionKnowledgePoint.question_id == Question.id)

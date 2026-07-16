@@ -57,6 +57,28 @@ export function PaperBuilder({ subjects = [], initialValue = null, onSaved, onCa
     return () => { current = false; };
   }, [subjectId, initialValue?.id]);
 
+  useEffect(() => {
+    const search = query.trim();
+    if (!subjectId || !search) return undefined;
+    let current = true;
+    const timer = window.setTimeout(() => {
+      teacherApi.questions(`?subjectId=${encodeURIComponent(subjectId)}&status=active&pageSize=100&search=${encodeURIComponent(search)}`)
+        .then((data) => {
+          if (!current) return;
+          setQuestions((items) => {
+            const merged = new Map(items.map((item) => [item.id, item]));
+            for (const item of data.items || []) merged.set(item.id, item);
+            return [...merged.values()];
+          });
+        })
+        .catch((reason) => current && setError(reason.message || "题目搜索失败"));
+    }, 250);
+    return () => {
+      current = false;
+      window.clearTimeout(timer);
+    };
+  }, [query, subjectId]);
+
   const filtered = useMemo(() => questions.filter((item) => !selected.some((record) => record.questionId === item.id) && `${item.text}${item.chapter}${item.questionType}`.includes(query.trim())), [questions, selected, query]);
   const totalPoints = selected.reduce((sum, item) => sum + Number(item.points || 0), 0);
   const coverage = new Set(selected.flatMap((item) => item.knowledgePoints?.map((point) => point.id) || []));

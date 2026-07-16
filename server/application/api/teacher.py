@@ -8,6 +8,7 @@ from fastapi.responses import FileResponse, Response
 from datetime import datetime, timezone
 
 from sqlalchemy import func, or_, select
+from sqlalchemy.orm import selectinload
 
 from ..errors import APIError
 from ..models import (
@@ -33,6 +34,7 @@ from ..services.storage import chunk_text, extract_text, save_upload
 from ..services.question_imports import build_question_import_template, parse_question_import
 from ..services.question_service import create_question
 from ..services.formal_grading import recalculate_formal_average
+from ..services.practice_selection import question_snapshot
 from .auth import client_ip
 from .dependencies import AuthContext, require_teacher
 
@@ -474,9 +476,14 @@ def create_assignment(body: AssignmentInput, request: Request, auth: AuthContext
         owned = set(owned_student_ids(session, teacher.id))
         if not set(body.studentIds).issubset(owned):
             raise APIError(403, "只能给本人管理的学生布置作业", "STUDENT_SCOPE_FORBIDDEN")
-        questions = session.scalars(select(Question).where(Question.id.in_(body.questionIds))).all()
+        questions = session.scalars(
+            select(Question)
+            .options(selectinload(Question.knowledge_point_links))
+            .where(Question.id.in_(body.questionIds))
+        ).all()
         if len(questions) != len(set(body.questionIds)):
             raise APIError(404, "部分题目不存在", "QUESTION_NOT_FOUND")
+        questions_by_id = {question.id: question for question in questions}
         assignment = Assignment(
             id=str(uuid4()), title=body.title, description=body.description, teacher_id=teacher.id,
             starts_at=body.startsAt, due_at=body.dueAt, total_points=body.totalPoints,
@@ -486,7 +493,14 @@ def create_assignment(body: AssignmentInput, request: Request, auth: AuthContext
         session.flush()
         points = body.totalPoints / len(body.questionIds)
         for index, question_id in enumerate(body.questionIds):
-            session.add(AssignmentQuestion(id=str(uuid4()), assignment_id=assignment.id, question_id=question_id, sequence=index + 1, points=points))
+            sequence = index + 1
+            session.add(AssignmentQuestion(
+                id=str(uuid4()), assignment_id=assignment.id, question_id=question_id,
+                sequence=sequence, points=points,
+                question_snapshot=question_snapshot(
+                    questions_by_id[question_id], sequence=sequence, points=points
+                ),
+            ))
         for student_id in body.studentIds:
             student = session.get(Student, student_id)
             session.add(AssignmentTarget(id=str(uuid4()), assignment_id=assignment.id, class_id=student.class_id, student_id=student_id))

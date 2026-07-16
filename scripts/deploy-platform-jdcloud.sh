@@ -17,9 +17,8 @@ RELEASE_ID="$(date +%Y%m%d%H%M%S)-${GIT_SHA}"
 SOURCE_RELEASE="${SOURCE_BASE}/releases/${RELEASE_ID}"
 WEB_RELEASE="${WEB_BASE}/releases/${RELEASE_ID}"
 
-npm run build
-npm test
-server/.venv/bin/pytest server/tests -q
+npm run check
+npm run test:e2e
 
 ssh "${SSH_OPTIONS[@]}" "${SSH_HOST}" "mkdir -p '${SOURCE_RELEASE}' '${WEB_RELEASE}' '${SOURCE_BASE}/releases' '${WEB_BASE}/releases'"
 rsync -az --delete -e "${RSYNC_RSH}" \

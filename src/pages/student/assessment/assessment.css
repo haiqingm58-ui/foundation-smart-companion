@@ -200,6 +200,10 @@
 .studentAnswerPrivacy div { display: flex; flex-direction: column; gap: 2px; }
 .studentAnswerPrivacy strong { font-size: 13px; }
 .studentAnswerPrivacy span { color: var(--student-muted); font-size: 11px; }
+.studentTeacherFeedback { margin-top: 15px; padding: 14px 16px; display: flex; align-items: flex-start; gap: 11px; background: #f2faf7; border: 1px solid #bfe5d6; border-radius: 6px; }
+.studentTeacherFeedback svg { flex: 0 0 auto; color: #16805d; margin-top: 1px; }
+.studentTeacherFeedback strong { color: #145d47; font-size: 13px; }
+.studentTeacherFeedback p { margin: 4px 0 0; color: #344a42; font-size: 13px; line-height: 1.65; }
 .studentResultQuestions { margin-top: 18px; border: 1px solid var(--student-line); border-radius: 6px; overflow: hidden; }
 .studentResultQuestions > header { min-height: 48px; padding: 0 15px; background: #f7f9fb; border-bottom: 1px solid var(--student-line); display: flex; align-items: center; justify-content: space-between; }
 .studentResultQuestions > header span { color: var(--student-muted); font-size: 12px; }
@@ -242,8 +246,8 @@
   .studentSetupGrid { grid-template-columns: 1fr; }
   .studentSetupPanel + .studentSetupPanel { border-left: 0; border-top: 1px solid var(--student-line); }
   .studentSetupPanel:last-child { grid-column: auto; }
-  .studentSessionLayout { grid-template-columns: 1fr; }
-  .studentQuestionNavigator { border-right: 0; border-bottom: 1px solid var(--student-line); }
+  .studentSessionLayout { grid-template-columns: minmax(0, 1fr); }
+  .studentQuestionNavigator { min-width: 0; overflow: hidden; border-right: 0; border-bottom: 1px solid var(--student-line); }
   .studentQuestionNavigator nav { grid-template-columns: repeat(10, minmax(32px, 1fr)); overflow-x: auto; }
   .studentQuestionNavigator nav button { width: 34px; }
   .studentPaperList article { grid-template-columns: 42px minmax(0, 1fr); }
@@ -261,9 +265,14 @@
   .studentQuestionBody { padding: 19px 15px; }
   .studentQuestionBody h2 { font-size: 17px; }
   .studentBooleanOptions { grid-template-columns: 1fr; }
-  .studentQuestionActions { padding: 10px 14px; flex-wrap: wrap; }
-  .studentQuestionActions > div { width: 100%; }
-  .studentQuestionActions > div button { flex: 1; }
+  .studentSessionLayout,
+  .studentQuestionStage,
+  .studentQuestionActions { width: 100%; max-width: 100%; min-width: 0; box-sizing: border-box; }
+  .studentQuestionActions { padding: 10px 14px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .studentQuestionActions > button { width: 100%; min-width: 0; }
+  .studentQuestionActions > div { width: 100%; min-width: 0; grid-column: 1 / -1; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .studentQuestionActions > div button { width: 100%; min-width: 0; }
+  .studentAnswerOptions label { min-width: 0; overflow-wrap: anywhere; }
   .studentPaperTabs { width: 100%; overflow-x: auto; }
   .studentPaperTabs button { padding: 0 10px; }
   .studentPaperList article { grid-template-columns: 1fr; }

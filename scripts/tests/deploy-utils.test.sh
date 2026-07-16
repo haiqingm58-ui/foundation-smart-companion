@@ -41,8 +41,8 @@ import_line=$(rg -n 'server\.manage import-question-bank' "${activation_script}"
 font_install_line=$(rg -n 'fonts-wqy-zenhei' "${activation_script}" | head -n 1 | cut -d: -f1)
 font_preflight_line=$(rg -n 'TTFont' "${activation_script}" | head -n 1 | cut -d: -f1)
 source_switch_line=$(rg -n 'mv -Tf /opt/foundation-smart-companion\.next /opt/foundation-smart-companion' "${activation_script}" | head -n 1 | cut -d: -f1)
-restart_line=$(rg -n 'systemctl restart foundation-smart-companion-api\.service' "${activation_script}" | head -n 1 | cut -d: -f1)
-nginx_reload_line=$(rg -n 'systemctl reload nginx' "${activation_script}" | head -n 1 | cut -d: -f1)
+restart_line=$(rg -n '^systemctl restart foundation-smart-companion-api\.service' "${activation_script}" | head -n 1 | cut -d: -f1)
+nginx_reload_line=$(rg -n '^systemctl reload nginx' "${activation_script}" | head -n 1 | cut -d: -f1)
 [[ -n "${font_install_line}" && -n "${font_preflight_line}" && -n "${migration_line}" && -n "${import_line}" && -n "${source_switch_line}" && -n "${restart_line}" && -n "${nginx_reload_line}" ]]
 [[ "${font_install_line}" -lt "${font_preflight_line}" && "${font_preflight_line}" -lt "${migration_line}" ]]
 [[ "${migration_line}" -lt "${import_line}" ]]
@@ -53,6 +53,9 @@ while IFS=: read -r pointer_line _; do
 done < <(rg -n 'ln -sfn .*\.next|mv -Tf .*\.next' "${activation_script}")
 [[ "${pointer_count}" -eq 6 ]]
 [[ "${import_line}" -lt "${restart_line}" && "${import_line}" -lt "${nginx_reload_line}" ]]
+rg -q '^rollback_activation\(\)' "${activation_script}"
+rg -q '^trap rollback_activation ERR$' "${activation_script}"
+rg -q --fixed-strings 'wait_for_http "${ACTIVATION_HEALTH_URL}"' "${activation_script}"
 
 activation_root="$(mktemp -d)"
 actions_file="${activation_root}/actions.log"
@@ -65,6 +68,7 @@ env_file="${activation_root}/foundation.env"
 font_path="${activation_root}/fonts/wqy-zenhei.ttc"
 mkdir -p "${source_release}/server/.venv/bin" "${source_release}/content/question-banks/soil-mechanics" "${source_release}/scripts/lib" "${web_release}" "${source_base}/releases" "${web_base}/releases" "${stub_bin}"
 cp "${activation_script}" "${source_release}/scripts/lib/deploy-platform-activate.sh"
+cp "${scripts_dir}/lib/deploy-utils.sh" "${source_release}/scripts/lib/deploy-utils.sh"
 printf 'FOUNDATION_DATABASE_URL=sqlite:///%s/test.db\n' "${activation_root}" > "${env_file}"
 
 cat > "${source_release}/server/.venv/bin/python" <<'EOF'
@@ -113,6 +117,50 @@ rg -q --fixed-strings "python -m server.manage import-question-bank ${source_rel
 if rg -q '^(ln|mv|systemctl|nginx|find) ' "${actions_file}"; then
   echo "activation continued after import failure" >&2
   cat "${actions_file}" >&2
+  exit 1
+fi
+
+# A failure after pointer switching must restore both source and web releases.
+previous_source="${activation_root}/previous-source"
+previous_web="${activation_root}/previous-web"
+mkdir -p "${previous_source}" "${previous_web}"
+: > "${actions_file}"
+cat > "${source_release}/server/.venv/bin/python" <<'EOF'
+#!/usr/bin/env bash
+printf 'python %s\n' "$*" >> "${ACTIVATION_ACTIONS_FILE}"
+exit 0
+EOF
+cat > "${stub_bin}/readlink" <<EOF
+#!/usr/bin/env bash
+printf 'readlink %s\n' "\$*" >> "\${ACTIVATION_ACTIONS_FILE}"
+case "\$*" in
+  '-f /opt/foundation-smart-companion') printf '%s\n' '${previous_source}' ;;
+  '-f ${web_base}/current') printf '%s\n' '${previous_web}' ;;
+  *) exit 1 ;;
+esac
+EOF
+cat > "${stub_bin}/systemctl" <<'EOF'
+#!/usr/bin/env bash
+printf 'systemctl %s\n' "$*" >> "${ACTIVATION_ACTIONS_FILE}"
+if [[ "$*" == "restart foundation-smart-companion-api.service" && ! -f "${ACTIVATION_ACTIONS_FILE}.restart-failed" ]]; then
+  : > "${ACTIVATION_ACTIONS_FILE}.restart-failed"
+  exit 53
+fi
+exit 0
+EOF
+chmod +x "${source_release}/server/.venv/bin/python" "${stub_bin}/readlink" "${stub_bin}/systemctl"
+
+if PATH="${stub_bin}:${PATH}" ACTIVATION_ACTIONS_FILE="${actions_file}" FOUNDATION_PDF_FONT_PATH="${font_path}" FOUNDATION_ENV_FILE="${env_file}" SOURCE_RELEASE="${source_release}" SOURCE_BASE="${source_base}" WEB_RELEASE="${web_release}" WEB_BASE="${web_base}" KEEP_RELEASES=5 RELEASE_ID=test-rollback bash "${source_release}/scripts/lib/deploy-platform-activate.sh"; then
+  echo "expected service restart failure to roll back activation" >&2
+  exit 1
+fi
+[[ "$(rg -c '^systemctl restart foundation-smart-companion-api\.service$' "${actions_file}")" -eq 2 ]]
+rg -q --fixed-strings "ln -sfn ${previous_source} /opt/foundation-smart-companion.rollback" "${actions_file}"
+rg -q --fixed-strings "mv -Tf /opt/foundation-smart-companion.rollback /opt/foundation-smart-companion" "${actions_file}"
+rg -q --fixed-strings "ln -sfn ${previous_web} ${web_base}/current.rollback" "${actions_file}"
+rg -q --fixed-strings "mv -Tf ${web_base}/current.rollback ${web_base}/current" "${actions_file}"
+if rg -q '^find ' "${actions_file}"; then
+  echo "release pruning ran after a failed activation" >&2
   exit 1
 fi
 rm -rf "${activation_root}"

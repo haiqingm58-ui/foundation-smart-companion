@@ -4,8 +4,8 @@
 
 ## 平台能力
 
-- 学生端：教材、知识图谱、服务端 RAG 问答、关联规范、全书题库、学习进度与报告。
-- 教师端：班级和学生、资料上传与 RAG 切块、题库、作业、批改、学情和通知。
+- 学生端：教材、知识图谱、服务端 RAG 问答、关联规范、按章节或知识点随机练习、正式试卷、学习进度与报告。
+- 教师端：班级和学生、资料上传与 RAG 切块、知识点库、结构化题库、手动或蓝图组卷、Word/PDF 导出、发布、批改、学情和通知。
 - 管理员端：教师、学生、班级、强绑定、导入预检、账号安全和操作日志。
 - 安全：服务端图片验证码、Argon2 密码、HttpOnly 会话、CSRF、角色 API 权限和登录限流。
 
@@ -33,6 +33,26 @@ server/.venv/bin/python -m server.manage import-legacy /path/to/app.db
 
 旧 SQLite 数据导入是幂等事务，原数据库会保留用于回滚。教材切块存放在 `server/data/knowledge/`，不会复制到公开静态目录。
 
+## 土力学独立题库与评测
+
+土力学使用独立课程 ID `soil-mechanics`，与《基础工程》题库、章节、知识点和练习记录相互隔离。教师可以为每道题关联 1 至 3 个知识点，并通过手动选题或严格蓝图生成可复用试卷；学生可以按章节或 1 至 3 个知识点随机抽题，也可以完成教师发布的正式试卷。
+
+当前结构化题库的可复核统计如下：
+
+- 4 个来源文件，共识别 1090 个来源题目，去重后 1022 道。
+- 662 道达到可用标准并进入共享题库，360 道保留在人工复核清单中。
+- 50 个知识点、814 条题目知识点关联；每道可用题关联 1 至 3 个知识点，无越界记录。
+- 可用题包含 237 个附件，其中图片 230 个、表格 7 个。来源附件出现次数 359 次，全部被计入可用题、复核项或重复项，没有静默丢失。
+- 首次导入新增 662 道；同一清单再次导入时新增 0、更新 0、保持不变 662，证明导入幂等。
+
+导入命令：
+
+```bash
+server/.venv/bin/python -m server.manage import-question-bank content/question-banks/soil-mechanics/manifest.json
+```
+
+原始来源校验、去重记录和复核原因位于 `content/question-banks/soil-mechanics/import-report.json`。只有 `manifest.json` 中通过严格校验的题目会进入正式题库。
+
 ## RAG 与大模型
 
 未配置大模型时，问答仍会返回服务端 RAG 检索答案和引用。配置 OpenAI-compatible Chat Completions 接口后会生成基于召回片段的答案：
@@ -47,10 +67,13 @@ FOUNDATION_LLM_MODEL=your-model
 
 ```bash
 npm run check
-bash scripts/deploy-platform-jdcloud.sh
+npm run test:e2e
+npm run deploy:jdcloud
 ```
 
-部署脚本执行测试、构建、数据库迁移、旧数据幂等导入、后端和前端原子切换、服务重启与线上健康检查。生产入口保持：
+`npm run test:e2e` 使用隔离数据库验收“教师查题与组卷 → Word 导出 → 发布 → 学生作答 → 教师批改 → 学生查看反馈 → 随机练习刷新续答”的完整流程，同时检查 API 错误、运行时异常和手机端横向溢出。
+
+部署脚本执行全量测试、端到端验收、构建、数据库迁移、土力学题库幂等导入、后端和前端原子切换、服务重启与线上健康检查。生产入口保持：
 
 `http://111.228.5.243/foundation-smart-companion/`
 

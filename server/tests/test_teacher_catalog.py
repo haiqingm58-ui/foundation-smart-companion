@@ -268,17 +268,25 @@ def test_teacher_question_list_filters_and_paginates(teacher_context) -> None:
         session.add_all([secondary, shared, owned, other])
         session.commit()
 
+    review_question_id = seed_invalid_shared_soil_question(database)
+
     base = "/api/teacher/questions?subjectId=soil-mechanics"
     assert client.get(f"{base}&chapter=筛选章节").json()["data"]["total"] == 2
     assert client.get(f"{base}&knowledgePointId=filter-secondary").json()["data"]["total"] == 2
-    assert client.get(f"{base}&questionType=判断题").json()["data"]["total"] == 2
+    assert client.get(f"{base}&questionType=判断题&status=active").json()["data"]["total"] == 2
     assert client.get(f"{base}&difficulty=困难").json()["data"]["items"][0]["id"] == "filter-owned"
-    assert client.get(f"{base}&source=imported").json()["data"]["items"][0]["id"] == "filter-shared"
+    assert client.get(f"{base}&source=imported&status=active").json()["data"]["items"][0]["id"] == "filter-shared"
+    active = client.get(f"{base}&status=active").json()["data"]
+    assert active["total"] == 3
+    assert {item["status"] for item in active["items"]} == {"active"}
+    review = client.get(f"{base}&status=review_required").json()["data"]
+    assert [item["id"] for item in review["items"]] == [review_question_id]
+    assert client.get(f"{base}&status=unknown").status_code == 422
     assert client.get(f"{base}&keyword=教师关键字").json()["data"]["items"][0]["id"] == "filter-owned"
     assert client.get(f"{base}&search=共享关键字").json()["data"]["items"][0]["id"] == "filter-shared"
     first = client.get(f"{base}&page=1&pageSize=1").json()["data"]
     second = client.get(f"{base}&page=2&pageSize=1").json()["data"]
-    assert first["total"] == 3
+    assert first["total"] == 4
     assert len(first["items"]) == len(second["items"]) == 1
     assert first["items"][0]["id"] != second["items"][0]["id"]
     assert client.get(f"{base}&pageSize=101").status_code == 422

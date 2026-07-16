@@ -12,7 +12,7 @@ function queryString(values) {
 }
 
 function sourceLabel(source) {
-  return ({ textbook: "教材共享", imported: "共享 DOCX", "teacher-import": "批量导入", "teacher-copy": "教师副本", teacher: "教师自建" })[source] || "课程题库";
+  return ({ textbook: "教材共享", imported: "共享 DOCX", "soil-mechanics-bank": "土力学共享题库", "teacher-import": "批量导入", "teacher-copy": "教师副本", teacher: "教师自建" })[source] || "课程题库";
 }
 
 
@@ -62,7 +62,7 @@ export function QuestionBank({ subjects = [], onOpenImport, notify }) {
   useEffect(() => { load(); }, [load]);
   const selectedSubject = subjects.find((subject) => subject.id === subjectId) || subjects[0];
   const chapters = useMemo(() => [...new Set(points.map((point) => point.chapter).filter(Boolean))], [points]);
-  const sharedCount = (data?.items || []).filter((item) => ["imported", "textbook"].includes(item.source)).length;
+  const sharedCount = (data?.items || []).filter((item) => ["imported", "textbook", "soil-mechanics-bank"].includes(item.source)).length;
   const attachmentCount = (data?.items || []).reduce((sum, item) => sum + (item.attachments?.length || 0), 0);
 
   const save = async (payload) => {
@@ -101,7 +101,7 @@ export function QuestionBank({ subjects = [], onOpenImport, notify }) {
       <label><span>章节</span><select value={chapter} onChange={(event) => setChapter(event.target.value)}><option value="">全部章节</option>{chapters.map((item) => <option key={item}>{item}</option>)}</select></label>
       <label><span>题型</span><select value={questionType} onChange={(event) => setQuestionType(event.target.value)}><option value="">全部题型</option><option>单项选择题</option><option>多项选择题</option><option>判断题</option><option>填空题</option><option>简答题</option><option>计算题</option></select></label>
       <label><span>难度</span><select value={difficulty} onChange={(event) => setDifficulty(event.target.value)}><option value="">全部难度</option><option>基础</option><option>中等</option><option>困难</option></select></label>
-      <label><span>来源</span><select value={source} onChange={(event) => setSource(event.target.value)}><option value="">全部来源</option><option value="imported">共享 DOCX</option><option value="textbook">教材共享</option><option value="teacher">教师自建</option><option value="teacher-copy">教师副本</option><option value="teacher-import">批量导入</option></select></label>
+      <label><span>来源</span><select value={source} onChange={(event) => setSource(event.target.value)}><option value="">全部来源</option><option value="soil-mechanics-bank">土力学共享题库</option><option value="imported">共享 DOCX</option><option value="textbook">教材共享</option><option value="teacher">教师自建</option><option value="teacher-copy">教师副本</option><option value="teacher-import">批量导入</option></select></label>
       <label className="assessmentSearch"><Search size={15} /><span className="srOnly">搜索题目</span><input value={keyword} onChange={(event) => setKeyword(event.target.value)} placeholder="搜索题干" /></label>
       <button className="assessmentIconButton" type="button" onClick={load} aria-label="刷新题库" title="刷新"><RefreshCw size={17} /></button>
     </div>

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { AlertTriangle, ArrowLeft, ArrowRight, CheckCircle2, Clock3, Send, X } from "lucide-react";
 import { studentApi } from "../../../api/student.js";
 import { QuestionAnswer, QuestionAttachments } from "./QuestionAnswer.jsx";
-import { saveStatusLabel, useAnswerAutosave } from "./useAnswerAutosave.js";
+import { firstDraftIndex, flushStoredAnswerDrafts, saveStatusLabel, useAnswerAutosave } from "./useAnswerAutosave.js";
 
 
 function timerText(seconds) {
@@ -43,7 +43,8 @@ export function ExamSession({ assignmentId, title = "正式试卷", initialSubmi
   }, [remainingSeconds === null]);
 
   const question = submission?.questions?.[activeIndex];
-  const storageKey = submission && question ? `student-paper-draft:${submission.submissionId}:${question.id}` : "student-paper-draft:inactive";
+  const draftPrefix = submission ? `student-paper-draft:${submission.submissionId}` : "student-paper-draft:inactive";
+  const storageKey = submission && question ? `${draftPrefix}:${question.id}` : "student-paper-draft:inactive";
   const autosave = useAnswerAutosave({
     storageKey,
     initialValue: question?.answer,
@@ -51,8 +52,19 @@ export function ExamSession({ assignmentId, title = "正式试卷", initialSubmi
   });
   const answered = useMemo(() => submission?.questions?.filter((item, index) => item.answer !== null && item.answer !== undefined || index === activeIndex && autosave.value !== null && autosave.value !== undefined && autosave.value !== "").length || 0, [activeIndex, autosave.value, submission?.questions]);
 
+  useEffect(() => {
+    if (!submission?.id && !submission?.submissionId) return;
+    const draftIndex = firstDraftIndex(draftPrefix, submission.questions);
+    if (draftIndex >= 0) setActiveIndex(draftIndex);
+  }, [draftPrefix, submission?.id, submission?.submissionId]);
+
   async function move(nextIndex) {
-    await autosave.flush();
+    const saved = await autosave.flush();
+    if (!saved) {
+      setError("当前答案尚未保存，请联网后重试。");
+      return;
+    }
+    setError("");
     setSubmission((current) => current ? { ...current, questions: current.questions.map((item, index) => index === activeIndex ? { ...item, answer: autosave.value } : item) } : current);
     setActiveIndex(nextIndex);
   }
@@ -63,9 +75,21 @@ export function ExamSession({ assignmentId, title = "正式试卷", initialSubmi
     setError("");
     try {
       const saved = await autosave.flush();
-      if (!saved) {
+      if (!saved && !force) {
         setError("当前答案尚未保存，请联网后重试交卷。");
         return;
+      }
+      if (!force) {
+        const drafts = await flushStoredAnswerDrafts(
+          draftPrefix,
+          submission.questions,
+          (questionId, answer) => studentApi.saveSubmissionAnswer(submission.submissionId, questionId, answer),
+        );
+        if (!drafts.ok) {
+          setActiveIndex(drafts.index);
+          setError("仍有答案未同步到服务器，已定位到对应题目，请联网后重试交卷。");
+          return;
+        }
       }
       const summary = await studentApi.submitPaper(submission.submissionId);
       const result = await studentApi.paperResult(summary.submissionId);

@@ -9,7 +9,8 @@ from urllib.parse import quote
 
 from fastapi import APIRouter, Depends, Query, Request
 from fastapi.responses import StreamingResponse
-from sqlalchemy import delete, or_, select
+from sqlalchemy import delete, func, or_, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import selectinload
 
 from ..errors import APIError
@@ -470,6 +471,20 @@ def _question_snapshot(item: PaperQuestion) -> dict:
     }
 
 
+def _published_assignment_payload(session, assignment: Assignment) -> dict:
+    target_count = session.scalar(
+        select(func.count(AssignmentTarget.id)).where(
+            AssignmentTarget.assignment_id == assignment.id
+        )
+    ) or 0
+    return {
+        "assignmentId": assignment.id,
+        "paperId": assignment.paper_id,
+        "targetCount": int(target_count),
+        "status": assignment.status,
+    }
+
+
 @router.post("/{paper_id}/publish")
 def publish_paper(
     paper_id: str,
@@ -480,6 +495,22 @@ def publish_paper(
     with request.app.state.database.session() as session:
         teacher = teacher_for(session, auth.user.id)
         paper = _owned_paper(session, paper_id, auth.user.id)
+        if body.publication_key:
+            existing = session.scalar(
+                select(Assignment).where(
+                    Assignment.teacher_id == teacher.id,
+                    Assignment.publication_key == body.publication_key,
+                )
+            )
+            if existing:
+                if existing.paper_id != paper.id:
+                    raise APIError(
+                        409,
+                        "该发布请求标识已用于其他试卷",
+                        "PUBLICATION_KEY_CONFLICT",
+                    )
+                payload = _published_assignment_payload(session, existing)
+                return request.app.state.success(request, payload, "试卷已发布")
         if paper.shortages:
             raise APIError(409, "试卷存在缺题，不能发布", "PAPER_HAS_SHORTAGES")
         if not paper.paper_questions:
@@ -493,6 +524,7 @@ def publish_paper(
             description=paper.description if body.description is None else body.description,
             teacher_id=teacher.id,
             paper_id=paper.id,
+            publication_key=body.publication_key,
             starts_at=body.starts_at,
             due_at=body.due_at,
             duration_minutes=body.duration_minutes or paper.duration_minutes,
@@ -538,14 +570,18 @@ def publish_paper(
             detail,
             client_ip(request),
         )
-        session.commit()
-    return request.app.state.success(
-        request,
-        {
-            "assignmentId": assignment.id,
-            "paperId": paper.id,
-            "targetCount": len(targets),
-            "status": "published",
-        },
-        "试卷已发布",
-    )
+        try:
+            session.commit()
+            payload = _published_assignment_payload(session, assignment)
+        except IntegrityError:
+            session.rollback()
+            existing = session.scalar(
+                select(Assignment).where(
+                    Assignment.teacher_id == teacher.id,
+                    Assignment.publication_key == body.publication_key,
+                )
+            ) if body.publication_key else None
+            if existing is None or existing.paper_id != paper.id:
+                raise
+            payload = _published_assignment_payload(session, existing)
+    return request.app.state.success(request, payload, "试卷已发布")

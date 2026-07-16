@@ -1,4 +1,4 @@
-import { ArrowLeft, CheckCircle2, Clock3, EyeOff, RotateCcw, Trophy } from "lucide-react";
+import { ArrowLeft, CheckCircle2, Clock3, EyeOff, MessageSquareText, RotateCcw, Trophy } from "lucide-react";
 
 
 function scoreText(result) {
@@ -26,6 +26,8 @@ export function AssessmentResult({ kind = "paper", result, onBack, onRetry }) {
     </header>
 
     {!showAnswers && <div className="studentAnswerPrivacy"><EyeOff size={18} /><div><strong>答案暂未公开</strong><span>是否公开答案由老师发布试卷时设置。</span></div></div>}
+
+    {kind === "paper" && result.feedback && <section className="studentTeacherFeedback" aria-label="教师总评"><MessageSquareText size={20} /><div><strong>教师总评</strong><p>{result.feedback}</p></div></section>}
 
     <section className="studentResultQuestions"><header><strong>逐题情况</strong><span>{result.questions?.length || 0} 题</span></header>{(result.questions || []).map((question, index) => <article key={question.id || question.questionId || index}>
       <div className="studentResultQuestionHead"><span>{index + 1}</span><div><strong>{question.text}</strong><small>{question.questionType} · {question.points || question.maxScore || 0} 分</small></div><em>{question.status === "pending_review" || question.score === null ? "待批改" : `${question.score ?? 0} 分`}</em></div>

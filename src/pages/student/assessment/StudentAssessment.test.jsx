@@ -142,6 +142,30 @@ test("答案先写本地草稿再自动保存，失败后联网自动重试", as
 });
 
 
+test("离线保存失败时禁止跨题，避免把未同步答案留在上一题", async () => {
+  const second = { ...question, id: "q-2", text: "渗透系数受哪些因素影响？", sequence: 2 };
+  studentApi.savePracticeAnswer.mockRejectedValue(new Error("断网"));
+  render(<PracticeSession initialSession={{ ...practice, questions: [question, second] }} onFinished={vi.fn()} onExit={vi.fn()} />);
+  fireEvent.click(await screen.findByLabelText("A. 层流"));
+  fireEvent.click(screen.getByRole("button", { name: "下一题" }));
+  expect(await screen.findByText("当前答案尚未保存，请联网后重试。")).toBeInTheDocument();
+  expect(screen.getByText(question.text)).toBeInTheDocument();
+  expect(screen.queryByText(second.text)).not.toBeInTheDocument();
+});
+
+
+test("随机练习恢复本地草稿并在全部草稿同步前阻止提交", async () => {
+  const second = { ...question, id: "q-2", text: "渗透系数受哪些因素影响？", sequence: 2 };
+  window.localStorage.setItem("student-practice-draft:practice-1:q-2", JSON.stringify("B"));
+  studentApi.savePracticeAnswer.mockRejectedValue(new Error("断网"));
+  render(<PracticeSession initialSession={{ ...practice, questions: [question, second] }} onFinished={vi.fn()} onExit={vi.fn()} />);
+  expect(await screen.findByText(second.text)).toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: "提交练习" }));
+  expect(await screen.findByText("当前答案尚未保存，请联网后重试提交。")).toBeInTheDocument();
+  expect(studentApi.submitPracticeSession).not.toHaveBeenCalled();
+});
+
+
 test("我的试卷提供待完成进行中已提交已批改四种状态", async () => {
   studentApi.papers.mockResolvedValue({ items: [
     { assignmentId: "a-1", title: "待完成测验", teacherName: "李老师", status: "pending", totalPoints: 100, questionCount: 20, countdown: { dueAt: "2026-07-20T08:00:00Z", remainingSeconds: 7200 } },
@@ -179,13 +203,41 @@ test("正式试卷使用服务端倒计时、自动保存并确认交卷", async
 });
 
 
+test("正式试卷到期时即使最后一次自动保存被截止规则拒绝也会完成服务器结算", async () => {
+  const expired = { submissionId: "submission-expired", attemptNumber: 1, countdown: { remainingSeconds: 0 }, questions: [question] };
+  window.localStorage.setItem("student-paper-draft:submission-expired:q-1", JSON.stringify("A"));
+  studentApi.saveSubmissionAnswer.mockRejectedValue(new Error("试卷已截止"));
+  studentApi.submitPaper.mockResolvedValue({ submissionId: "submission-expired", status: "graded", score: 0, maxScore: 5 });
+  studentApi.paperResult.mockResolvedValue({ submissionId: "submission-expired", status: "graded", score: 0, maxScore: 5, showAnswers: false, questions: [{ ...question, answer: null, score: 0 }] });
+  const onFinished = vi.fn();
+  render(<ExamSession assignmentId="assignment-expired" initialSubmission={expired} onFinished={onFinished} onExit={vi.fn()} />);
+  await waitFor(() => expect(studentApi.saveSubmissionAnswer).toHaveBeenCalled());
+  await waitFor(() => expect(studentApi.submitPaper).toHaveBeenCalledWith("submission-expired"));
+  expect(onFinished).toHaveBeenCalledWith(expect.objectContaining({ status: "graded" }));
+});
+
+
+test("正式试卷恢复跨题草稿并在同步失败时阻止交卷", async () => {
+  const second = { ...question, id: "q-2", text: "说明渗透系数的影响因素", sequence: 2 };
+  const submission = { submissionId: "submission-drafts", attemptNumber: 1, countdown: { remainingSeconds: 3600 }, questions: [question, second] };
+  window.localStorage.setItem("student-paper-draft:submission-drafts:q-2", JSON.stringify("颗粒级配与孔隙比"));
+  studentApi.saveSubmissionAnswer.mockRejectedValue(new Error("断网"));
+  render(<ExamSession assignmentId="assignment-drafts" initialSubmission={submission} onFinished={vi.fn()} onExit={vi.fn()} />);
+  expect(await screen.findByText(second.text)).toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: "交卷" }));
+  expect(await screen.findByText("当前答案尚未保存，请联网后重试交卷。")).toBeInTheDocument();
+  expect(studentApi.submitPaper).not.toHaveBeenCalled();
+});
+
+
 test("结果页区分随机练习掌握度与正式成绩并尊重答案公开状态", () => {
   const { rerender } = render(<AssessmentResult kind="practice" result={{ status: "pending_review", score: 6, maxScore: 10, questions: [{ ...question, status: "pending_review", feedback: "等待复核" }] }} onBack={vi.fn()} />);
   expect(screen.getByText("等待老师批改")).toBeInTheDocument();
   expect(screen.getByText("本次随机练习只更新知识点掌握度，不计入课程成绩")).toBeInTheDocument();
 
-  rerender(<AssessmentResult kind="paper" result={{ status: "graded", score: 88, maxScore: 100, showAnswers: false, questions: [{ ...question, answer: "A", score: 5 }] }} onBack={vi.fn()} />);
+  rerender(<AssessmentResult kind="paper" result={{ status: "graded", score: 88, maxScore: 100, feedback: "概念掌握扎实", showAnswers: false, questions: [{ ...question, answer: "A", score: 5 }] }} onBack={vi.fn()} />);
   expect(screen.getByText("88 / 100")).toBeInTheDocument();
+  expect(screen.getByRole("region", { name: "教师总评" })).toHaveTextContent("概念掌握扎实");
   expect(screen.getByText("答案暂未公开")).toBeInTheDocument();
   expect(screen.queryByText("正确答案：A")).not.toBeInTheDocument();
 });

@@ -367,6 +367,7 @@ def test_student_safe_snapshot_never_leaks_private_import_fields(assessment_cont
     client.post(f"/api/student/submissions/{start['submissionId']}/submit", headers=CSRF)
     result = client.get(f"/api/student/submissions/{start['submissionId']}/result").json()["data"]
     assert result["showAnswers"] is False
+    assert result["questions"][0]["score"] == 10
     assert "feedback" not in result["questions"][0]
     assert "explanation" not in result["questions"][0]
 
@@ -449,7 +450,7 @@ def test_teacher_manual_grade_recalculates_average_and_hides_in_progress(assessm
     completed = client.post(f"/api/student/assignments/{completed_id}/start", headers=CSRF).json()["data"]
     client.put(f"/api/student/submissions/{completed['submissionId']}/answers/{completed['questions'][0]['id']}", json={"answer": "A"}, headers=CSRF)
     client.post(f"/api/student/submissions/{completed['submissionId']}/submit", headers=CSRF)
-    pending_id = _assignment(database, auto_grade=False)
+    pending_id = _assignment(database, auto_grade=False, show_answers_mode="never")
     pending = client.post(f"/api/student/assignments/{pending_id}/start", headers=CSRF).json()["data"]
     with database.session() as session:
         session.add(SessionToken(id="formal-teacher-session", user_id="formal-teacher-user", token_hash=token_digest("formal-teacher-token"), csrf_hash=token_digest("formal-teacher-csrf"), expires_at=datetime.now(timezone.utc) + timedelta(hours=1)))
@@ -461,7 +462,27 @@ def test_teacher_manual_grade_recalculates_average_and_hides_in_progress(assessm
     assert pending["submissionId"] not in {item["id"] for item in teacher.get("/api/teacher/submissions").json()["data"]["items"]}
     client.put(f"/api/student/submissions/{pending['submissionId']}/answers/{pending['questions'][0]['id']}", json={"answer": "A"}, headers=CSRF)
     client.post(f"/api/student/submissions/{pending['submissionId']}/submit", headers=CSRF)
-    assert teacher.put(f"/api/teacher/submissions/{pending['submissionId']}/grade", json={"score": 5, "feedback": "人工评分"}, headers=headers).status_code == 200
+    assert teacher.put(
+        f"/api/teacher/submissions/{pending['submissionId']}/grade",
+        json={
+            "score": 5,
+            "feedback": "人工评分",
+            "answers": [{
+                "questionId": pending["questions"][0]["id"],
+                "score": 5,
+                "criteriaScores": {},
+                "feedback": "单题评语：概念正确。",
+            }],
+        },
+        headers=headers,
+    ).status_code == 200
+    result = client.get(f"/api/student/submissions/{pending['submissionId']}/result").json()["data"]
+    assert result["feedback"] == "人工评分"
+    assert result["gradedAt"] is not None
+    assert result["showAnswers"] is False
+    assert result["questions"][0]["score"] == 5
+    assert result["questions"][0]["feedback"] == "单题评语：概念正确。"
+    assert "correctAnswer" not in result["questions"][0]
     with database.session() as session:
         assert session.get(Student, "student-profile").average_score == 75
 
@@ -825,6 +846,15 @@ def test_formal_routes_enforce_exact_start_due_duration_and_after_close_boundari
     )
     assert at_duration.status_code == 409
     assert at_duration.json()["code"] == "ASSIGNMENT_CLOSED"
+    finalized = client.post(
+        f"/api/student/submissions/{submission_id}/submit", headers=CSRF
+    )
+    assert finalized.status_code == 200
+    assert finalized.json()["data"]["status"] == "graded"
+    assert finalized.json()["data"]["score"] == 10
+    assert client.post(
+        f"/api/student/submissions/{submission_id}/submit", headers=CSRF
+    ).json()["data"]["status"] == "graded"
 
     closed_assignment = _assignment(
         database,

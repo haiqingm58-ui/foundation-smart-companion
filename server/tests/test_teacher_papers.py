@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from copy import deepcopy
+import json
 
 from sqlalchemy import inspect, select, text
 
@@ -167,12 +168,16 @@ def test_migration_006_preserves_legacy_assignments_and_questions(tmp_path) -> N
     upgrade_database(database_url)
     inspector = inspect(database.engine)
     assert {"papers", "paper_questions"}.issubset(inspector.get_table_names())
-    assert {"paper_id", "duration_minutes", "show_answers_mode"}.issubset(
+    assert {"paper_id", "duration_minutes", "show_answers_mode", "publication_key"}.issubset(
         {column["name"] for column in inspector.get_columns("assignments")}
     )
     assert "question_snapshot" in {
         column["name"] for column in inspector.get_columns("assignment_questions")
     }
+    assert next(
+        column for column in inspector.get_columns("assignment_questions")
+        if column["name"] == "question_snapshot"
+    )["nullable"] is False
     with database.engine.connect() as connection:
         assignment = connection.execute(
             text(
@@ -187,7 +192,14 @@ def test_migration_006_preserves_legacy_assignments_and_questions(tmp_path) -> N
             )
         ).one()
     assert assignment == ("旧作业", "不能丢失", 10.0, None, None, "after_submission")
-    assert assignment_question == ("legacy-question", 1, 10.0, None)
+    assert assignment_question[:3] == ("legacy-question", 1, 10.0)
+    snapshot = assignment_question.question_snapshot
+    if isinstance(snapshot, str):
+        snapshot = json.loads(snapshot)
+    assert snapshot["id"] == "legacy-question"
+    assert snapshot["text"] == "旧题干"
+    assert snapshot["sequence"] == 1
+    assert snapshot["points"] == 10
 
 
 def test_manual_paper_preserves_order_sections_points_and_is_reusable(teacher_context) -> None:
@@ -590,6 +602,31 @@ def test_publish_authorizes_students_and_classes_and_logs_targets(teacher_contex
         }
 
 
+def test_publish_is_idempotent_for_the_same_publication_key(teacher_context) -> None:
+    from server.application.models import Assignment, AssignmentTarget, OperationLog
+
+    client, database, _ = teacher_context
+    paper = create_manual_paper(client, [seed_question(database, "publish-idempotent-question")])
+    payload = {
+        "studentIds": ["student-1"],
+        "classIds": [],
+        "publicationKey": "publish-idempotent-0001",
+    }
+    first = client.post(f"/api/teacher/papers/{paper['id']}/publish", json=payload, headers=csrf())
+    second = client.post(f"/api/teacher/papers/{paper['id']}/publish", json=payload, headers=csrf())
+
+    assert first.status_code == second.status_code == 200
+    assert first.json()["data"] == second.json()["data"]
+    with database.session() as session:
+        assignments = session.scalars(
+            select(Assignment).where(Assignment.paper_id == paper["id"])
+        ).all()
+        assert len(assignments) == 1
+        assert assignments[0].publication_key == payload["publicationKey"]
+        assert session.query(AssignmentTarget).filter_by(assignment_id=assignments[0].id).count() == 1
+        assert session.query(OperationLog).filter_by(action="paper.publish", target_id=paper["id"]).count() == 1
+
+
 def test_publish_rejects_zero_question_and_automatic_shortage_papers(teacher_context) -> None:
     client, database, _ = teacher_context
     empty = create_manual_paper(client, [])
@@ -826,8 +863,8 @@ def test_publication_snapshot_is_rich_server_side_and_immutable_after_source_edi
         assert row.question_snapshot["text"] != session.get(Question, question_id).text
 
 
-def test_legacy_assignment_route_still_creates_unsnapshotted_assignment(teacher_context) -> None:
-    from server.application.models import Assignment, AssignmentQuestion
+def test_legacy_assignment_route_creates_an_immutable_question_snapshot(teacher_context) -> None:
+    from server.application.models import Assignment, AssignmentQuestion, Question
 
     client, database, _ = teacher_context
     question_id = seed_question(database, "legacy-route-question")
@@ -851,4 +888,13 @@ def test_legacy_assignment_route_still_creates_unsnapshotted_assignment(teacher_
         assert assignment.paper_id is None
         assert assignment.duration_minutes is None
         assert assignment.show_answers_mode == "after_submission"
-        assert row.question_snapshot is None
+        original_snapshot = deepcopy(row.question_snapshot)
+        assert original_snapshot["id"] == question_id
+        assert original_snapshot["text"] == "题目 legacy-route-question"
+        session.get(Question, question_id).text = "题库后来修改的题干"
+        session.commit()
+    with database.session() as session:
+        row = session.scalar(
+            select(AssignmentQuestion).where(AssignmentQuestion.assignment_id == assignment.id)
+        )
+        assert row.question_snapshot == original_snapshot

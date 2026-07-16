@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { ArrowLeft, ArrowRight, CheckCircle2, Send, X } from "lucide-react";
 import { studentApi } from "../../../api/student.js";
 import { QuestionAnswer, QuestionAttachments } from "./QuestionAnswer.jsx";
-import { saveStatusLabel, useAnswerAutosave } from "./useAnswerAutosave.js";
+import { firstDraftIndex, flushStoredAnswerDrafts, saveStatusLabel, useAnswerAutosave } from "./useAnswerAutosave.js";
 
 
 export function PracticeSession({ sessionId, initialSession, onFinished, onExit }) {
@@ -33,7 +33,8 @@ export function PracticeSession({ sessionId, initialSession, onFinished, onExit 
   }, [initialSession?.id]);
 
   const question = session?.questions?.[activeIndex];
-  const storageKey = session && question ? `student-practice-draft:${session.id}:${question.id}` : "student-practice-draft:inactive";
+  const draftPrefix = session ? `student-practice-draft:${session.id}` : "student-practice-draft:inactive";
+  const storageKey = session && question ? `${draftPrefix}:${question.id}` : "student-practice-draft:inactive";
   const autosave = useAnswerAutosave({
     storageKey,
     initialValue: question?.answer,
@@ -41,8 +42,19 @@ export function PracticeSession({ sessionId, initialSession, onFinished, onExit 
   });
   const answered = useMemo(() => session?.questions?.filter((item, index) => item.answer !== null && item.answer !== undefined || index === activeIndex && autosave.value !== null && autosave.value !== undefined && autosave.value !== "").length || 0, [activeIndex, autosave.value, session?.questions]);
 
+  useEffect(() => {
+    if (!session?.id) return;
+    const draftIndex = firstDraftIndex(draftPrefix, session.questions);
+    if (draftIndex >= 0) setActiveIndex(draftIndex);
+  }, [draftPrefix, session?.id]);
+
   async function move(nextIndex) {
-    await autosave.flush();
+    const saved = await autosave.flush();
+    if (!saved) {
+      setError("当前答案尚未保存，请联网后重试。");
+      return;
+    }
+    setError("");
     setSession((current) => current ? { ...current, questions: current.questions.map((item, index) => index === activeIndex ? { ...item, answer: autosave.value } : item) } : current);
     setActiveIndex(nextIndex);
   }
@@ -52,7 +64,21 @@ export function PracticeSession({ sessionId, initialSession, onFinished, onExit 
     setSubmitting(true);
     setError("");
     try {
-      await autosave.flush();
+      const saved = await autosave.flush();
+      if (!saved) {
+        setError("当前答案尚未保存，请联网后重试提交。");
+        return;
+      }
+      const drafts = await flushStoredAnswerDrafts(
+        draftPrefix,
+        session.questions,
+        (questionId, answer) => studentApi.savePracticeAnswer(session.id, questionId, answer),
+      );
+      if (!drafts.ok) {
+        setActiveIndex(drafts.index);
+        setError("仍有答案未同步到服务器，已定位到对应题目，请联网后重试提交。");
+        return;
+      }
       const result = await studentApi.submitPracticeSession(session.id);
       window.localStorage.removeItem("student-active-practice-session");
       onFinished?.(result);

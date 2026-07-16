@@ -145,7 +145,9 @@ test("发布只提供绑定目标并明确生成不可变快照", async () => {
   fireEvent.click(screen.getByLabelText("班级 基础工程演示班"));
   fireEvent.change(screen.getByLabelText("截止时间"), { target: { value: "2026-07-20T18:00" } });
   fireEvent.click(screen.getByRole("button", { name: "确认发布" }));
-  await waitFor(() => expect(teacherApi.publishPaper).toHaveBeenCalledWith("paper-1", expect.objectContaining({ classIds: ["class-1"], studentIds: [] })));
+  await waitFor(() => expect(teacherApi.publishPaper).toHaveBeenCalledWith("paper-1", expect.objectContaining({
+    classIds: ["class-1"], studentIds: [], publicationKey: expect.stringMatching(/^publish-/),
+  })));
 });
 
 

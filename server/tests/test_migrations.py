@@ -7,6 +7,19 @@ from pathlib import Path
 from sqlalchemy import inspect, select, text
 
 
+def test_migration_revision_ids_fit_production_version_column() -> None:
+    from alembic.config import Config
+    from alembic.script import ScriptDirectory
+
+    root = Path(__file__).resolve().parents[2]
+    config = Config(str(root / "alembic.ini"))
+    config.set_main_option("script_location", str(root / "server" / "migrations"))
+    revisions = list(ScriptDirectory.from_config(config).walk_revisions())
+
+    assert revisions
+    assert {revision.revision for revision in revisions if len(revision.revision) > 32} == set()
+
+
 REVISION_003_TABLE_COLUMNS = {
     "users": {"id", "username", "password_hash", "password_salt", "password_algorithm", "role", "role_label", "name", "avatar", "status", "student_no", "college", "school", "mentor", "must_change_password", "last_login_at", "created_at", "updated_at"},
     "classes": {"id", "name", "grade", "major", "college", "created_at"},
@@ -486,7 +499,14 @@ def test_migration_006_populated_downgrade_preserves_revision_005_rows_and_schem
             )
         ).one()
     assert upgraded_assignment == ("迁移保留作业", None, None, "after_submission")
-    assert upgraded_question == ("task6-question", 1, 12.0, None)
+    assert upgraded_question[:3] == ("task6-question", 1, 12.0)
+    upgraded_snapshot = upgraded_question.question_snapshot
+    if isinstance(upgraded_snapshot, str):
+        upgraded_snapshot = json.loads(upgraded_snapshot)
+    assert upgraded_snapshot["id"] == "task6-question"
+    assert upgraded_snapshot["text"] == "迁移保留题干"
+    assert upgraded_snapshot["sequence"] == 1
+    assert upgraded_snapshot["points"] == 12
 
 
 def test_fresh_revision_003_schema_matches_frozen_signature(tmp_path: Path) -> None:

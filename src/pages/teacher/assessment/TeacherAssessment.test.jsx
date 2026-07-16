@@ -115,7 +115,7 @@ test("知识点库显示有限总数并可查看关联题目", async () => {
 test("共享题目只提供复制操作，教师副本才可编辑", async () => {
   const shared = {
     id: "shared-1", subjectId: "soil-mechanics", chapter: "第二章", text: "共享题目", questionType: "判断题",
-    difficulty: "基础", points: 5, source: "imported", editable: false, knowledgePoints: [{ id: "kp-3", name: "达西定律" }],
+    difficulty: "基础", points: 5, source: "soil-mechanics-bank", editable: false, knowledgePoints: [{ id: "kp-3", name: "达西定律" }],
   };
   const owned = { ...shared, id: "owned-1", text: "教师自建题", source: "teacher", editable: true };
   teacherApi.questions.mockResolvedValueOnce({ items: [shared, owned], total: 2 });
@@ -126,6 +126,9 @@ test("共享题目只提供复制操作，教师副本才可编辑", async () =>
   const ownedRow = screen.getByText("教师自建题").closest("tr");
 
   expect(within(sharedRow).getByRole("button", { name: "复制到我的题库" })).toBeInTheDocument();
+  expect(within(sharedRow).getByText("土力学共享题库")).toBeInTheDocument();
+  expect(screen.getByText("1 道")).toBeInTheDocument();
+  expect(screen.getByRole("option", { name: "土力学共享题库" })).toHaveValue("soil-mechanics-bank");
   expect(within(sharedRow).queryByRole("button", { name: "编辑" })).not.toBeInTheDocument();
   expect(within(ownedRow).getByRole("button", { name: "编辑" })).toBeInTheDocument();
 

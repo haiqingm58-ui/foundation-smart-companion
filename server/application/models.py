@@ -395,12 +395,21 @@ class PaperQuestion(Base):
 
 class Assignment(Base):
     __tablename__ = "assignments"
+    __table_args__ = (
+        Index(
+            "uq_assignment_teacher_publication_key",
+            "teacher_id",
+            "publication_key",
+            unique=True,
+        ),
+    )
 
     id: Mapped[str] = mapped_column(String(64), primary_key=True)
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     description: Mapped[str] = mapped_column(Text, default="", nullable=False)
     teacher_id: Mapped[str] = mapped_column(ForeignKey("teachers.id"), nullable=False, index=True)
     paper_id: Mapped[str | None] = mapped_column(ForeignKey("papers.id", ondelete="SET NULL"), index=True)
+    publication_key: Mapped[str | None] = mapped_column(String(96))
     starts_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     due_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     duration_minutes: Mapped[int | None] = mapped_column(Integer)
@@ -421,7 +430,7 @@ class AssignmentQuestion(Base):
     question_id: Mapped[str] = mapped_column(ForeignKey("questions.id"), nullable=False, index=True)
     sequence: Mapped[int] = mapped_column(Integer, nullable=False)
     points: Mapped[float] = mapped_column(Float, nullable=False)
-    question_snapshot: Mapped[dict[str, Any] | None] = mapped_column(JSON)
+    question_snapshot: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False)
 
 
 class AssignmentTarget(Base):

@@ -364,18 +364,25 @@ def _assignment_questions(session, assignment: Assignment) -> list[AssignmentQue
 
 def _formal_questions_payload(session, assignment: Assignment, submission: Submission, *, reveal: bool) -> list[dict]:
     answers = {item.question_id: item for item in session.scalars(select(SubmissionAnswer).where(SubmissionAnswer.submission_id == submission.id))}
-    return [
-        {
+    payload = []
+    for item in _assignment_questions(session, assignment):
+        answer = answers.get(item.question_id)
+        question = {
             **sanitize_snapshot(item.question_snapshot or {}, include_solutions=reveal),
-            "answer": answers[item.question_id].answer if item.question_id in answers else None,
-            **({
-                "score": answers[item.question_id].score if item.question_id in answers else None,
-                "status": "pending_review" if item.question_id in answers and answers[item.question_id].score is None and submission.status == "pending_review" else None,
-                "feedback": answers[item.question_id].feedback if item.question_id in answers else None,
-            } if reveal else {}),
+            "answer": answer.answer if answer else None,
+            "score": answer.score if answer else None,
+            "status": (
+                "pending_review"
+                if answer and answer.score is None and submission.status == "pending_review"
+                else None
+            ),
         }
-        for item in _assignment_questions(session, assignment)
-    ]
+        # Automatic feedback may contain the private answer explanation. Teacher-authored
+        # feedback remains visible independently from the answer disclosure policy.
+        if answer and (reveal or submission.graded_by):
+            question["feedback"] = answer.feedback
+        payload.append(question)
+    return payload
 
 
 def _countdown(assignment: Assignment, submission: Submission | None = None) -> dict:
@@ -519,7 +526,6 @@ def submit_formal_paper(submission_id: str, request: Request, auth: AuthContext 
         if submission.status in {"graded", "pending_review"}:
             payload = {"submissionId": submission.id, "status": submission.status, "score": submission.score, "maxScore": assignment.total_points, "countdown": _countdown(assignment, submission)}
             return request.app.state.success(request, payload, "试卷已提交")
-        _ensure_assignment_open(assignment, submission)
         claimed = session.execute(
             update(Submission)
             .where(Submission.id == submission.id, Submission.student_id == student.id, Submission.status == "in_progress")
@@ -579,5 +585,15 @@ def formal_result(submission_id: str, request: Request, auth: AuthContext = Depe
         reveal = assignment.show_answers_mode == "after_submission" or (
             assignment.show_answers_mode == "after_close" and _assignment_globally_closed(assignment)
         )
-        payload = {"submissionId": submission.id, "assignmentId": assignment.id, "status": submission.status, "score": submission.score, "maxScore": assignment.total_points, "showAnswers": reveal, "questions": _formal_questions_payload(session, assignment, submission, reveal=reveal)}
+        payload = {
+            "submissionId": submission.id,
+            "assignmentId": assignment.id,
+            "status": submission.status,
+            "score": submission.score,
+            "maxScore": assignment.total_points,
+            "feedback": submission.feedback,
+            "gradedAt": submission.graded_at,
+            "showAnswers": reveal,
+            "questions": _formal_questions_payload(session, assignment, submission, reveal=reveal),
+        }
     return request.app.state.success(request, payload)
