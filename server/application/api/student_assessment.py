@@ -14,12 +14,17 @@ from ..models import (
     Assignment,
     AssignmentQuestion,
     AssignmentTarget,
+    KnowledgePoint,
     PracticeAttempt,
     PracticeSession,
     PracticeSessionQuestion,
     Question,
+    QuestionKnowledgePoint,
+    Subject,
     Submission,
     SubmissionAnswer,
+    Teacher,
+    User,
 )
 from ..schemas.practice import AnswerSave, PracticeSessionCreate
 from ..services.grading import grade_objective
@@ -87,6 +92,108 @@ def _practice_payload(record: PracticeSession) -> dict:
     }
 
 
+@router.get("/assessment-catalog")
+def assessment_catalog(request: Request, subjectId: str | None = None, _auth: AuthContext = Depends(require_student)):
+    with request.app.state.database.session() as session:
+        question_counts = dict(
+            session.execute(
+                select(Question.subject_id, func.count(Question.id))
+                .where(Question.status == "active")
+                .group_by(Question.subject_id)
+            ).all()
+        )
+        subjects = list(
+            session.scalars(
+                select(Subject).where(Subject.status == "active").order_by(Subject.sort_order, Subject.title)
+            )
+        )
+        subject_items = [
+            {
+                "id": subject.id,
+                "title": subject.title,
+                "slug": subject.slug,
+                "questionCount": int(question_counts.get(subject.id, 0)),
+            }
+            for subject in subjects
+        ]
+        selected_id = subjectId or next((item["id"] for item in subject_items if item["questionCount"]), None)
+        if selected_id and selected_id not in {item["id"] for item in subject_items}:
+            raise APIError(404, "课程不存在或不可用", "PRACTICE_SUBJECT_NOT_FOUND")
+
+        chapters = []
+        points = []
+        question_types = []
+        difficulties = []
+        if selected_id:
+            chapters = [
+                {"name": name, "questionCount": int(count)}
+                for name, count in session.execute(
+                    select(Question.chapter, func.count(Question.id))
+                    .where(
+                        Question.subject_id == selected_id,
+                        Question.status == "active",
+                        Question.chapter.is_not(None),
+                    )
+                    .group_by(Question.chapter)
+                    .order_by(Question.chapter)
+                ).all()
+            ]
+            point_counts = (
+                select(
+                    QuestionKnowledgePoint.knowledge_point_id.label("point_id"),
+                    func.count(func.distinct(Question.id)).label("question_count"),
+                )
+                .join(Question, Question.id == QuestionKnowledgePoint.question_id)
+                .where(Question.subject_id == selected_id, Question.status == "active")
+                .group_by(QuestionKnowledgePoint.knowledge_point_id)
+                .subquery()
+            )
+            points = [
+                {
+                    "id": point.id,
+                    "name": point.name,
+                    "chapter": point.chapter,
+                    "description": point.description,
+                    "questionCount": int(count),
+                }
+                for point, count in session.execute(
+                    select(KnowledgePoint, func.coalesce(point_counts.c.question_count, 0))
+                    .outerjoin(point_counts, point_counts.c.point_id == KnowledgePoint.id)
+                    .where(KnowledgePoint.subject_id == selected_id, KnowledgePoint.status == "active")
+                    .order_by(KnowledgePoint.sort_order, KnowledgePoint.name)
+                ).all()
+            ]
+            question_types = [
+                {"name": name, "questionCount": int(count)}
+                for name, count in session.execute(
+                    select(Question.question_type, func.count(Question.id))
+                    .where(Question.subject_id == selected_id, Question.status == "active")
+                    .group_by(Question.question_type)
+                    .order_by(Question.question_type)
+                ).all()
+            ]
+            difficulties = [
+                {"name": name, "questionCount": int(count)}
+                for name, count in session.execute(
+                    select(Question.difficulty, func.count(Question.id))
+                    .where(Question.subject_id == selected_id, Question.status == "active")
+                    .group_by(Question.difficulty)
+                    .order_by(Question.difficulty)
+                ).all()
+            ]
+    return request.app.state.success(
+        request,
+        {
+            "subjects": subject_items,
+            "selectedSubjectId": selected_id,
+            "chapters": chapters,
+            "knowledgePoints": points,
+            "questionTypes": question_types,
+            "difficulties": difficulties,
+        },
+    )
+
+
 @router.post("/practice-sessions")
 def create_practice_session(body: PracticeSessionCreate, request: Request, auth: AuthContext = Depends(require_student)):
     with request.app.state.database.session() as session:
@@ -98,6 +205,8 @@ def create_practice_session(body: PracticeSessionCreate, request: Request, auth:
             mode=body.mode,
             chapter=body.chapter,
             knowledge_point_ids=body.knowledge_point_ids,
+            question_types=body.question_types,
+            difficulties=body.difficulties,
             count=body.count,
             seed=time_ns(),
         )
@@ -309,11 +418,23 @@ def list_formal_papers(request: Request, auth: AuthContext = Depends(require_stu
         for assignment in assignments:
             current = session.scalar(select(Submission).where(Submission.assignment_id == assignment.id, Submission.student_id == student.id, Submission.status == "in_progress"))
             submitted = session.scalar(select(Submission).where(Submission.assignment_id == assignment.id, Submission.student_id == student.id, Submission.status != "in_progress").order_by(Submission.attempt_number.desc()))
+            latest = current or submitted
+            teacher = session.get(Teacher, assignment.teacher_id)
+            teacher_user = session.get(User, teacher.user_id) if teacher else None
+            question_count = session.scalar(
+                select(func.count(AssignmentQuestion.id)).where(AssignmentQuestion.assignment_id == assignment.id)
+            ) or 0
             items.append({
                 "assignmentId": assignment.id, "title": assignment.title, "description": assignment.description,
+                "teacherName": teacher_user.name if teacher_user else "课程教师",
                 "totalPoints": assignment.total_points, "showAnswersMode": assignment.show_answers_mode,
                 "allowResubmit": assignment.allow_resubmit, "countdown": _countdown(assignment, current),
-                "submissionId": current.id if current else None, "submitted": submitted is not None,
+                "questionCount": int(question_count),
+                "submissionId": latest.id if latest else None,
+                "status": latest.status if latest else "pending",
+                "score": submitted.score if submitted else None,
+                "submittedAt": submitted.submitted_at if submitted else None,
+                "submitted": submitted is not None,
             })
     return request.app.state.success(request, {"items": items, "total": len(items)})
 

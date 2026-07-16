@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import {
   BarChart3,
   Bell,
@@ -44,6 +44,8 @@ import {
   ZoomOut,
 } from "lucide-react";
 import foundationSection from "./assets/foundation-section-compact.png";
+
+const StudentAssessmentHome = lazy(() => import("./pages/student/assessment/AssessmentHome.jsx"));
 
 const navItems = [
   { id: "overview", label: "课程总览", icon: LayoutDashboard },
@@ -4494,15 +4496,7 @@ function Page({
     case "resources":
       return <ResourcesPage initialResourceTitle={activeResourceTitle} />;
     case "practice":
-      return (
-        <PracticePage
-          initialChapter={activeChapter}
-          initialExerciseId={activeExerciseId}
-          onRecordAttempt={onRecordAttempt}
-          exerciseBank={fullExerciseBank}
-          customExercises={customExercises}
-        />
-      );
+      return <Suspense fallback={<LoadingSkeleton title="正在加载练习与试卷" rows={4} />}><StudentAssessmentHome /></Suspense>;
     case "report":
       return <ReportPage learningStats={learningStats} />;
     case "admin":

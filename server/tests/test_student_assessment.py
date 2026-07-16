@@ -164,6 +164,71 @@ def test_practice_selection_subject_filters_modes_counts_shortages_and_recency(a
     assert "soil-question-00" not in ids
 
 
+def test_student_assessment_catalog_is_subject_scoped_and_reports_available_counts(assessment_context) -> None:
+    client, _database = assessment_context
+
+    response = client.get("/api/student/assessment-catalog?subjectId=soil-mechanics")
+
+    assert response.status_code == 200
+    data = response.json()["data"]
+    soil = next(item for item in data["subjects"] if item["id"] == "soil-mechanics")
+    assert soil["title"] == "土力学"
+    assert soil["questionCount"] == 25
+    assert data["selectedSubjectId"] == "soil-mechanics"
+    assert data["chapters"] == [
+        {"name": "第一章", "questionCount": 13},
+        {"name": "第二章", "questionCount": 12},
+    ]
+    assert {item["id"]: item["questionCount"] for item in data["knowledgePoints"]} == {
+        "soil-kp-1": 13,
+        "soil-kp-2": 12,
+    }
+    assert data["questionTypes"] == [{"name": "单项选择题", "questionCount": 25}]
+    assert data["difficulties"] == [{"name": "基础", "questionCount": 25}]
+
+
+def test_random_practice_applies_question_type_and_difficulty_without_cross_subject_fallback(assessment_context) -> None:
+    from server.application.models import Question
+
+    client, database = assessment_context
+    with database.session() as session:
+        session.get(Question, "soil-question-00").question_type = "判断题"
+        session.get(Question, "soil-question-00").options = []
+        session.get(Question, "soil-question-00").correct_answer = True
+        session.get(Question, "soil-question-00").difficulty = "提高"
+        session.commit()
+
+    selected = client.post(
+        "/api/student/practice-sessions",
+        json={
+            "subjectId": "soil-mechanics",
+            "mode": "chapter",
+            "chapter": "第一章",
+            "questionTypes": ["判断题"],
+            "difficulties": ["提高"],
+            "count": 1,
+        },
+        headers=CSRF,
+    )
+    assert selected.status_code == 200
+    assert [item["id"] for item in selected.json()["data"]["questions"]] == ["soil-question-00"]
+
+    shortage = client.post(
+        "/api/student/practice-sessions",
+        json={
+            "subjectId": "soil-mechanics",
+            "mode": "chapter",
+            "chapter": "第一章",
+            "questionTypes": ["计算题"],
+            "difficulties": ["提高"],
+            "count": 1,
+        },
+        headers=CSRF,
+    )
+    assert shortage.status_code == 409
+    assert shortage.json()["code"] == "PRACTICE_QUESTION_SHORTAGE"
+
+
 def test_practice_resume_autosave_uses_immutable_snapshot_and_updates_mastery_only(assessment_context) -> None:
     from server.application.models import KnowledgeMastery, Question, Student
 
@@ -195,6 +260,8 @@ def test_formal_papers_authorize_target_resume_autosave_deadline_and_attempt_lim
     assert listed.status_code == 200
     metadata = listed.json()["data"]["items"][0]
     assert metadata["assignmentId"] == assignment_id
+    assert metadata["teacherName"] == "正式教师"
+    assert metadata["status"] == "pending"
     assert metadata["countdown"]["remainingSeconds"] is not None
     started = client.post(f"/api/student/assignments/{assignment_id}/start", headers=CSRF)
     assert started.status_code == 200
@@ -205,11 +272,18 @@ def test_formal_papers_authorize_target_resume_autosave_deadline_and_attempt_lim
     assert duplicate.json()["data"]["submissionId"] == submission_id
     question_id = started.json()["data"]["questions"][0]["id"]
     assert client.put(f"/api/student/submissions/{submission_id}/answers/{question_id}", json={"answer": "A"}, headers=CSRF).status_code == 200
+    resumed_list = client.get("/api/student/papers").json()["data"]["items"]
+    assert next(item for item in resumed_list if item["assignmentId"] == assignment_id)["status"] == "in_progress"
     assert client.post(f"/api/student/assignments/{assignment_id}/start", headers=CSRF).json()["data"]["submissionId"] == submission_id
     inaccessible_id = _assignment(database, student_id="other-student")
     inaccessible = client.post(f"/api/student/assignments/{inaccessible_id}/start", headers=CSRF)
     assert inaccessible.status_code == 404
     assert client.post(f"/api/student/submissions/{submission_id}/submit", headers=CSRF).status_code == 200
+    graded_list = client.get("/api/student/papers").json()["data"]["items"]
+    graded_meta = next(item for item in graded_list if item["assignmentId"] == assignment_id)
+    assert graded_meta["status"] == "graded"
+    assert graded_meta["score"] == 10
+    assert graded_meta["submittedAt"] is not None
     assert client.post(f"/api/student/assignments/{assignment_id}/start", headers=CSRF).status_code == 409
     overdue_id = _assignment(database, due_at=datetime.now(timezone.utc) - timedelta(seconds=1))
     assert client.post(f"/api/student/assignments/{overdue_id}/start", headers=CSRF).status_code == 409

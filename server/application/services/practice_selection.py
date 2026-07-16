@@ -143,6 +143,8 @@ def select_practice_questions(
     mode: str,
     chapter: str | None,
     knowledge_point_ids: list[str],
+    question_types: list[str] | None = None,
+    difficulties: list[str] | None = None,
     count: int,
     seed: int,
 ) -> list[Question]:
@@ -164,6 +166,10 @@ def select_practice_questions(
         statement = statement.join(QuestionKnowledgePoint).where(
             QuestionKnowledgePoint.knowledge_point_id.in_(knowledge_point_ids)
         )
+    if question_types:
+        statement = statement.where(Question.question_type.in_(question_types))
+    if difficulties:
+        statement = statement.where(Question.difficulty.in_(difficulties))
     questions = list(session.scalars(statement.distinct()).all())
     if len(questions) < count:
         raise APIError(409, f"符合条件的题目不足，需要 {count} 题，当前仅有 {len(questions)} 题", "PRACTICE_QUESTION_SHORTAGE")
