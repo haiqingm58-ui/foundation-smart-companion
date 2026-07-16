@@ -35,14 +35,18 @@ verify_page_contains "http://example.test/login" "《基础工程》智慧学伴
 scripts_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 deploy_script="${scripts_dir}/deploy-platform-jdcloud.sh"
 activation_script="${scripts_dir}/lib/deploy-platform-activate.sh"
-rg -q 'source "\\?\$\{SOURCE_RELEASE\}/scripts/lib/deploy-platform-activate\.sh"' "${deploy_script}"
-migration_line=$(rg -n 'server\.manage migrate' "${activation_script}" | head -n 1 | cut -d: -f1)
-import_line=$(rg -n 'server\.manage import-question-bank' "${activation_script}" | head -n 1 | cut -d: -f1)
-font_install_line=$(rg -n 'fonts-wqy-zenhei' "${activation_script}" | head -n 1 | cut -d: -f1)
-font_preflight_line=$(rg -n 'TTFont' "${activation_script}" | head -n 1 | cut -d: -f1)
-source_switch_line=$(rg -n 'mv -Tf /opt/foundation-smart-companion\.next /opt/foundation-smart-companion' "${activation_script}" | head -n 1 | cut -d: -f1)
-restart_line=$(rg -n '^systemctl restart foundation-smart-companion-api\.service' "${activation_script}" | head -n 1 | cut -d: -f1)
-nginx_reload_line=$(rg -n '^systemctl reload nginx' "${activation_script}" | head -n 1 | cut -d: -f1)
+first_matching_line() {
+  grep -nE -- "$1" "$2" | sed -n '1{s/:.*//;p;}'
+}
+
+grep -Fq -- 'source "\${SOURCE_RELEASE}/scripts/lib/deploy-platform-activate.sh"' "${deploy_script}"
+migration_line=$(first_matching_line 'server\.manage migrate' "${activation_script}")
+import_line=$(first_matching_line 'server\.manage import-question-bank' "${activation_script}")
+font_install_line=$(first_matching_line 'fonts-wqy-zenhei' "${activation_script}")
+font_preflight_line=$(first_matching_line 'TTFont' "${activation_script}")
+source_switch_line=$(first_matching_line 'mv -Tf /opt/foundation-smart-companion\.next /opt/foundation-smart-companion' "${activation_script}")
+restart_line=$(first_matching_line '^systemctl restart foundation-smart-companion-api\.service' "${activation_script}")
+nginx_reload_line=$(first_matching_line '^systemctl reload nginx' "${activation_script}")
 [[ -n "${font_install_line}" && -n "${font_preflight_line}" && -n "${migration_line}" && -n "${import_line}" && -n "${source_switch_line}" && -n "${restart_line}" && -n "${nginx_reload_line}" ]]
 [[ "${font_install_line}" -lt "${font_preflight_line}" && "${font_preflight_line}" -lt "${migration_line}" ]]
 [[ "${migration_line}" -lt "${import_line}" ]]
@@ -50,12 +54,12 @@ pointer_count=0
 while IFS=: read -r pointer_line _; do
   pointer_count=$((pointer_count + 1))
   [[ "${import_line}" -lt "${pointer_line}" ]]
-done < <(rg -n 'ln -sfn .*\.next|mv -Tf .*\.next' "${activation_script}")
+done < <(grep -nE -- 'ln -sfn .*\.next|mv -Tf .*\.next' "${activation_script}")
 [[ "${pointer_count}" -eq 6 ]]
 [[ "${import_line}" -lt "${restart_line}" && "${import_line}" -lt "${nginx_reload_line}" ]]
-rg -q '^rollback_activation\(\)' "${activation_script}"
-rg -q '^trap rollback_activation ERR$' "${activation_script}"
-rg -q --fixed-strings 'wait_for_http "${ACTIVATION_HEALTH_URL}"' "${activation_script}"
+grep -Eq -- '^rollback_activation\(\)' "${activation_script}"
+grep -Eq -- '^trap rollback_activation ERR$' "${activation_script}"
+grep -Fq -- 'wait_for_http "${ACTIVATION_HEALTH_URL}"' "${activation_script}"
 
 activation_root="$(mktemp -d)"
 actions_file="${activation_root}/actions.log"
@@ -108,13 +112,13 @@ if PATH="${stub_bin}:${PATH}" ACTIVATION_ACTIONS_FILE="${actions_file}" FOUNDATI
   echo "expected import failure to stop production activation script" >&2
   exit 1
 fi
-rg -q --fixed-strings "apt-get update" "${actions_file}"
-rg -q --fixed-strings "apt-get install -y --no-install-recommends fonts-wqy-zenhei" "${actions_file}"
-rg -q --fixed-strings "python -c from reportlab.pdfbase.ttfonts import TTFont" "${actions_file}"
-rg -q --fixed-strings "python -m server.manage migrate" "${actions_file}"
-rg -q --fixed-strings "python -m server.manage import-question-bank ${source_release}/content/question-banks/soil-mechanics/manifest.json" "${actions_file}"
+grep -Fq -- "apt-get update" "${actions_file}"
+grep -Fq -- "apt-get install -y --no-install-recommends fonts-wqy-zenhei" "${actions_file}"
+grep -Fq -- "python -c from reportlab.pdfbase.ttfonts import TTFont" "${actions_file}"
+grep -Fq -- "python -m server.manage migrate" "${actions_file}"
+grep -Fq -- "python -m server.manage import-question-bank ${source_release}/content/question-banks/soil-mechanics/manifest.json" "${actions_file}"
 [[ "$(wc -l < "${actions_file}")" -eq 7 ]]
-if rg -q '^(ln|mv|systemctl|nginx|find) ' "${actions_file}"; then
+if grep -Eq -- '^(ln|mv|systemctl|nginx|find) ' "${actions_file}"; then
   echo "activation continued after import failure" >&2
   cat "${actions_file}" >&2
   exit 1
@@ -154,12 +158,12 @@ if PATH="${stub_bin}:${PATH}" ACTIVATION_ACTIONS_FILE="${actions_file}" FOUNDATI
   echo "expected service restart failure to roll back activation" >&2
   exit 1
 fi
-[[ "$(rg -c '^systemctl restart foundation-smart-companion-api\.service$' "${actions_file}")" -eq 2 ]]
-rg -q --fixed-strings "ln -sfn ${previous_source} /opt/foundation-smart-companion.rollback" "${actions_file}"
-rg -q --fixed-strings "mv -Tf /opt/foundation-smart-companion.rollback /opt/foundation-smart-companion" "${actions_file}"
-rg -q --fixed-strings "ln -sfn ${previous_web} ${web_base}/current.rollback" "${actions_file}"
-rg -q --fixed-strings "mv -Tf ${web_base}/current.rollback ${web_base}/current" "${actions_file}"
-if rg -q '^find ' "${actions_file}"; then
+[[ "$(grep -Ec -- '^systemctl restart foundation-smart-companion-api\.service$' "${actions_file}")" -eq 2 ]]
+grep -Fq -- "ln -sfn ${previous_source} /opt/foundation-smart-companion.rollback" "${actions_file}"
+grep -Fq -- "mv -Tf /opt/foundation-smart-companion.rollback /opt/foundation-smart-companion" "${actions_file}"
+grep -Fq -- "ln -sfn ${previous_web} ${web_base}/current.rollback" "${actions_file}"
+grep -Fq -- "mv -Tf ${web_base}/current.rollback ${web_base}/current" "${actions_file}"
+if grep -Eq -- '^find ' "${actions_file}"; then
   echo "release pruning ran after a failed activation" >&2
   exit 1
 fi
