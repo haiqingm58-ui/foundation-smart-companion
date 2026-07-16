@@ -1199,3 +1199,706 @@
     animation: none;
   }
 }
+
+.paperBuilder {
+  display: grid;
+  gap: 18px;
+}
+
+.paperBuilderMeta {
+  display: grid;
+  grid-template-columns: minmax(260px, 1.5fr) minmax(150px, 0.7fr) 120px 130px;
+  gap: 12px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.paperBuilderMeta label,
+.blueprintRow label,
+.publicationSettings label,
+.gradingQuestionFields label,
+.gradingFinal label {
+  display: grid;
+  align-content: start;
+  gap: 6px;
+  min-width: 0;
+}
+
+.paperBuilderMeta label > span,
+.blueprintRow label > span,
+.publicationSettings label > span,
+.gradingQuestionFields label > span,
+.gradingFinal label > span {
+  color: #59697e;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.paperBuilderMeta input,
+.paperBuilderMeta select,
+.blueprintRow input,
+.blueprintRow select,
+.publicationSettings input,
+.publicationSettings select,
+.gradingQuestionFields input,
+.gradingFinal input,
+.gradingFinal textarea,
+.gradingRubric input,
+.paperSelectedQuestions input {
+  width: 100%;
+  min-height: 38px;
+  border: 1px solid #cfd9e6;
+  border-radius: 5px;
+  background: #fff;
+  padding: 8px 10px;
+  color: #172338;
+  font: inherit;
+}
+
+.paperBuilderMeta small {
+  color: #7b8798;
+  font-size: 10px;
+}
+
+.paperDescriptionField {
+  grid-column: 1 / -1;
+}
+
+.paperModeTabs {
+  display: inline-flex;
+  justify-self: start;
+  min-height: 38px;
+  border: 1px solid #cfdae7;
+  border-radius: 5px;
+  overflow: hidden;
+}
+
+.paperModeTabs button {
+  min-width: 112px;
+  border: 0;
+  border-right: 1px solid #cfdae7;
+  background: #fff;
+  padding: 8px 16px;
+  color: #526174;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.paperModeTabs button:last-child {
+  border-right: 0;
+}
+
+.paperModeTabs button[aria-selected="true"] {
+  color: #075bcf;
+  background: #edf5ff;
+}
+
+.paperAvailableQuestions,
+.paperSelectedQuestions {
+  border: 1px solid #dbe4ef;
+  border-radius: 6px;
+  background: #fff;
+  overflow: hidden;
+}
+
+.paperAvailableQuestions > header,
+.paperSelectedQuestions > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  min-height: 48px;
+  border-bottom: 1px solid #e5ebf2;
+  padding: 8px 13px;
+}
+
+.paperAvailableQuestions > header > div,
+.paperSelectedQuestions > header > div {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #172338;
+}
+
+.paperSelectedQuestions > header span {
+  color: #758397;
+  font-size: 11px;
+}
+
+.paperAvailableQuestions > header label {
+  display: flex;
+  align-items: center;
+  width: min(320px, 46vw);
+  min-height: 34px;
+  border: 1px solid #d6e0eb;
+  border-radius: 5px;
+  padding: 0 9px;
+  color: #7a8798;
+}
+
+.paperAvailableQuestions > header input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  padding: 7px;
+  font: inherit;
+}
+
+.paperCandidateTable th:first-child,
+.paperCandidateTable td:first-child,
+.paperListTable th:first-child,
+.paperListTable td:first-child {
+  width: 42%;
+}
+
+.paperOrderButtons {
+  display: flex;
+  gap: 4px;
+}
+
+.paperOrderButtons button {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border: 1px solid #d5dfeb;
+  border-radius: 4px;
+  background: #fff;
+  color: #526174;
+  cursor: pointer;
+}
+
+.paperOrderButtons button:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.paperPointsInput {
+  max-width: 76px;
+}
+
+.paperSummaryBand {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px 18px;
+  min-height: 48px;
+  border: 1px solid #cfe0f5;
+  border-radius: 6px;
+  background: #f3f8fe;
+  padding: 10px 14px;
+  color: #526174;
+  font-size: 11px;
+}
+
+.paperSummaryBand > div {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: #075bcf;
+  font-weight: 700;
+}
+
+.paperSummaryBand strong {
+  color: #075bcf;
+  font-size: 15px;
+}
+
+.assessmentPaperDrawer,
+.gradingDrawer {
+  width: min(1180px, 94vw);
+}
+
+.paperListTabs {
+  margin-bottom: 14px;
+}
+
+.paperExportMenu {
+  position: relative;
+}
+
+.paperExportPopover {
+  position: absolute;
+  z-index: 8;
+  top: calc(100% + 6px);
+  right: 0;
+  display: grid;
+  width: 250px;
+  border: 1px solid #d4deea;
+  border-radius: 6px;
+  background: #fff;
+  box-shadow: 0 14px 32px rgba(25, 45, 73, 0.16);
+  overflow: hidden;
+}
+
+.paperExportPopover a {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border-bottom: 1px solid #edf1f5;
+  padding: 9px 11px;
+  color: #075bcf;
+  text-decoration: none;
+}
+
+.paperExportPopover a:last-child {
+  border-bottom: 0;
+}
+
+.paperExportPopover a:hover {
+  background: #f4f8fd;
+}
+
+.paperExportPopover span {
+  display: grid;
+  gap: 2px;
+}
+
+.paperExportPopover strong {
+  color: #26364c;
+  font-size: 11px;
+}
+
+.paperExportPopover small {
+  color: #7a8798;
+  font-size: 9px;
+}
+
+.blueprintBuilder {
+  display: grid;
+  gap: 14px;
+}
+
+.blueprintRows {
+  display: grid;
+  gap: 8px;
+}
+
+.blueprintRow {
+  display: grid;
+  grid-template-columns: 76px repeat(6, minmax(90px, 1fr));
+  gap: 10px;
+  align-items: end;
+  border: 1px solid #dbe4ee;
+  border-radius: 6px;
+  background: #fff;
+  padding: 11px;
+}
+
+.blueprintRow > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  align-self: center;
+  color: #26364b;
+  font-size: 11px;
+}
+
+.blueprintRow > header button {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: #c24141;
+  cursor: pointer;
+}
+
+.blueprintSectionField {
+  grid-column: span 2;
+}
+
+.blueprintActions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.blueprintPreview {
+  display: grid;
+  gap: 12px;
+}
+
+.blueprintPreview > .portalPrimary {
+  justify-self: end;
+}
+
+.blueprintShortages {
+  display: grid;
+  gap: 5px;
+  border-left: 3px solid #d97706;
+  background: #fff8eb;
+  padding: 10px 13px;
+  color: #8a4b05;
+  font-size: 11px;
+}
+
+.blueprintShortages > div {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.blueprintShortages p,
+.blueprintShortages small {
+  margin: 0;
+}
+
+.publicationDrawer {
+  width: min(900px, 92vw);
+}
+
+.publicationForm {
+  display: grid;
+  gap: 16px;
+}
+
+.publicationSnapshotNotice {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  border: 1px solid #cfe0f4;
+  border-radius: 6px;
+  background: #f2f8ff;
+  padding: 12px 14px;
+  color: #075bcf;
+}
+
+.publicationSnapshotNotice span {
+  display: grid;
+  gap: 3px;
+}
+
+.publicationSnapshotNotice strong {
+  color: #21334b;
+  font-size: 12px;
+}
+
+.publicationSnapshotNotice small {
+  color: #6d7c90;
+  font-size: 10px;
+}
+
+.publicationForm > section {
+  border-top: 1px solid #e2e8f0;
+  padding-top: 14px;
+}
+
+.publicationForm > section > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+  color: #718096;
+  font-size: 10px;
+}
+
+.publicationForm > section > header > div {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: #25374f;
+  font-size: 12px;
+}
+
+.publicationTargets {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.publicationTargets fieldset {
+  display: grid;
+  align-content: start;
+  gap: 6px;
+  max-height: 240px;
+  overflow: auto;
+  border: 1px solid #dbe4ee;
+  border-radius: 6px;
+  padding: 10px;
+}
+
+.publicationTargets legend {
+  padding: 0 5px;
+  color: #66758a;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.publicationTargets label {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 42px;
+  border-bottom: 1px solid #edf1f5;
+  padding: 5px 3px;
+  cursor: pointer;
+}
+
+.publicationTargets label:last-child {
+  border-bottom: 0;
+}
+
+.publicationTargets label span {
+  display: grid;
+  gap: 2px;
+}
+
+.publicationTargets label strong {
+  color: #26364b;
+  font-size: 11px;
+}
+
+.publicationTargets label small {
+  color: #7b8798;
+  font-size: 9px;
+}
+
+.publicationSettings {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.publicationToggles {
+  display: flex;
+  gap: 18px;
+  margin-top: 12px;
+  color: #536276;
+  font-size: 11px;
+}
+
+.publicationToggles label {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.gradingFilters {
+  margin-bottom: 14px;
+}
+
+.gradingSummary {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  min-height: 44px;
+  border-bottom: 1px solid #e2e8f0;
+  color: #69778a;
+  font-size: 11px;
+}
+
+.gradingSummary strong {
+  color: #075bcf;
+}
+
+.gradingQuestion {
+  display: grid;
+  gap: 11px;
+  border-bottom: 1px solid #dce4ed;
+  padding: 16px 0;
+}
+
+.gradingQuestion > header {
+  display: flex;
+  justify-content: space-between;
+  color: #657489;
+  font-size: 10px;
+}
+
+.gradingQuestion h3 {
+  margin: 0;
+  color: #1f2f46;
+  font-size: 14px;
+  line-height: 1.65;
+}
+
+.gradingAnswer {
+  display: grid;
+  gap: 6px;
+}
+
+.gradingAnswer > span,
+.gradingRubric > strong {
+  color: #66758a;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.gradingAnswer pre {
+  margin: 0;
+  border-left: 3px solid #2b8a62;
+  background: #f2faf7;
+  padding: 10px 12px;
+  color: #263a34;
+  font: inherit;
+  font-size: 12px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+
+.gradingSignals {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.gradingSignals span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border-radius: 4px;
+  background: #edf7f2;
+  padding: 4px 7px;
+  color: #247452;
+  font-size: 9px;
+  font-weight: 700;
+}
+
+.gradingSignals span.low {
+  background: #fff3e7;
+  color: #a6540d;
+}
+
+.gradingRubric {
+  display: grid;
+  gap: 7px;
+  border: 1px solid #e0e7ef;
+  border-radius: 6px;
+  padding: 10px;
+}
+
+.gradingRubric label {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 100px;
+  align-items: center;
+  gap: 10px;
+  color: #44546a;
+  font-size: 11px;
+}
+
+.gradingQuestionFields {
+  display: grid;
+  grid-template-columns: 140px minmax(0, 1fr);
+  gap: 10px;
+}
+
+.gradingFinal {
+  display: grid;
+  grid-template-columns: minmax(240px, 1fr) 150px;
+  gap: 12px;
+  border-top: 2px solid #cfe0f4;
+  padding-top: 16px;
+}
+
+.gradingFinal > div {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  color: #075bcf;
+}
+
+.gradingFinal > div span {
+  display: grid;
+  gap: 2px;
+}
+
+.gradingFinal > div strong {
+  color: #26364b;
+  font-size: 12px;
+}
+
+.gradingFinal > div small {
+  color: #758397;
+  font-size: 9px;
+}
+
+.gradingFeedback {
+  grid-column: 1 / -1;
+}
+
+@media (max-width: 1040px) {
+  .paperBuilderMeta {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .paperDescriptionField {
+    grid-column: 1 / -1;
+  }
+
+  .blueprintRow {
+    grid-template-columns: repeat(3, minmax(110px, 1fr));
+  }
+
+  .blueprintSectionField {
+    grid-column: span 2;
+  }
+
+  .publicationSettings {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 720px) {
+  .paperBuilderMeta,
+  .publicationTargets,
+  .publicationSettings,
+  .gradingQuestionFields,
+  .gradingFinal,
+  .blueprintRow {
+    grid-template-columns: 1fr;
+  }
+
+  .paperDescriptionField,
+  .blueprintSectionField,
+  .gradingFeedback {
+    grid-column: auto;
+  }
+
+  .paperModeTabs {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    justify-self: stretch;
+  }
+
+  .paperModeTabs button {
+    min-width: 0;
+  }
+
+  .paperAvailableQuestions > header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .paperAvailableQuestions > header label {
+    width: 100%;
+  }
+
+  .blueprintActions,
+  .publicationToggles {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .assessmentPaperDrawer,
+  .gradingDrawer,
+  .publicationDrawer {
+    width: 100vw;
+  }
+
+  .paperExportPopover {
+    position: fixed;
+    right: 12px;
+    bottom: 12px;
+    top: auto;
+    left: 12px;
+    width: auto;
+  }
+}

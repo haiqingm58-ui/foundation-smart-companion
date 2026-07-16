@@ -22,6 +22,7 @@ from ..models import (
     Resource,
     Student,
     Submission,
+    SubmissionAnswer,
     Teacher,
     TeacherStudentBinding,
     User,
@@ -344,29 +345,124 @@ def submissions(request: Request, status: str | None = None, auth: AuthContext =
     return request.app.state.success(request, {"items": items, "total": len(items)})
 
 
+def _owned_submission_row(session, submission_id: str, teacher_id: str):
+    row = session.execute(
+        select(Submission, Assignment, Student, User)
+        .join(Assignment, Assignment.id == Submission.assignment_id)
+        .join(Student, Student.id == Submission.student_id)
+        .join(User, User.id == Student.user_id)
+        .where(Submission.id == submission_id, Assignment.teacher_id == teacher_id)
+    ).first()
+    if not row:
+        raise APIError(404, "提交记录不存在或不属于当前教师", "SUBMISSION_NOT_FOUND")
+    return row
+
+
+@router.get("/submissions/{submission_id}")
+def submission_detail(submission_id: str, request: Request, auth: AuthContext = Depends(require_teacher)):
+    with request.app.state.database.session() as session:
+        teacher = teacher_for(session, auth.user.id)
+        submission, assignment, student, user = _owned_submission_row(session, submission_id, teacher.id)
+        assignment_questions = session.scalars(
+            select(AssignmentQuestion)
+            .where(AssignmentQuestion.assignment_id == assignment.id)
+            .order_by(AssignmentQuestion.sequence)
+        ).all()
+        answers = {
+            item.question_id: item
+            for item in session.scalars(
+                select(SubmissionAnswer).where(SubmissionAnswer.submission_id == submission.id)
+            ).all()
+        }
+        questions = []
+        for item in assignment_questions:
+            snapshot = dict(item.question_snapshot or {})
+            if not snapshot:
+                question = session.get(Question, item.question_id)
+                if question:
+                    snapshot = {
+                        "id": question.id,
+                        "text": question.text,
+                        "questionType": question.question_type,
+                        "options": question.options,
+                        "correctAnswer": question.correct_answer,
+                        "explanation": question.explanation,
+                        "rubric": question.rubric,
+                        "attachments": question.attachments,
+                        "gradingMode": question.grading_mode,
+                    }
+            answer = answers.get(item.question_id)
+            questions.append({
+                **snapshot,
+                "questionId": item.question_id,
+                "sequence": item.sequence,
+                "points": item.points,
+                "answer": answer.answer if answer else None,
+                "score": answer.score if answer else None,
+                "criteriaScores": answer.criteria_scores if answer else {},
+                "confidence": answer.confidence if answer else None,
+                "feedback": answer.feedback if answer else None,
+            })
+        payload = {
+            "id": submission.id,
+            "assignmentId": assignment.id,
+            "assignmentTitle": assignment.title,
+            "studentId": student.id,
+            "studentName": user.name,
+            "studentNo": student.student_no,
+            "status": submission.status,
+            "score": submission.score,
+            "totalPoints": assignment.total_points,
+            "feedback": submission.feedback,
+            "submittedAt": submission.submitted_at,
+            "gradedAt": submission.graded_at,
+            "questions": questions,
+        }
+    return request.app.state.success(request, payload)
+
+
 @router.put("/submissions/{submission_id}/grade")
 def grade_submission(submission_id: str, body: GradeInput, request: Request, auth: AuthContext = Depends(require_teacher)):
     with request.app.state.database.session() as session:
         teacher = teacher_for(session, auth.user.id)
-        row = session.execute(
-            select(Submission, Assignment)
-            .join(Assignment, Assignment.id == Submission.assignment_id)
-            .where(Submission.id == submission_id, Assignment.teacher_id == teacher.id)
-        ).first()
-        if not row:
-            raise APIError(404, "提交记录不存在或不属于当前教师", "SUBMISSION_NOT_FOUND")
-        submission, assignment = row
+        submission, assignment, _student, _user = _owned_submission_row(session, submission_id, teacher.id)
         if submission.status == "in_progress":
             raise APIError(409, "学生尚未提交，不能批改", "SUBMISSION_IN_PROGRESS")
         if body.score > assignment.total_points:
             raise APIError(422, "得分不能超过作业总分", "GRADE_EXCEEDS_TOTAL")
+        if body.answers:
+            question_ids = [item.questionId for item in body.answers]
+            if len(question_ids) != len(set(question_ids)):
+                raise APIError(422, "同一道题不能重复评分", "GRADE_QUESTION_DUPLICATE")
+            assignment_questions = {
+                item.question_id: item
+                for item in session.scalars(
+                    select(AssignmentQuestion).where(AssignmentQuestion.assignment_id == assignment.id)
+                ).all()
+            }
+            stored_answers = {
+                item.question_id: item
+                for item in session.scalars(
+                    select(SubmissionAnswer).where(SubmissionAnswer.submission_id == submission.id)
+                ).all()
+            }
+            for item in body.answers:
+                assigned = assignment_questions.get(item.questionId)
+                answer = stored_answers.get(item.questionId)
+                if not assigned or not answer:
+                    raise APIError(422, "评分题目不属于该学生提交", "GRADE_QUESTION_NOT_FOUND")
+                if item.score > assigned.points:
+                    raise APIError(422, "单题得分不能超过该题分值", "GRADE_ANSWER_EXCEEDS_POINTS")
+                answer.score = item.score
+                answer.criteria_scores = item.criteriaScores
+                answer.feedback = item.feedback
         submission.score = body.score
         submission.feedback = body.feedback
         submission.status = "graded"
         submission.graded_at = datetime.now(timezone.utc)
         submission.graded_by = auth.user.id
         recalculate_formal_average(session, submission.student_id)
-        add_log(session, auth.user.id, "submission.grade", "submission", submission.id, {"score": body.score}, client_ip(request))
+        add_log(session, auth.user.id, "submission.grade", "submission", submission.id, {"score": body.score, "answerCount": len(body.answers)}, client_ip(request))
         session.commit()
     return request.app.state.success(request, {"id": submission_id, "score": body.score, "status": "graded"}, "批改已保存")
 

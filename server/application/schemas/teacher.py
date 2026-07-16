@@ -51,9 +51,17 @@ class AssignmentInput(TeacherModel):
         return value.astimezone(timezone.utc)
 
 
+class AnswerGradeInput(TeacherModel):
+    questionId: str = Field(min_length=1, max_length=96)
+    score: float = Field(ge=0)
+    criteriaScores: dict[str, float] = Field(default_factory=dict)
+    feedback: str = Field(default="", max_length=4000)
+
+
 class GradeInput(TeacherModel):
     score: float = Field(ge=0)
     feedback: str = Field(default="", max_length=8000)
+    answers: list[AnswerGradeInput] = Field(default_factory=list, max_length=1000)
 
 
 class NoticeInput(TeacherModel):

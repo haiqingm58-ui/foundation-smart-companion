@@ -190,6 +190,74 @@ def test_teacher_grades_only_owned_submission(teacher_context) -> None:
     assert listed.json()["data"]["items"][0]["score"] == 88
 
 
+def test_teacher_reads_rich_owned_submission_snapshot_for_manual_grading(teacher_context) -> None:
+    from server.application.models import Assignment, AssignmentQuestion, AssignmentTarget, Question, Submission, SubmissionAnswer
+
+    client, database, _settings = teacher_context
+    now = datetime.now(timezone.utc)
+    snapshot = {
+        "id": "grading-question", "subjectId": "soil-mechanics", "text": "说明渗透系数的影响因素。",
+        "questionType": "简答题", "options": [], "correctAnswer": None, "explanation": "考虑土粒级配和孔隙比。",
+        "rubric": [{"criterion": "指出级配", "points": 8}, {"criterion": "指出孔隙比", "points": 8}],
+        "difficulty": "中等", "chapter": "第二章 土的渗透性", "knowledgePointIds": ["soil-permeability"],
+        "attachments": [], "gradingMode": "manual", "sectionTitle": "二、简答题", "sequence": 1, "points": 20,
+    }
+    with database.session() as session:
+        session.add(Question(id="grading-question", text=snapshot["text"], question_type="简答题", options=[], correct_answer=None, rubric=snapshot["rubric"], difficulty="中等", points=20, subject_id="soil-mechanics", grading_mode="manual", status="active", source="teacher"))
+        session.add(Assignment(id="grading-assignment", title="土力学期中测验", teacher_id="teacher-1", total_points=20, status="published"))
+        session.flush()
+        session.add(AssignmentQuestion(id="grading-aq", assignment_id="grading-assignment", question_id="grading-question", sequence=1, points=20, question_snapshot=snapshot))
+        session.add(AssignmentTarget(id="grading-target", assignment_id="grading-assignment", student_id="student-1", class_id="class-1"))
+        session.flush()
+        session.add(Submission(id="grading-submission", assignment_id="grading-assignment", student_id="student-1", submitted_at=now, status="pending_review"))
+        session.flush()
+        session.add(SubmissionAnswer(id="grading-answer", submission_id="grading-submission", question_id="grading-question", answer="与土粒级配和孔隙比有关。", score=None, criteria_scores={}, confidence=0.52))
+        session.commit()
+
+    response = client.get("/api/teacher/submissions/grading-submission")
+    assert response.status_code == 200, response.text
+    data = response.json()["data"]
+    assert data["totalPoints"] == 20
+    assert data["studentName"] == "学生一"
+    assert data["questions"][0]["text"] == snapshot["text"]
+    assert data["questions"][0]["answer"] == "与土粒级配和孔隙比有关。"
+    assert data["questions"][0]["rubric"] == snapshot["rubric"]
+    assert data["questions"][0]["confidence"] == 0.52
+
+
+def test_teacher_grades_each_submission_answer_and_can_override_final_total(teacher_context) -> None:
+    from server.application.models import Assignment, AssignmentQuestion, AssignmentTarget, Question, Submission, SubmissionAnswer
+
+    client, database, _settings = teacher_context
+    now = datetime.now(timezone.utc)
+    with database.session() as session:
+        session.add(Question(id="answer-grade-question", text="说明固结过程。", question_type="简答题", options=[], correct_answer=None, rubric=[{"criterion": "过程", "points": 20}], difficulty="中等", points=20, subject_id="soil-mechanics", grading_mode="manual", status="active", source="teacher"))
+        session.add(Assignment(id="answer-grade-assignment", title="固结测验", teacher_id="teacher-1", total_points=20, status="published"))
+        session.flush()
+        session.add(AssignmentQuestion(id="answer-grade-aq", assignment_id="answer-grade-assignment", question_id="answer-grade-question", sequence=1, points=20, question_snapshot={"id": "answer-grade-question", "text": "说明固结过程。", "questionType": "简答题", "rubric": [{"criterion": "过程", "points": 20}], "gradingMode": "manual", "points": 20, "sequence": 1}))
+        session.add(AssignmentTarget(id="answer-grade-target", assignment_id="answer-grade-assignment", student_id="student-1", class_id="class-1"))
+        session.flush()
+        session.add(Submission(id="answer-grade-submission", assignment_id="answer-grade-assignment", student_id="student-1", submitted_at=now, status="pending_review"))
+        session.flush()
+        session.add(SubmissionAnswer(id="answer-grade-answer", submission_id="answer-grade-submission", question_id="answer-grade-question", answer="孔隙水排出，有效应力增加。", score=None, criteria_scores={}, confidence=0.45))
+        session.commit()
+
+    response = client.put(
+        "/api/teacher/submissions/answer-grade-submission/grade",
+        json={
+            "score": 18, "feedback": "结论正确，过程可更完整。",
+            "answers": [{"questionId": "answer-grade-question", "score": 17, "criteriaScores": {"过程": 17}, "feedback": "补充时间效应。"}],
+        },
+        headers={"X-CSRF-Token": "teacher-csrf"},
+    )
+    assert response.status_code == 200, response.text
+    with database.session() as session:
+        submission = session.get(Submission, "answer-grade-submission")
+        answer = session.get(SubmissionAnswer, "answer-grade-answer")
+        assert (submission.score, submission.feedback, submission.status) == (18, "结论正确，过程可更完整。", "graded")
+        assert (answer.score, answer.criteria_scores, answer.feedback) == (17, {"过程": 17}, "补充时间效应。")
+
+
 def test_teacher_downloads_template_and_previews_question_import(teacher_context) -> None:
     client, _database, _settings = teacher_context
     template = client.get("/api/teacher/question-import-template")

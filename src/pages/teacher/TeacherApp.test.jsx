@@ -56,7 +56,9 @@ test("教师工作台展示真实统计和完整导航", async () => {
   expect(await screen.findByRole("heading", { name: "教学工作台" })).toBeInTheDocument();
   expect(screen.getByText("2")).toBeInTheDocument();
   expect(screen.getByRole("button", { name: /资料与 RAG/ })).toBeInTheDocument();
-  expect(screen.getByRole("button", { name: /作业批改/ })).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: /组卷中心/ })).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: /考试与作业/ })).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: /批改与成绩分析/ })).toBeInTheDocument();
 });
 
 

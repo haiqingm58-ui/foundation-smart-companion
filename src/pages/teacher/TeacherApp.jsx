@@ -1,6 +1,6 @@
 import {
   BarChart3, BookOpenCheck, Boxes, ClipboardCheck, FilePlus2, FileText, GraduationCap,
-  LayoutDashboard, LibraryBig, Megaphone, Plus, School, Send, Tags, Trash2, Upload, Users,
+  Files, LayoutDashboard, LibraryBig, Megaphone, Plus, School, Send, Tags, Trash2, Upload, Users,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -22,8 +22,9 @@ const navItems = [
   { key: "resources", label: "资料与 RAG", icon: LibraryBig },
   { key: "knowledge-points", label: "知识点库", icon: Tags },
   { key: "question-bank", label: "题库管理", icon: BookOpenCheck },
-  { key: "assignments", label: "作业管理", icon: FileText },
-  { key: "grading", label: "作业批改", icon: ClipboardCheck },
+  { key: "papers", label: "组卷中心", icon: Files },
+  { key: "exams", label: "考试与作业", icon: FileText },
+  { key: "grading", label: "批改与成绩分析", icon: ClipboardCheck },
   { key: "analytics", label: "学情分析", icon: BarChart3 },
   { key: "notices", label: "通知管理", icon: Megaphone },
 ];
@@ -42,7 +43,8 @@ const loaders = {
 
 
 function currentView(pathname) {
-  const tail = pathname.replace(/^\/teacher\/?/, "").split("/")[0];
+  const rawTail = pathname.replace(/^\/teacher\/?/, "").split("/")[0];
+  const tail = rawTail === "assignments" ? "exams" : rawTail;
   return navItems.some((item) => item.key === tail) ? tail : "dashboard";
 }
 
@@ -102,9 +104,7 @@ export default function TeacherApp() {
       {active === "classes" && <ClassesView {...common} />}
       {active === "students" && <StudentsView {...common} />}
       {active === "resources" && <ResourcesView {...common} />}
-      {(active === "knowledge-points" || active === "question-bank") && <TeacherAssessmentShell key={`${active}-${assessmentRevision}`} view={active} onOpenImport={() => setModal({ type: "question-import" })} notify={notify} />}
-      {active === "assignments" && <AssignmentsView {...common} />}
-      {active === "grading" && <GradingView {...common} />}
+      {["knowledge-points", "question-bank", "papers", "exams", "grading"].includes(active) && <TeacherAssessmentShell key={`${active}-${assessmentRevision}`} view={active} onOpenImport={() => setModal({ type: "question-import" })} notify={notify} />}
       {active === "analytics" && <AnalyticsView {...common} />}
       {active === "notices" && <NoticesView {...common} />}
       {modal?.type === "resource" && <ResourceModal close={() => setModal(null)} done={() => { setModal(null); refresh(); notify("资料已上传并进入 RAG 知识库"); }} />}
@@ -133,7 +133,7 @@ function TeacherDashboard({ data = {}, loading, error, retry, go }) {
     { label: "知识库资料", value: data.resourceTotal, note: "已完成 RAG 切块", icon: LibraryBig, tone: "teal" },
     { label: "待批改", value: data.pendingGrading, note: `${data.assignmentTotal || 0} 份作业`, icon: ClipboardCheck, tone: "amber" },
   ];
-  return <ViewState loading={loading} error={error} retry={retry}><PageHeading eyebrow="课程教学" title="教学工作台" description="管理课程资料、题目、作业与学生学习情况。" /><StatGrid items={stats} /><div className="portalTwoColumn"><Panel title="常用教学操作" description="直接进入高频工作流程"><div className="portalQuickGrid"><button onClick={() => go("resources")}><Upload size={20} /><strong>上传教学资料</strong><span>自动提取并加入 RAG</span></button><button onClick={() => go("question-bank")}><FilePlus2 size={20} /><strong>创建练习题</strong><span>支持客观题与主观题</span></button><button onClick={() => go("assignments")}><Send size={20} /><strong>布置作业</strong><span>选择题目与学生范围</span></button><button onClick={() => go("analytics")}><BarChart3 size={20} /><strong>查看学情</strong><span>成绩、进度与薄弱点</span></button></div></Panel><Panel title="教学概况" description="当前账号的数据范围"><dl className="portalDefinition"><div><dt>题库题目</dt><dd>{data.questionTotal || 0} 道</dd></div><div><dt>已建作业</dt><dd>{data.assignmentTotal || 0} 份</dd></div><div><dt>资料数量</dt><dd>{data.resourceTotal || 0} 份</dd></div><div><dt>学生完成率</dt><dd>{data.completionRate || 0}%</dd></div></dl></Panel></div></ViewState>;
+  return <ViewState loading={loading} error={error} retry={retry}><PageHeading eyebrow="课程教学" title="教学工作台" description="管理课程资料、题目、作业与学生学习情况。" /><StatGrid items={stats} /><div className="portalTwoColumn"><Panel title="常用教学操作" description="直接进入高频工作流程"><div className="portalQuickGrid"><button onClick={() => go("resources")}><Upload size={20} /><strong>上传教学资料</strong><span>自动提取并加入 RAG</span></button><button onClick={() => go("question-bank")}><FilePlus2 size={20} /><strong>创建练习题</strong><span>支持客观题与主观题</span></button><button onClick={() => go("papers")}><Send size={20} /><strong>创建并发布试卷</strong><span>手动或自动组卷</span></button><button onClick={() => go("analytics")}><BarChart3 size={20} /><strong>查看学情</strong><span>成绩、进度与薄弱点</span></button></div></Panel><Panel title="教学概况" description="当前账号的数据范围"><dl className="portalDefinition"><div><dt>题库题目</dt><dd>{data.questionTotal || 0} 道</dd></div><div><dt>已建作业</dt><dd>{data.assignmentTotal || 0} 份</dd></div><div><dt>资料数量</dt><dd>{data.resourceTotal || 0} 份</dd></div><div><dt>学生完成率</dt><dd>{data.completionRate || 0}%</dd></div></dl></Panel></div></ViewState>;
 }
 
 
