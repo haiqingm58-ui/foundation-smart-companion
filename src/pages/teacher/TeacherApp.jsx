@@ -1,6 +1,6 @@
 import {
   BarChart3, BookOpenCheck, Boxes, ClipboardCheck, FilePlus2, FileText, GraduationCap,
-  LayoutDashboard, LibraryBig, Megaphone, Plus, School, Send, Trash2, Upload, Users,
+  LayoutDashboard, LibraryBig, Megaphone, Plus, School, Send, Tags, Trash2, Upload, Users,
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -12,6 +12,7 @@ import {
 } from "../../components/portal/PortalKit.jsx";
 import { useAuth } from "../../stores/AuthContext.jsx";
 import { QuestionImportModal } from "./QuestionImportModal.jsx";
+import { TeacherAssessmentShell } from "./assessment/TeacherAssessmentShell.jsx";
 
 
 const navItems = [
@@ -19,6 +20,7 @@ const navItems = [
   { key: "classes", label: "班级管理", icon: School },
   { key: "students", label: "学生管理", icon: Users },
   { key: "resources", label: "资料与 RAG", icon: LibraryBig },
+  { key: "knowledge-points", label: "知识点库", icon: Tags },
   { key: "question-bank", label: "题库管理", icon: BookOpenCheck },
   { key: "assignments", label: "作业管理", icon: FileText },
   { key: "grading", label: "作业批改", icon: ClipboardCheck },
@@ -32,7 +34,6 @@ const loaders = {
   classes: teacherApi.classes,
   students: teacherApi.students,
   resources: teacherApi.resources,
-  "question-bank": teacherApi.questions,
   assignments: teacherApi.assignments,
   grading: teacherApi.submissions,
   analytics: teacherApi.analytics,
@@ -58,43 +59,6 @@ function formatSize(bytes = 0) {
 }
 
 
-function questionKnowledgePointNames(item) {
-  const names = item.knowledgePoints?.map((point) => point.name).filter(Boolean);
-  return names?.join("、") || item.knowledgePoint || "";
-}
-
-
-function answerDisplayValue(questionType, correctAnswer) {
-  if (questionType === "判断题") return correctAnswer === true ? "true" : "false";
-  if (questionType === "多项选择题" || questionType === "填空题") return JSON.stringify(Array.isArray(correctAnswer) ? correctAnswer : []);
-  return typeof correctAnswer === "string" ? correctAnswer : "";
-}
-
-
-function parseStringAnswerList(value, errorMessage) {
-  try {
-    const parsed = JSON.parse(value);
-    if (Array.isArray(parsed) && parsed.length && parsed.every((item) => typeof item === "string" && item.trim())) return parsed;
-  } catch {
-    // The caller receives the same concise validation error for invalid JSON and invalid shapes.
-  }
-  throw new Error(errorMessage);
-}
-
-
-function parseCorrectAnswer(questionType, value, existingAnswer) {
-  if (questionType === "判断题") {
-    if (value === "true") return true;
-    if (value === "false") return false;
-    throw new Error("判断题答案必须为真或假");
-  }
-  if (questionType === "多项选择题") return parseStringAnswerList(value, "多项选择题答案必须是 JSON 字符串数组");
-  if (questionType === "填空题") return parseStringAnswerList(value, "填空题答案必须是 JSON 同义答案数组");
-  if ((questionType === "简答题" || questionType === "计算题") && existingAnswer === null) return null;
-  return value;
-}
-
-
 export default function TeacherApp() {
   const { user, logout } = useAuth();
   const location = useLocation();
@@ -105,13 +69,16 @@ export default function TeacherApp() {
   const [error, setError] = useState("");
   const [modal, setModal] = useState(null);
   const [toast, setToast] = useState(null);
+  const [assessmentRevision, setAssessmentRevision] = useState(0);
 
   const load = useCallback(async (key = active, force = false) => {
+    const loader = loaders[key];
+    if (!loader) { setLoading(false); return null; }
     if (cache[key] && !force) { setLoading(false); return cache[key]; }
     setLoading(true);
     setError("");
     try {
-      const data = await loaders[key]();
+      const data = await loader();
       setCache((previous) => ({ ...previous, [key]: data }));
       return data;
     } catch (reason) {
@@ -135,14 +102,13 @@ export default function TeacherApp() {
       {active === "classes" && <ClassesView {...common} />}
       {active === "students" && <StudentsView {...common} />}
       {active === "resources" && <ResourcesView {...common} />}
-      {active === "question-bank" && <QuestionsView {...common} />}
+      {(active === "knowledge-points" || active === "question-bank") && <TeacherAssessmentShell key={`${active}-${assessmentRevision}`} view={active} onOpenImport={() => setModal({ type: "question-import" })} notify={notify} />}
       {active === "assignments" && <AssignmentsView {...common} />}
       {active === "grading" && <GradingView {...common} />}
       {active === "analytics" && <AnalyticsView {...common} />}
       {active === "notices" && <NoticesView {...common} />}
       {modal?.type === "resource" && <ResourceModal close={() => setModal(null)} done={() => { setModal(null); refresh(); notify("资料已上传并进入 RAG 知识库"); }} />}
-      {modal?.type === "question" && <QuestionModal item={modal.item} close={() => setModal(null)} done={() => { setModal(null); refresh(); notify("题目已保存"); }} />}
-      {modal?.type === "question-import" && <QuestionImportModal close={() => setModal(null)} done={(count) => { setModal(null); refresh(); notify(`已导入 ${count} 道题目`); }} />}
+      {modal?.type === "question-import" && <QuestionImportModal close={() => setModal(null)} done={(count) => { setModal(null); setAssessmentRevision((value) => value + 1); notify(`已导入 ${count} 道题目`); }} />}
       {modal?.type === "assignment" && <AssignmentModal cache={cache} setCache={setCache} close={() => setModal(null)} done={() => { setModal(null); refresh(); notify("作业已创建"); }} />}
       {modal?.type === "grade" && <GradeModal submission={modal.item} close={() => setModal(null)} done={() => { setModal(null); refresh(); notify("批改结果已保存"); }} />}
       {modal?.type === "notice" && <NoticeModal cache={cache} setCache={setCache} close={() => setModal(null)} done={() => { setModal(null); refresh(); notify("通知已发布"); }} />}
@@ -189,24 +155,6 @@ function ResourcesView({ data, loading, error, retry, open, notify, refresh }) {
 }
 
 
-function QuestionsView({ data, loading, error, retry, open, notify, refresh }) {
-  const [query, setQuery] = useState("");
-  const rows = (data?.items || []).filter((item) => `${item.text}${item.chapter}${questionKnowledgePointNames(item)}`.includes(query));
-  const remove = (item) => open({ type: "confirm", title: "删除题目", message: "确认删除这道自建题目吗？已被作业引用的题目将由服务器拒绝删除。", confirmLabel: "确认删除", danger: true, onConfirm: async () => { await teacherApi.deleteQuestion(item.id); notify("题目已删除"); refresh(); } });
-  const copy = async (item) => {
-    try {
-      const copied = await teacherApi.copyQuestion(item.id);
-      await refresh();
-      open({ type: "question", item: copied });
-      notify("题目副本已创建，待复核");
-    } catch (reason) {
-      notify(reason.message || "复制题目失败", "error");
-    }
-  };
-  return <ViewState loading={loading} error={error} retry={retry}><PageHeading eyebrow="教学内容" title="题库管理" description="教材题目只读，自建题目可编辑和用于作业。" actions={<><button className="portalSecondary" onClick={() => open({ type: "question-import" })}><FilePlus2 size={17} />批量导入</button><button className="portalPrimary" onClick={() => open({ type: "question" })}><Plus size={17} />新建题目</button></>} /><Panel title="课程题库" description={`共 ${data?.total || 0} 道题`} actions={<SearchField value={query} onChange={setQuery} placeholder="搜索题干或知识点" />}><DataTable rows={rows} columns={[{ key: "text", label: "题目", render: (row) => <div className="portalQuestionCell"><strong>{row.text}</strong><span>{row.chapter || "未关联章节"} · {questionKnowledgePointNames(row) || "未标注知识点"}</span></div> }, { key: "questionType", label: "题型" }, { key: "difficulty", label: "难度" }, { key: "points", label: "分值" }, { key: "source", label: "来源", render: (row) => row.source === "textbook" ? "教材题库" : row.source === "imported" ? "共享题库" : row.source === "teacher-import" ? "批量导入" : "教师自建" }, { key: "actions", label: "操作", render: (row) => row.editable ? <div className="portalRowActions"><button className="portalTextButton" onClick={() => open({ type: "question", item: row })}>编辑</button><button className="portalIconDanger" onClick={() => remove(row)} aria-label={`删除题目 ${row.text}`}><Trash2 size={16} /></button></div> : <button className="portalTextButton" onClick={() => copy(row)}>复制到我的题库</button> }]} empty="题库中暂无题目" /></Panel></ViewState>;
-}
-
-
 function AssignmentsView({ data, loading, error, retry, open }) {
   return <ViewState loading={loading} error={error} retry={retry}><PageHeading eyebrow="作业流程" title="作业管理" description="从题库选题并发送给强绑定范围内的学生。" actions={<button className="portalPrimary" onClick={() => open({ type: "assignment" })}><Plus size={17} />创建作业</button>} /><Panel title="作业列表" description={`共 ${data?.total || 0} 份作业`}><DataTable rows={data?.items} columns={[{ key: "title", label: "作业名称", render: (row) => <div className="portalTitleCell"><strong>{row.title}</strong><span>{row.description || "无说明"}</span></div> }, { key: "dueAt", label: "截止时间", render: (row) => formatDate(row.dueAt) }, { key: "targetCount", label: "布置人数" }, { key: "submittedCount", label: "已提交" }, { key: "completionRate", label: "完成率", render: (row) => `${row.completionRate || 0}%` }, { key: "averageScore", label: "平均分", render: (row) => row.averageScore ?? "-" }, { key: "status", label: "状态", render: (row) => <StatusBadge status={row.status} /> }]} empty="尚未创建作业" /></Panel></ViewState>;
 }
@@ -231,17 +179,6 @@ function ResourceModal({ close, done }) {
   const [busy, setBusy] = useState(false); const [error, setError] = useState(""); const [file, setFile] = useState(null); const [dragging, setDragging] = useState(false);
   const submit = async (event) => { event.preventDefault(); if (!file) { setError("请选择资料文件"); return; } const body = new FormData(event.currentTarget); body.set("file", file); setBusy(true); setError(""); try { await teacherApi.uploadResource(body); done(); } catch (reason) { setError(reason.message); setBusy(false); } };
   return <Modal title="上传教学资料" onClose={close}><form className="portalForm" onSubmit={submit}><label className={`portalDropzone ${dragging ? "dragging" : ""}`} onDragOver={(event) => { event.preventDefault(); setDragging(true); }} onDragLeave={() => setDragging(false)} onDrop={(event) => { event.preventDefault(); setDragging(false); setFile(event.dataTransfer.files[0] || null); }}><Upload size={24} /><strong>{file ? file.name : "拖拽文件到此处，或点击选择"}</strong><span>支持 PDF、DOCX、PPTX、XLSX、图片、Markdown 和 TXT，最大 25MB</span><input type="file" name="fileInput" accept=".pdf,.docx,.pptx,.xlsx,.png,.jpg,.jpeg,.webp,.md,.markdown,.txt" onChange={(event) => setFile(event.target.files[0] || null)} /></label><div className="portalFormGrid"><Field label="关联章节"><input name="chapter" placeholder="例如：第3章 桩基础" /></Field><Field label="知识点"><input name="knowledgePoint" placeholder="例如：单桩竖向承载力" /></Field></div><Field label="可见范围"><select name="visibility" defaultValue="class"><option value="class">绑定班级可见</option><option value="private">仅自己可见</option></select></Field>{error && <p className="portalFormError">{error}</p>}<div className="portalFormActions"><button type="button" onClick={close}>取消</button><button className="portalPrimary" disabled={busy}>{busy ? "正在提取并建立索引..." : "上传并建立索引"}</button></div></form></Modal>;
-}
-
-
-function QuestionModal({ close, done, item }) {
-  const [busy, setBusy] = useState(false); const [error, setError] = useState(""); const [questionType, setQuestionType] = useState(item?.questionType || "简答题");
-  const canonical = Boolean(item?.subjectId && Array.isArray(item.knowledgePoints));
-  const knowledgePointIds = canonical ? item.knowledgePoints.map((point) => point.id) : [];
-  const answerValue = answerDisplayValue(questionType, item?.correctAnswer);
-  const submit = async (event) => { event.preventDefault(); const form = new FormData(event.currentTarget); let correctAnswer; try { correctAnswer = parseCorrectAnswer(questionType, form.get("correctAnswer"), item?.correctAnswer); } catch (reason) { setError(reason.message); return; } setBusy(true); setError(""); try { const common = { text: form.get("text"), questionType, difficulty: form.get("difficulty"), points: Number(form.get("points")), chapter: form.get("chapter"), correctAnswer, explanation: form.get("explanation"), options: item?.options || [], rubric: item?.rubric || [], attachments: item?.attachments || [], gradingMode: item?.gradingMode || "auto", answerWordLimit: item?.answerWordLimit ?? undefined }; const body = canonical ? { ...common, subjectId: item.subjectId, knowledgePointIds } : { ...common, knowledgePoint: form.get("knowledgePoint") }; if (item) await teacherApi.updateQuestion(item.id, body); else await teacherApi.createQuestion(body); done(); } catch (reason) { setError(reason.message); setBusy(false); } };
-  const answerField = questionType === "判断题" ? <Field label="标准答案"><select name="correctAnswer" defaultValue={answerValue}><option value="true">真</option><option value="false">假</option></select></Field> : questionType === "多项选择题" ? <Field label="标准答案（JSON 字符串数组）" hint='例如：["A","C"]'><textarea key={questionType} name="correctAnswer" rows="3" defaultValue={answerValue} /></Field> : questionType === "填空题" ? <Field label="标准答案（JSON 同义答案数组）" hint='例如：["太沙基","Terzaghi"]'><textarea key={questionType} name="correctAnswer" rows="3" defaultValue={answerValue} /></Field> : <Field label="标准答案"><textarea key={questionType} name="correctAnswer" rows="3" defaultValue={answerValue} /></Field>;
-  return <Modal title={item ? "编辑题目" : "新建题目"} onClose={close} wide><form className="portalForm" onSubmit={submit}><Field label="题干"><textarea name="text" rows="4" defaultValue={item?.text || ""} required /></Field><div className="portalFormGrid"><Field label="题型"><select name="questionType" value={questionType} onChange={(event) => setQuestionType(event.target.value)}><option>简答题</option><option>单项选择题</option><option>多项选择题</option><option>判断题</option><option>填空题</option><option>计算题</option></select></Field><Field label="难度"><select name="difficulty" defaultValue={item?.difficulty || "基础"}><option>基础</option><option>中等</option><option>困难</option></select></Field><Field label="分值"><input name="points" type="number" min="1" defaultValue={item?.points || 10} required /></Field><Field label="章节"><input name="chapter" defaultValue={item?.chapter || ""} placeholder="第3章 桩基础" /></Field></div>{canonical ? <Field label="关联知识点"><span>{questionKnowledgePointNames(item)}</span></Field> : <Field label="基础工程知识点"><input name="knowledgePoint" defaultValue={item?.knowledgePoint || ""} /></Field>}{answerField}<Field label="答案解析"><textarea name="explanation" rows="3" defaultValue={item?.explanation || ""} /></Field>{error && <p className="portalFormError">{error}</p>}<div className="portalFormActions"><button type="button" onClick={close}>取消</button><button className="portalPrimary" disabled={busy}>保存题目</button></div></form></Modal>;
 }
 
 

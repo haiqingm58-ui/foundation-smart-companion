@@ -1763,9 +1763,53 @@ textarea:focus-visible,
   justify-content: space-between;
   gap: 16px;
   border: 1px solid #dfe7f0;
-  border-radius: 7px;
+  border-radius: 6px;
   background: #f8fbff;
   padding: 14px 16px;
+}
+
+.questionImportModes {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  border: 1px solid #dfe7f0;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.questionImportModes section {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  padding: 13px 14px;
+  color: #64748b;
+  background: #fff;
+}
+
+.questionImportModes section + section {
+  border-left: 1px solid #dfe7f0;
+}
+
+.questionImportModes section.active {
+  color: #075bcf;
+  background: #eef6ff;
+}
+
+.questionImportModes span {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.questionImportModes strong {
+  color: #24344a;
+  font-size: 12px;
+}
+
+.questionImportModes small {
+  color: #728197;
+  font-size: 10px;
+  line-height: 1.45;
 }
 
 .questionImportIntro > div,
@@ -2044,6 +2088,15 @@ textarea:focus-visible,
 
   .questionImportSummary {
     grid-template-columns: 1fr;
+  }
+
+  .questionImportModes {
+    grid-template-columns: 1fr;
+  }
+
+  .questionImportModes section + section {
+    border-top: 1px solid #dfe7f0;
+    border-left: 0;
   }
 
   .portalStat {

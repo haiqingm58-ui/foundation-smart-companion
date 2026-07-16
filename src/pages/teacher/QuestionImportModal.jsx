@@ -1,4 +1,4 @@
-import { AlertTriangle, ArrowLeft, CheckCircle2, Download, FileSpreadsheet, Upload } from "lucide-react";
+import { AlertTriangle, ArrowLeft, BookOpenCheck, CheckCircle2, Download, FileSpreadsheet, Upload } from "lucide-react";
 import { useMemo, useState } from "react";
 import { teacherApi } from "../../api/teacher.js";
 import { DataTable, Modal } from "../../components/portal/PortalKit.jsx";
@@ -66,6 +66,10 @@ export function QuestionImportModal({ close, done }) {
       </div>
 
       {stage === 1 && <form className="portalForm" onSubmit={previewFile}>
+        <div className="questionImportModes" aria-label="题库入库方式">
+          <section className="active"><FileSpreadsheet size={19} /><span><strong>批量表格导入教师自建题</strong><small>使用 XLSX 或 CSV，系统先预检再写入</small></span></section>
+          <section><BookOpenCheck size={19} /><span><strong>共享 DOCX 题库由服务器统一入库</strong><small>无需重复上传原始文档</small></span></section>
+        </div>
         <div className="questionImportIntro">
           <div><FileSpreadsheet size={21} /><span><strong>使用官方模板整理题目</strong><small>支持 XLSX 和 UTF-8 CSV，文件最大 5MB</small></span></div>
           <a className="portalSecondary" href={teacherApi.questionImportTemplateUrl()} download><Download size={16} />下载题库模板</a>
