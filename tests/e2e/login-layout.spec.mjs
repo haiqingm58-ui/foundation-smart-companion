@@ -23,6 +23,10 @@ async function readLayout(page) {
     const card = rectOf(".authColumns");
     const loginPanel = rectOf(".loginCard");
     const footer = rectOf(".authCopyright");
+    const cardElement = document.querySelector(".authColumns");
+    const tintElement = document.querySelector(".carouselTint");
+    const cardStyle = cardElement ? getComputedStyle(cardElement) : null;
+    const tintStyle = tintElement ? getComputedStyle(tintElement) : null;
     return {
       viewport: { width: window.innerWidth, height: window.innerHeight },
       page: {
@@ -37,6 +41,10 @@ async function readLayout(page) {
       footer,
       overlap: card && footer ? Math.max(0, card.bottom - footer.top) : null,
       footerText: document.querySelector(".authCopyright")?.textContent,
+      visualStyles: {
+        cardShadow: cardStyle?.boxShadow ?? null,
+        tintBackgroundImage: tintStyle?.backgroundImage ?? null,
+      },
     };
   });
 }
@@ -57,6 +65,14 @@ test("登录页桌面与移动布局保持 Logo 间距和版权流式定位", as
   expect(desktop.overlap).toBe(0);
   expect(desktop.footer.bottom).toBeCloseTo(desktop.viewport.height - 24, 0);
   expect(desktop.page.scrollWidth).toBeLessThanOrEqual(desktop.page.clientWidth + 1);
+  expect(desktop.visualStyles.cardShadow).toContain("rgba(53, 84, 115, 0.08)");
+  expect(desktop.visualStyles.cardShadow).toContain("0px 10px 24px");
+  expect(desktop.visualStyles.tintBackgroundImage)
+    .toContain("rgba(22, 73, 122, 0) 34%");
+  expect(desktop.visualStyles.tintBackgroundImage)
+    .toContain("rgba(22, 73, 122, 0.16) 62%");
+  expect(desktop.visualStyles.tintBackgroundImage)
+    .toContain("rgba(22, 63, 115, 0.72) 100%");
 
   await page.setViewportSize({ width: 390, height: 844 });
   const mobile = await readLayout(page);

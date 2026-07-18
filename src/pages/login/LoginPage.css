@@ -48,7 +48,7 @@
   min-height: 0;
   border: 1px solid var(--auth-border);
   background: #fff;
-  box-shadow: 0 18px 45px rgba(37, 69, 101, .12);
+  box-shadow: 0 10px 24px rgba(53, 84, 115, .08);
   border-radius: 8px;
   overflow: hidden;
 }
@@ -59,7 +59,16 @@
 .carouselSlide.active { opacity: 1; transform: translateX(0) scale(1); pointer-events: auto; }
 .carouselSlide img { width: 100%; height: 100%; object-fit: cover; filter: saturate(.82) contrast(1.02); }
 .carouselSlide.contain img { object-fit: contain; padding: 38px; background: #edf3f7; }
-.carouselTint { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(17, 52, 85, .04) 25%, rgba(16, 48, 80, .88) 100%); }
+.carouselTint {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    180deg,
+    rgba(22, 73, 122, 0) 34%,
+    rgba(22, 73, 122, .16) 62%,
+    rgba(22, 63, 115, .72) 100%
+  );
+}
 .carouselCopy { position: absolute; left: clamp(28px, 5vw, 58px); right: 70px; bottom: 62px; color: #fff; }
 .carouselCopy > span { display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 26px; border: 1px solid rgba(255,255,255,.55); font: 700 12px/1 ui-monospace, monospace; }
 .carouselCopy h2 { margin: 12px 0 8px; font-size: clamp(26px, 3vw, 38px); line-height: 1.2; letter-spacing: 0; }
