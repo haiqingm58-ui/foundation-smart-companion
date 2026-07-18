@@ -52,6 +52,7 @@ state: 登录页默认学生身份，验证码加载成功，Logo、登录卡片
 - Desktop DOM geometry: Logo 120 x 120 at top 36px; card bottom 858.94px; footer top 982px; card/footer overlap 0px.
 - Mobile DOM geometry: Logo 78 x 78 at top 20px; card bottom 1027.30px; footer top 1053.30px; card/footer overlap 0px.
 - Browser console: 0 error entries after a clean local reload with the backend and CAPTCHA endpoint available.
+- Automated browser regression: `tests/e2e/login-layout.spec.mjs` verifies the exact footer copy, desktop/mobile Logo geometry, desktop bottom alignment, mobile document flow, no overlap, and no horizontal overflow.
 - Visual comparison: The annotated source and implementation screenshot were reviewed together in `screenshots/login-spacing-comparison.png`.
 
 patches made since previous QA pass: desktop top padding changed from 20px to 36px; a flexible footer row was added; exact copyright text added; mobile keeps compact top spacing and lets the footer follow content.
