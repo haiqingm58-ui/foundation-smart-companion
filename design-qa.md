@@ -31,6 +31,38 @@ final result: passed
 
 ---
 
+source visual truth path: /tmp/foundation-login-wide-1920.png
+implementation wide screenshot path: /Users/georisklab02/Documents/教材/foundation-smart-companion/screenshots/login-wide-after-1920.png
+implementation ultrawide screenshot path: /Users/georisklab02/Documents/教材/foundation-smart-companion/screenshots/login-wide-after-2560.png
+implementation desktop regression path: /Users/georisklab02/Documents/教材/foundation-smart-companion/screenshots/login-wide-regression-1440.png
+implementation mobile regression path: /Users/georisklab02/Documents/教材/foundation-smart-companion/screenshots/login-wide-regression-mobile.png
+comparison evidence path: /Users/georisklab02/Documents/教材/foundation-smart-companion/screenshots/login-wide-comparison.png
+viewports: wide desktop 1920 x 1080; ultrawide 2560 x 1440; standard desktop 1440 x 1024; mobile 390 x 844
+state: 登录页默认学生身份，验证码加载成功，大屏卡片按视口放大并在品牌区与版权区之间垂直居中。
+
+**Findings**
+- No actionable P0/P1/P2 findings.
+
+**Required Fidelity Surfaces**
+- Layout scale: At 1920 x 1080 the login card grows from the previous fixed 1360 x 540 to 1792 x 720, increasing viewport coverage from about 35% to 62%. At 2560 x 1440 it reaches the capped 2080 x 900 size and covers about 51% of the viewport.
+- Vertical rhythm: The wide layout uses the flexible middle grid row. At 1920 the brand-to-card and card-to-footer gaps are both 39.25px; at 2560 they are both 129.25px.
+- Form ergonomics: The login panel stays within the approved 560-680px range: 652.8px at 1920 and 680px at 2560. Inputs, CAPTCHA, role selection, and actions remain readable instead of stretching with the carousel.
+- Standard desktop regression: At 1440 x 1024 the existing 1324.8 x 540 card, 120px Logo, 36px Logo top offset, and footer placement remain unchanged.
+- Mobile regression: At 390 x 844 the existing stacked layout remains intact with a 78px Logo, 20px top offset, no card/footer overlap, and no horizontal overflow.
+- Assets and styling: Existing school Logo, engineering carousel assets, academic blue palette, border radii, shadows, and copy are unchanged.
+
+**Verification**
+- Automated wide-layout regression: `tests/e2e/login-layout.spec.mjs` checks exact card geometry, 560-680px login-panel width, at least 50% viewport coverage, balanced vertical gaps, and no horizontal overflow at 1920 and 2560.
+- Full browser workflow: 2 Playwright E2E flows passed, including the teacher-paper/student-answering loop and the responsive login layout.
+- Runtime state: CAPTCHA image has nonzero natural width, `All Rights Reserved @2026` is present, no login server error is shown, and browser geometry reports no horizontal overflow.
+- Capture note: The in-app browser compositor repeats a right-edge tile in captures wider than 1440px. The coherent left frame, exact DOM geometry, and complete 1440/mobile captures were reviewed together; the repeated tile is capture-only and is not present in page layout metrics.
+
+patches made since previous QA pass: added a large-screen-only media query at 1500px width and 900px height; expanded the login card responsively with 2080px width and 900px height caps; constrained the form panel to 560-680px; centered the card in the flexible middle row; added exact wide-screen layout regression assertions.
+
+final result: passed
+
+---
+
 source visual truth path: /Users/georisklab02/Library/Containers/com.tencent.xinWeChat/Data/Documents/xwechat_files/wxid_aejymgpr75vc22_a7af/temp/RWTemp/2026-07/9e20f478899dc29eb19741386f9343c8/7a455b09da1e963eaaa5b8b4c74da21d.png
 implementation desktop screenshot path: /Users/georisklab02/Documents/教材/foundation-smart-companion/screenshots/login-spacing-desktop.png
 implementation mobile screenshot path: /Users/georisklab02/Documents/教材/foundation-smart-companion/screenshots/login-spacing-mobile.png
