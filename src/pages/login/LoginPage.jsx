@@ -112,6 +112,7 @@ export default function LoginPage() {
           <p className="authPrivacy">登录即表示你同意学校对课程学习数据进行教学用途处理。</p>
         </section>
       </div>
+      <footer className="authCopyright">All Rights Reserved @2026</footer>
     </main>
   );
 }

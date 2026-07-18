@@ -35,6 +35,12 @@ test("登录页展示院徽、三种 Emoji 角色和后端验证码", async () =
 });
 
 
+test("登录页展示版权声明", async () => {
+  renderLogin();
+  expect(await screen.findByText("All Rights Reserved @2026")).toBeInTheDocument();
+});
+
+
 test("空表单显示中文校验信息", async () => {
   renderLogin();
   await waitFor(() => expect(screen.getByAltText("图片验证码")).toBeInTheDocument());

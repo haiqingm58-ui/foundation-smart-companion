@@ -32,4 +32,17 @@ describe("college logo asset", () => {
     expect(imageRule).toMatch(/object-fit:\s*contain/);
     expect(imageRule).not.toMatch(/transform:/);
   });
+
+  test("reserves desktop footer space and lowers the brand without resizing the logo", () => {
+    const css = readFileSync(resolve(process.cwd(), "src/pages/login/LoginPage.css"), "utf8");
+    const pageRule = css.match(/\.authPage\s*\{([^}]*)\}/)?.[1] ?? "";
+    const logoRule = css.match(/\.collegeLogo\s*\{([^}]*)\}/)?.[1] ?? "";
+    const footerRule = css.match(/\.authCopyright\s*\{([^}]*)\}/)?.[1] ?? "";
+
+    expect(pageRule).toMatch(/padding:\s*36px/);
+    expect(pageRule).toMatch(/grid-template-rows:\s*auto auto minmax\(24px, 1fr\)/);
+    expect(logoRule).toMatch(/width:\s*120px/);
+    expect(logoRule).toMatch(/height:\s*120px/);
+    expect(footerRule).toMatch(/align-self:\s*end/);
+  });
 });

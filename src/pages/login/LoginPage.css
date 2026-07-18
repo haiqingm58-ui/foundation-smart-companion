@@ -9,9 +9,9 @@
   min-height: 100vh;
   background: #eef4f9;
   color: #172538;
-  padding: 20px clamp(22px, 4vw, 64px) 28px;
+  padding: 36px clamp(22px, 4vw, 64px) 24px;
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr);
+  grid-template-rows: auto auto minmax(24px, 1fr);
   gap: 18px;
 }
 
@@ -106,6 +106,7 @@
 .loginSubmit:disabled { opacity: .58; cursor: not-allowed; }
 .loginReset { border: 0; background: transparent; color: #607087; cursor: pointer; font-size: 13px; }
 .authPrivacy { margin: 14px 0 0; color: #8591a1; font-size: 11px; line-height: 1.55; text-align: center; }
+.authCopyright { align-self: end; color: #75859a; font-size: 12px; line-height: 1.5; text-align: center; }
 .spin { animation: loginSpin .8s linear infinite; }
 @keyframes loginSpin { to { transform: rotate(360deg); } }
 
@@ -115,11 +116,12 @@
 button:focus-visible, input:focus-visible, [tabindex]:focus-visible { outline: 3px solid rgba(11,95,186,.32); outline-offset: 2px; }
 
 @media (max-width: 900px) {
-  .authPage { grid-template-rows: auto auto; align-content: start; padding: 20px 16px 30px; }
+  .authPage { grid-template-rows: auto auto auto; align-content: start; padding: 20px 16px 24px; }
   .authColumns { width: min(720px, 100%); height: auto; margin-top: 0; align-self: start; grid-template-columns: 1fr; }
   .loginCarousel { height: auto; min-height: 330px; }
   .loginCard { min-height: auto; overflow: visible; padding: 34px clamp(22px, 7vw, 48px); }
   .carouselSlide.contain img { padding: 28px; }
+  .authCopyright { margin-top: 8px; }
 }
 
 @media (max-width: 560px) {
