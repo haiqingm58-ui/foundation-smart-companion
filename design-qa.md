@@ -31,6 +31,35 @@ final result: passed
 
 ---
 
+source visual truth path: /Users/georisklab02/Library/Containers/com.tencent.xinWeChat/Data/Documents/xwechat_files/wxid_aejymgpr75vc22_a7af/temp/RWTemp/2026-07/9e20f478899dc29eb19741386f9343c8/7a455b09da1e963eaaa5b8b4c74da21d.png
+implementation desktop screenshot path: /Users/georisklab02/Documents/教材/foundation-smart-companion/screenshots/login-spacing-desktop.png
+implementation mobile screenshot path: /Users/georisklab02/Documents/教材/foundation-smart-companion/screenshots/login-spacing-mobile.png
+comparison evidence path: /Users/georisklab02/Documents/教材/foundation-smart-companion/screenshots/login-spacing-comparison.png
+viewports: desktop 1440 x 1024; mobile 390 x 844
+state: 登录页默认学生身份，验证码加载成功，Logo、登录卡片和底部版权声明可见。
+
+**Findings**
+- No actionable P0/P1/P2 findings.
+
+**Required Fidelity Surfaces**
+- Typography and copy: Product title, supporting copy, login labels, and the exact footer text `All Rights Reserved @2026` remain readable and centered.
+- Spacing: Desktop brand top offset is 36px, increasing the previous 20px offset by the approved 16px without changing the 120px Logo size. Mobile retains the existing 20px top offset and 78px Logo.
+- Layout: Desktop card and footer have 0px overlap, and the footer sits at the visual bottom of the 1024px viewport. Mobile footer follows the stacked card instead of using fixed positioning.
+- Responsive behavior: Desktop and mobile both report 0px horizontal overflow. The mobile full-page capture shows the copyright completely below the login card.
+- Colors and assets: Existing light blue background, academic blue accents, school Logo asset, carousel imagery, border radii, and shadows are unchanged.
+
+**Verification**
+- Desktop DOM geometry: Logo 120 x 120 at top 36px; card bottom 858.94px; footer top 982px; card/footer overlap 0px.
+- Mobile DOM geometry: Logo 78 x 78 at top 20px; card bottom 1027.30px; footer top 1053.30px; card/footer overlap 0px.
+- Browser console: 0 error entries after a clean local reload with the backend and CAPTCHA endpoint available.
+- Visual comparison: The annotated source and implementation screenshot were reviewed together in `screenshots/login-spacing-comparison.png`.
+
+patches made since previous QA pass: desktop top padding changed from 20px to 36px; a flexible footer row was added; exact copyright text added; mobile keeps compact top spacing and lets the footer follow content.
+
+final result: passed
+
+---
+
 rubric scoring qa path: local browser at http://localhost:5173/foundation-smart-companion/
 state: 练习中心已从字数/关键词打分改为 rubric 分项评分，读取 `public/knowledge/exercise_rubrics.json`。
 
