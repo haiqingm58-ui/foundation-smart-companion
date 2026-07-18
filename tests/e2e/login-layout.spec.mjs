@@ -19,7 +19,9 @@ async function readLayout(page) {
       };
     };
 
+    const brand = rectOf(".authBrand");
     const card = rectOf(".authColumns");
+    const loginPanel = rectOf(".loginCard");
     const footer = rectOf(".authCopyright");
     return {
       viewport: { width: window.innerWidth, height: window.innerHeight },
@@ -28,8 +30,10 @@ async function readLayout(page) {
         scrollWidth: document.documentElement.scrollWidth,
         scrollHeight: document.documentElement.scrollHeight,
       },
+      brand,
       logo: rectOf(".collegeLogo"),
       card,
+      loginPanel,
       footer,
       overlap: card && footer ? Math.max(0, card.bottom - footer.top) : null,
       footerText: document.querySelector(".authCopyright")?.textContent,
@@ -65,4 +69,25 @@ test("登录页桌面与移动布局保持 Logo 间距和版权流式定位", as
   expect(mobile.footer.top).toBeGreaterThanOrEqual(mobile.card.bottom);
   expect(mobile.page.scrollHeight).toBeGreaterThan(mobile.viewport.height);
   expect(mobile.page.scrollWidth).toBeLessThanOrEqual(mobile.page.clientWidth + 1);
+
+  for (const expected of [
+    { viewport: { width: 1920, height: 1080 }, card: { width: 1792, height: 720 } },
+    { viewport: { width: 2560, height: 1440 }, card: { width: 2080, height: 900 } },
+  ]) {
+    await page.setViewportSize(expected.viewport);
+    const wide = await readLayout(page);
+    const topGap = wide.card.top - wide.brand.bottom;
+    const bottomGap = wide.footer.top - wide.card.bottom;
+    const areaRatio = (wide.card.width * wide.card.height)
+      / (wide.viewport.width * wide.viewport.height);
+
+    expect(wide.card.width).toBeCloseTo(expected.card.width, 0);
+    expect(wide.card.height).toBeCloseTo(expected.card.height, 0);
+    expect(wide.loginPanel.width).toBeGreaterThanOrEqual(560);
+    expect(wide.loginPanel.width).toBeLessThanOrEqual(680);
+    expect(areaRatio).toBeGreaterThanOrEqual(0.5);
+    expect(Math.abs(topGap - bottomGap)).toBeLessThanOrEqual(2);
+    expect(bottomGap).toBeGreaterThanOrEqual(18);
+    expect(wide.page.scrollWidth).toBeLessThanOrEqual(wide.page.clientWidth + 1);
+  }
 });

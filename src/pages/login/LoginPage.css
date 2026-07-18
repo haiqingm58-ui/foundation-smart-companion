@@ -115,6 +115,17 @@
 
 button:focus-visible, input:focus-visible, [tabindex]:focus-visible { outline: 3px solid rgba(11,95,186,.32); outline-offset: 2px; }
 
+@media (min-width: 1500px) and (min-height: 900px) {
+  .authPage { grid-template-rows: auto minmax(0, 1fr) auto; }
+  .authColumns {
+    width: min(2080px, 100%);
+    height: clamp(560px, calc(100vh - 360px), 900px);
+    margin-top: 0;
+    align-self: center;
+    grid-template-columns: minmax(0, 1fr) clamp(560px, 34vw, 680px);
+  }
+}
+
 @media (max-width: 900px) {
   .authPage { grid-template-rows: auto auto auto; align-content: start; padding: 20px 16px 24px; }
   .authColumns { width: min(720px, 100%); height: auto; margin-top: 0; align-self: start; grid-template-columns: 1fr; }
