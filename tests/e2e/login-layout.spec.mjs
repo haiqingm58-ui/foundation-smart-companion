@@ -86,8 +86,31 @@ test("登录页桌面与移动布局保持 Logo 间距和版权流式定位", as
     expect(wide.loginPanel.width).toBeGreaterThanOrEqual(560);
     expect(wide.loginPanel.width).toBeLessThanOrEqual(680);
     expect(areaRatio).toBeGreaterThanOrEqual(0.5);
+    expect(wide.overlap).toBe(0);
     expect(Math.abs(topGap - bottomGap)).toBeLessThanOrEqual(2);
     expect(bottomGap).toBeGreaterThanOrEqual(18);
     expect(wide.page.scrollWidth).toBeLessThanOrEqual(wide.page.clientWidth + 1);
   }
+
+  for (const viewport of [
+    { width: 1499, height: 900 },
+    { width: 1500, height: 899 },
+  ]) {
+    await page.setViewportSize(viewport);
+    const belowWideBreakpoint = await readLayout(page);
+    expect(belowWideBreakpoint.card.width).toBeCloseTo(1360, 0);
+    expect(belowWideBreakpoint.card.height).toBeCloseTo(540, 0);
+    expect(belowWideBreakpoint.overlap).toBe(0);
+    expect(belowWideBreakpoint.page.scrollWidth)
+      .toBeLessThanOrEqual(belowWideBreakpoint.page.clientWidth + 1);
+  }
+
+  await page.setViewportSize({ width: 1500, height: 900 });
+  const atWideBreakpoint = await readLayout(page);
+  expect(atWideBreakpoint.card.width).toBeCloseTo(1380, 0);
+  expect(atWideBreakpoint.card.height).toBeCloseTo(560, 0);
+  expect(atWideBreakpoint.loginPanel.width).toBeCloseTo(560, 0);
+  expect(atWideBreakpoint.overlap).toBe(0);
+  expect(atWideBreakpoint.page.scrollWidth)
+    .toBeLessThanOrEqual(atWideBreakpoint.page.clientWidth + 1);
 });
