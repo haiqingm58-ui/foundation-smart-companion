@@ -44,6 +44,7 @@ import {
   ZoomOut,
 } from "lucide-react";
 import foundationSection from "./assets/foundation-section-compact.png";
+import QAWorkbench from "./pages/student/qa/QAWorkbench.jsx";
 
 const StudentAssessmentHome = lazy(() => import("./pages/student/assessment/AssessmentHome.jsx"));
 
@@ -758,58 +759,6 @@ function useJsonAsset(path, fallback, options) {
   return useJsonAssetState(path, fallback, options).data;
 }
 
-const puterScriptId = "puter-ai-script";
-let puterLoadPromise = null;
-
-function ensurePuterLoaded() {
-  if (typeof window === "undefined") {
-    return Promise.reject(new Error("FREE_AI_UNAVAILABLE"));
-  }
-  if (typeof window.puter?.ai?.chat === "function") {
-    return Promise.resolve();
-  }
-  if (!puterLoadPromise) {
-    puterLoadPromise = new Promise((resolve, reject) => {
-      const existingScript = document.getElementById(puterScriptId);
-      const script = existingScript ?? document.createElement("script");
-      let timeoutId = null;
-      const cleanup = () => {
-        window.clearTimeout(timeoutId);
-        script.removeEventListener("load", handleLoad);
-        script.removeEventListener("error", handleError);
-      };
-      const handleLoad = () => {
-        cleanup();
-        if (typeof window.puter?.ai?.chat === "function") {
-          resolve();
-        } else {
-          reject(new Error("FREE_AI_UNAVAILABLE"));
-        }
-      };
-      const handleError = () => {
-        cleanup();
-        reject(new Error("FREE_AI_UNAVAILABLE"));
-      };
-      script.id = puterScriptId;
-      script.src = "https://js.puter.com/v2/";
-      script.async = true;
-      script.addEventListener("load", handleLoad);
-      script.addEventListener("error", handleError);
-      timeoutId = window.setTimeout(() => {
-        cleanup();
-        reject(new Error("FREE_AI_TIMEOUT"));
-      }, 12000);
-      if (!existingScript) {
-        document.body.appendChild(script);
-      }
-    }).catch((error) => {
-      puterLoadPromise = null;
-      throw error;
-    });
-  }
-  return puterLoadPromise;
-}
-
 function courseChapters(courseManifest) {
   return courseManifest?.chapters?.length ? courseManifest.chapters : defaultCourseManifest.chapters;
 }
@@ -1477,28 +1426,6 @@ function compactText(text = "", limit = 260) {
   return clean.length > limit ? `${clean.slice(0, limit)}...` : clean;
 }
 
-function buildAiPrompt(question, mode, results, qaConfig = defaultQaConfig) {
-  const context = results.length
-    ? results
-        .map((item, index) => {
-          const title = item.heading_path || item.documentTitle || item.title || "教材资料";
-          const line = item.source_line ? ` L${item.source_line}` : "";
-          return `${index + 1}. ${title}${line}: ${compactText(item.text ?? "", 360)}`;
-        })
-        .join("\n")
-    : "暂无教材检索片段。";
-  return [
-    "你是《基础工程》课程的智慧学伴。请只基于给定教材片段回答，必要时说明还需要查教材。",
-    `问答模式：${mode}`,
-    `指导老师要求：${qaConfig.teacherInstruction}`,
-    `回答风格：${qaConfig.answerStyle}`,
-    `学生问题：${question}`,
-    "教材片段：",
-    context,
-    "请用中文回答，结构简洁，包含：直接回答、关键概念、复习提醒。不要编造规范条文编号。",
-  ].join("\n");
-}
-
 function buildLocalRagAnswer(question, mode, results, qaConfig = defaultQaConfig) {
   if (!results.length) {
     return "暂时没有检索到足够相关的教材或教师上传资料。可以换一个更具体的关键词，例如“桩侧阻力”“地基承载力修正”或“主动土压力”。";
@@ -1526,36 +1453,6 @@ function buildLocalRagAnswer(question, mode, results, qaConfig = defaultQaConfig
     "",
     `引用依据：\n${support}`,
   ].join("\n");
-}
-
-function normalizeAiResponse(response) {
-  if (typeof response === "string") {
-    return response;
-  }
-  if (response?.message?.content) {
-    return Array.isArray(response.message.content)
-      ? response.message.content.map((item) => item.text ?? "").join("")
-      : response.message.content;
-  }
-  if (response?.text) {
-    return response.text;
-  }
-  return JSON.stringify(response);
-}
-
-async function callFreeAi(prompt) {
-  await ensurePuterLoaded();
-  const response = await Promise.race([
-    window.puter.ai.chat(prompt),
-    new Promise((_, reject) => {
-      window.setTimeout(() => reject(new Error("FREE_AI_TIMEOUT")), 12000);
-    }),
-  ]);
-  const text = normalizeAiResponse(response).trim();
-  if (!text) {
-    throw new Error("FREE_AI_EMPTY");
-  }
-  return text;
 }
 
 function displayChapter(chapter = "") {
@@ -3082,171 +2979,16 @@ function GraphPage({ initialNode }) {
   );
 }
 
-function QAPage({ ragChunks = [], qaConfig = defaultQaConfig, apiToken, backendStatus = "offline" }) {
-  const [mode, setMode] = useState("教材问答");
-  const [question, setQuestion] = useState("桩侧阻力是如何产生的？影响它的主要因素有哪些？");
-  const [draftQuestion, setDraftQuestion] = useState(question);
-  const [searchCount, setSearchCount] = useState(1);
-  const [aiAnswer, setAiAnswer] = useState("");
-  const [serverSources, setServerSources] = useState([]);
-  const [aiStatus, setAiStatus] = useState("idle");
-  const [aiError, setAiError] = useState("");
-  const baseChunks = [];
-  const chunks = useMemo(() => [...ragChunks], [ragChunks]);
-  const modes = ["教材问答", "规范问答", "学习辅导"];
-  const localResults = useMemo(() => searchChunks(chunks, question, 4), [chunks, question]);
-  const results = serverSources.length ? serverSources : localResults;
-  const answer = buildLocalRagAnswer(question, mode, results, qaConfig);
-  const isCorpusLoading = false;
-
-  useEffect(() => {
-    setAiAnswer("");
-    setServerSources([]);
-    setAiStatus("idle");
-    setAiError("");
-  }, [mode, question]);
-
-  async function askServer(nextQuestion, useLlm) {
-    if (!apiToken) {
-      throw new Error("NO_SERVER_TOKEN");
-    }
-    const data = await apiRequest("/qa", {
-      method: "POST",
-      token: apiToken,
-      body: { question: nextQuestion, mode, useLlm },
-    });
-    setServerSources(data.sources ?? []);
-    setAiAnswer(data.answer ?? "");
-    return data;
-  }
-
-  async function runSearch() {
-    const nextQuestion = draftQuestion.trim() || "桩侧阻力是如何产生的？";
-    setQuestion(nextQuestion);
-    setDraftQuestion(nextQuestion);
-    setSearchCount((count) => count + 1);
-    setAiStatus("loading");
-    setAiError("");
-    try {
-      const data = await askServer(nextQuestion, false);
-      setAiStatus("success");
-      setAiError(data.usedLlm ? "服务端大模型生成" : "服务端 RAG 检索回答");
-    } catch {
-      setServerSources([]);
-      setAiAnswer("");
-      setAiStatus("idle");
-      setAiError(apiToken ? "服务端暂不可用，已使用本地教材索引检索。" : "");
-    }
-  }
-
-  async function generateAiAnswer() {
-    const nextQuestion = draftQuestion.trim() || "桩侧阻力是如何产生的？";
-    const nextResults = searchChunks(chunks, nextQuestion, 4);
-    setQuestion(nextQuestion);
-    setDraftQuestion(nextQuestion);
-    setSearchCount((count) => count + 1);
-    setAiStatus("loading");
-    setAiError("");
-    try {
-      const data = await askServer(nextQuestion, true);
-      setAiStatus("success");
-      if (data.usedLlm) {
-        setAiError("服务端大模型生成 · 已结合 RAG 检索片段");
-        return;
-      }
-      try {
-        const responseText = await callFreeAi(buildAiPrompt(nextQuestion, mode, data.sources?.length ? data.sources : nextResults, qaConfig));
-        setAiAnswer(responseText);
-        setAiError("浏览器端免费 AI 生成 · 已结合服务器 RAG 片段");
-      } catch {
-        setAiError("免费 AI 需首次授权或暂不可用，已返回服务器 RAG 检索答案");
-      }
-    } catch {
-      try {
-        const responseText = await callFreeAi(buildAiPrompt(nextQuestion, mode, nextResults, qaConfig));
-        setAiAnswer(responseText);
-        setAiStatus("success");
-        setAiError("浏览器端免费 AI 生成 · 服务端暂不可用");
-      } catch {
-        setAiAnswer("");
-        setAiStatus("error");
-        setAiError("大模型暂时没有返回，已保留本地教材检索结果。");
-      }
-    }
-  }
-
+function QAPage({ ragChunks = [], qaConfig = defaultQaConfig, backendStatus = "offline" }) {
   return (
-    <section className="pagePanel">
-      <PageHeader label="智能问答" title="RAG 检索问答" desc="已接入《基础工程》教材切块和教师上传知识库，先检索引用，再生成回答。" />
-      <div className="teacherNotice">
-        <Link2 size={17} />
-        当前模式：{mode} · {backendStatus === "online" ? "服务器 RAG 已连接，教材切块在私有知识库中检索" : "服务器暂未连接"}
-      </div>
-      {isCorpusLoading && <LoadingSkeleton title="正在准备 RAG 教材索引" rows={3} />}
-      <div className="qaShell">
-        <div className="segmented">
-          {modes.map((item) => (
-            <button className={cx(mode === item && "active")} type="button" key={item} onClick={() => setMode(item)}>
-              {item}
-            </button>
-          ))}
-        </div>
-        <div className="chatArea">
-          <div className="bubble user">{question}</div>
-          <div className="bubble assistant">
-            <Bot size={20} />
-            <div>
-              <p>{aiAnswer || answer}</p>
-              <span>
-                {aiStatus === "success"
-                  ? aiError || "已结合 RAG 检索片段生成"
-                  : aiStatus === "loading"
-                    ? "正在请求服务端问答..."
-                    : aiError || `引用：${results[0]?.heading_path ?? "教材索引"} ${results[0] ? `L${results[0].source_line}` : ""}`}
-              </span>
-            </div>
-          </div>
-          <div className="ragFlow" aria-label="RAG 流程">
-            {["提问", "检索教材/上传库", "抽取引用", "生成回答"].map((step, index) => (
-              <span key={step}>
-                <em>{index + 1}</em>
-                {step}
-              </span>
-            ))}
-          </div>
-          <div className="sourceList">
-            {results.map((item) => (
-              <article className="sourceItem" key={item.id}>
-                <strong>{item.heading_path}</strong>
-                <p>{item.text.replace(/\s+/g, " ").slice(0, 150)}</p>
-                <span>
-                  来源行 {item.source_line} · {item.kind}
-                  {item.documentTitle ? ` · ${item.documentTitle}` : ""}
-                </span>
-              </article>
-            ))}
-          </div>
-        </div>
-        <label className="askBox">
-          <input
-            value={draftQuestion}
-            onChange={(event) => setDraftQuestion(event.target.value)}
-            onKeyDown={(event) => {
-              if (event.key === "Enter") {
-                runSearch();
-              }
-            }}
-            placeholder={`继续使用${mode}提问…`}
-          />
-          <button type="button" onClick={runSearch}>
-            检索{searchCount > 1 ? ` ${searchCount - 1}` : ""}
-          </button>
-          <button className="secondaryAskButton" type="button" onClick={generateAiAnswer} disabled={aiStatus === "loading"}>
-            {aiStatus === "loading" ? "生成中" : "AI生成"}
-          </button>
-        </label>
-      </div>
-    </section>
+    <QAWorkbench
+      ragChunks={ragChunks}
+      qaConfig={qaConfig}
+      backendStatus={backendStatus}
+      askQa={(body) => apiRequest("/qa", { method: "POST", body })}
+      searchLocal={searchChunks}
+      buildFallbackAnswer={buildLocalRagAnswer}
+    />
   );
 }
 
