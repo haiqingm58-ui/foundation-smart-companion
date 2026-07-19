@@ -88,6 +88,24 @@ def local_answer(question: str, sources: list[dict[str, Any]]) -> str:
     return f"根据《基础工程》知识库，{excerpt}\n\n参考位置：{top['heading']}。建议结合该章节的公式适用条件和例题继续核对。"
 
 
+def _chat_content(payload: Any) -> str | None:
+    if not isinstance(payload, dict):
+        return None
+    choices = payload.get("choices")
+    if not isinstance(choices, list) or not choices:
+        return None
+    first = choices[0]
+    if not isinstance(first, dict):
+        return None
+    message = first.get("message")
+    if not isinstance(message, dict):
+        return None
+    content = message.get("content")
+    if not isinstance(content, str) or not content.strip():
+        return None
+    return content.strip()
+
+
 def call_llm(settings: Settings, question: str, mode: str, sources: list[dict[str, Any]]) -> str | None:
     if not settings.llm_api_url or not settings.llm_api_key or not sources:
         return None
@@ -100,6 +118,7 @@ def call_llm(settings: Settings, question: str, mode: str, sources: list[dict[st
                 {"role": "user", "content": f"模式：{mode}\n问题：{question}\n\n资料：\n{context}"},
             ],
             "temperature": 0.2,
+            "stream": False,
         },
         ensure_ascii=False,
     ).encode("utf-8")
@@ -112,6 +131,6 @@ def call_llm(settings: Settings, question: str, mode: str, sources: list[dict[st
     try:
         with urllib.request.urlopen(request, timeout=25) as response:
             data = json.loads(response.read().decode("utf-8"))
-        return data.get("choices", [{}])[0].get("message", {}).get("content")
+        return _chat_content(data)
     except (urllib.error.URLError, TimeoutError, KeyError, json.JSONDecodeError):
         return None
