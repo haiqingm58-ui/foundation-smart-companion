@@ -1,27 +1,37 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, Request
+from typing import Literal
+
 from pydantic import BaseModel, Field
 
 from ..errors import APIError
-from ..services.rag import call_llm, local_answer, search
+from ..services.rag import call_llm, contextual_query, local_answer, search
 from .dependencies import AuthContext, current_auth
 
 
 router = APIRouter(tags=["qa"])
 
 
+class QaHistoryMessage(BaseModel):
+    role: Literal["user", "assistant"]
+    content: str = Field(min_length=1, max_length=2000)
+
+
 class QaInput(BaseModel):
     question: str = Field(min_length=2, max_length=1000)
     mode: str = Field(default="教材问答", pattern="^(教材问答|规范问答|学习辅导)$")
     useLlm: bool = True
+    history: list[QaHistoryMessage] = Field(default_factory=list, max_length=6)
 
 
 @router.post("/api/qa")
 def ask(body: QaInput, request: Request, _auth: AuthContext = Depends(current_auth)):
+    history = [item.model_dump() for item in body.history]
+    retrieval_query = contextual_query(body.question, history)
     with request.app.state.database.session() as session:
-        sources = search(session, body.question, body.mode, 5)
-    llm_answer = call_llm(request.app.state.settings, body.question, body.mode, sources) if body.useLlm else None
+        sources = search(session, retrieval_query, body.mode, 5)
+    llm_answer = call_llm(request.app.state.settings, body.question, body.mode, sources, history) if body.useLlm else None
     answer = llm_answer or local_answer(body.question, sources)
     citations = [
         {

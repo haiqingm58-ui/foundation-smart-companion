@@ -124,3 +124,30 @@ def test_rag_returns_ranked_citation_without_llm(student_context) -> None:
     assert data["usedLlm"] is False
     assert "桩侧阻力" in data["sources"][0]["heading"]
     assert "桩侧阻力" in data["answer"]
+
+
+def test_rag_accepts_six_history_messages_and_rejects_seven(student_context) -> None:
+    client, _database = student_context
+    history = [
+        {
+            "role": "user" if index % 2 == 0 else "assistant",
+            "content": f"第 {index + 1} 条消息",
+        }
+        for index in range(6)
+    ]
+    payload = {
+        "question": "它为什么变化？",
+        "mode": "教材问答",
+        "useLlm": True,
+        "history": history,
+    }
+
+    accepted = client.post("/api/qa", json=payload, headers={"X-CSRF-Token": "student-csrf"})
+    rejected = client.post(
+        "/api/qa",
+        json={**payload, "history": history + [{"role": "user", "content": "第 7 条消息"}]},
+        headers={"X-CSRF-Token": "student-csrf"},
+    )
+
+    assert accepted.status_code == 200
+    assert rejected.status_code == 422

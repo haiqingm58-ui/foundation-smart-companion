@@ -80,6 +80,27 @@ def search(session: Session, query: str, mode: str, limit: int = 5) -> list[dict
     return [{**row, "score": value} for value, row in ranked[:limit] if value > 0]
 
 
+def contextual_query(question: str, history: list[dict[str, str]] | None = None) -> str:
+    clean_question = re.sub(r"\s+", " ", question).strip()
+    if not history:
+        return clean_question
+    contextual_markers = ("它", "这个", "这些", "上述", "为什么", "再解释", "还有", "那")
+    needs_context = len(clean_question) <= 18 or any(marker in clean_question for marker in contextual_markers)
+    if not needs_context:
+        return clean_question
+    recent_user = next(
+        (
+            re.sub(r"\s+", " ", str(item.get("content") or "")).strip()
+            for item in reversed(history[-6:])
+            if item.get("role") == "user" and str(item.get("content") or "").strip()
+        ),
+        "",
+    )
+    if not recent_user or recent_user == clean_question:
+        return clean_question
+    return f"{recent_user} {clean_question}"[:1000]
+
+
 def local_answer(question: str, sources: list[dict[str, Any]]) -> str:
     if not sources:
         return "当前知识库没有检索到足够可靠的依据。建议更换关键词，或请指导老师补充相关教材与规范资料。"
@@ -106,16 +127,33 @@ def _chat_content(payload: Any) -> str | None:
     return content.strip()
 
 
-def call_llm(settings: Settings, question: str, mode: str, sources: list[dict[str, Any]]) -> str | None:
+def call_llm(
+    settings: Settings,
+    question: str,
+    mode: str,
+    sources: list[dict[str, Any]],
+    history: list[dict[str, str]] | None = None,
+) -> str | None:
     if not settings.llm_api_url or not settings.llm_api_key or not sources:
         return None
     context = "\n\n".join(f"[{index + 1}] {item['heading']}\n{item['text'][:900]}" for index, item in enumerate(sources))
+    role_labels = {"user": "学生", "assistant": "助教"}
+    history_lines = [
+        f"{role_labels[item['role']]}：{re.sub(r'\s+', ' ', item['content']).strip()[:800]}"
+        for item in (history or [])[-6:]
+        if item.get("role") in role_labels and isinstance(item.get("content"), str) and item["content"].strip()
+    ]
+    history_context = (
+        "\n\n对话上下文（仅用于理解指代，不作为知识依据）：\n" + "\n".join(history_lines)
+        if history_lines
+        else ""
+    )
     payload = json.dumps(
         {
             "model": settings.llm_model,
             "messages": [
                 {"role": "system", "content": "你是基础工程课程助教。只能依据给定资料回答，必须标注引用编号；资料不足时明确说明。"},
-                {"role": "user", "content": f"模式：{mode}\n问题：{question}\n\n资料：\n{context}"},
+                {"role": "user", "content": f"模式：{mode}\n问题：{question}{history_context}\n\n资料：\n{context}"},
             ],
             "temperature": 0.2,
             "stream": False,

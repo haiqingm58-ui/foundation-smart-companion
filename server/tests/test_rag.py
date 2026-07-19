@@ -5,7 +5,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 from server.application.config import Settings
-from server.application.services.rag import call_llm
+from server.application.services.rag import call_llm, contextual_query
 
 
 class FakeResponse:
@@ -47,7 +47,11 @@ def test_call_llm_parses_siliconflow_chat_completion(urlopen, tmp_path: Path) ->
         {"choices": [{"message": {"content": "  桩侧阻力由界面剪切发挥。[1]  "}}]}
     )
 
-    answer = call_llm(settings(tmp_path), "桩侧阻力如何发挥？", "教材问答", SOURCES)
+    history = [
+        {"role": "user", "content": "桩侧阻力如何产生？"},
+        {"role": "assistant", "content": "它由桩土界面剪切作用发挥。"},
+    ]
+    answer = call_llm(settings(tmp_path), "它受什么影响？", "教材问答", SOURCES, history)
 
     assert answer == "桩侧阻力由界面剪切发挥。[1]"
     request = urlopen.call_args.args[0]
@@ -56,6 +60,25 @@ def test_call_llm_parses_siliconflow_chat_completion(urlopen, tmp_path: Path) ->
     assert request.headers["Authorization"] == "Bearer test-key"
     assert payload["model"] == "THUDM/GLM-Z1-9B-0414"
     assert payload["stream"] is False
+    prompt = payload["messages"][1]["content"]
+    assert "对话上下文（仅用于理解指代，不作为知识依据）" in prompt
+    assert "学生：桩侧阻力如何产生？" in prompt
+    assert "助教：它由桩土界面剪切作用发挥。" in prompt
+
+
+def test_contextual_query_uses_recent_user_turn_for_short_follow_up() -> None:
+    history = [
+        {"role": "user", "content": "桩侧阻力如何产生？"},
+        {"role": "assistant", "content": "它由桩土界面剪切作用发挥。"},
+    ]
+
+    assert contextual_query("它受什么影响？", history) == "桩侧阻力如何产生？ 它受什么影响？"
+
+
+def test_contextual_query_keeps_standalone_question_unchanged() -> None:
+    question = "地基承载力特征值的主要影响因素有哪些？"
+
+    assert contextual_query(question, []) == question
 
 
 @patch("server.application.services.rag.urllib.request.urlopen")
