@@ -58,10 +58,12 @@ server/.venv/bin/python -m server.manage import-question-bank content/question-b
 未配置大模型时，问答仍会返回服务端 RAG 检索答案和引用。配置 OpenAI-compatible Chat Completions 接口后会生成基于召回片段的答案：
 
 ```bash
-FOUNDATION_LLM_API_URL=https://example.com/v1/chat/completions
-FOUNDATION_LLM_API_KEY=your-api-key
-FOUNDATION_LLM_MODEL=your-model
+FOUNDATION_LLM_API_URL=https://api.siliconflow.cn/v1/chat/completions
+FOUNDATION_LLM_API_KEY=your-server-only-api-key
+FOUNDATION_LLM_MODEL=THUDM/GLM-Z1-9B-0414
 ```
+
+真实密钥只保存在服务器的 `/etc/foundation-smart-companion.env`，文件权限为 `600`，不得写入前端、仓库或日志。免费模型和速率限制可能调整，切换模型前请以 [SiliconFlow 官方价格页](https://siliconflow.cn/pricing) 为准。
 
 ## 验证与部署
 
