@@ -46,11 +46,11 @@ afterEach(() => {
 });
 
 describe("QAWorkbench", () => {
-  test("starts with a concise welcome state and connected status", () => {
+  test("starts with a concise welcome state and connected service status", () => {
     renderWorkbench();
 
     expect(screen.getByRole("heading", { name: "智能问答" })).toBeInTheDocument();
-    expect(screen.getByText("大模型已连接")).toBeInTheDocument();
+    expect(screen.getByText("问答服务已连接")).toBeInTheDocument();
     expect(screen.getByText("可以从这些问题开始")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "桩侧阻力是如何发挥的？" })).toBeInTheDocument();
     expect(screen.getByRole("complementary", { name: "回答依据" })).toHaveTextContent("回答后将在这里显示教材与规范依据");
@@ -66,6 +66,7 @@ describe("QAWorkbench", () => {
     fireEvent.change(screen.getByLabelText("输入问题"), { target: { value: "桩侧阻力如何产生？" } });
     fireEvent.click(screen.getByRole("button", { name: "发送问题" }));
     expect(await screen.findByText("第一轮回答 [1]")).toBeInTheDocument();
+    expect(screen.getByText("大模型已连接")).toBeInTheDocument();
     expect(screen.getByRole("complementary", { name: "回答依据" })).toHaveTextContent("桩侧阻力由桩土界面的剪切作用发挥");
 
     fireEvent.change(screen.getByLabelText("输入问题"), { target: { value: "它受什么影响？" } });

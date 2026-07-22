@@ -14,6 +14,8 @@ import {
   UserRound,
 } from "lucide-react";
 
+import "./QAWorkbench.css";
+
 
 const MODES = ["教材问答", "规范问答", "学习辅导"];
 
@@ -101,7 +103,7 @@ export default function QAWorkbench({
   const [activeMessageId, setActiveMessageId] = useState(null);
   const [expandedSources, setExpandedSources] = useState(() => new Set());
   const [copiedMessageId, setCopiedMessageId] = useState(null);
-  const [llmAvailable, setLlmAvailable] = useState(backendStatus === "online");
+  const [llmAvailable, setLlmAvailable] = useState(null);
   const sequence = useRef(0);
   const transcriptRef = useRef(null);
 
@@ -109,7 +111,15 @@ export default function QAWorkbench({
   const assistantMessages = useMemo(() => messages.filter((message) => message.role === "assistant"), [messages]);
   const activeMessage = assistantMessages.find((message) => message.id === activeMessageId) || assistantMessages.at(-1) || null;
   const activeSources = activeMessage?.sources ?? [];
-  const connectionLabel = backendStatus !== "online" ? "本地检索可用" : llmAvailable ? "大模型已连接" : "RAG 检索模式";
+  const connectionLabel = backendStatus === "checking"
+    ? "正在连接问答服务"
+    : backendStatus !== "online"
+      ? "本地检索可用"
+      : llmAvailable === true
+        ? "大模型已连接"
+        : llmAvailable === false
+          ? "RAG 检索模式"
+          : "问答服务已连接";
 
   useEffect(() => {
     if (!transcriptRef.current) return;

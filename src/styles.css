@@ -2992,7 +2992,6 @@ textarea:focus-visible,
 .practiceSummary article,
 .questionCard,
 .scorePanel,
-.qaShell,
 .graphCanvas {
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -3139,7 +3138,6 @@ textarea:focus-visible,
 .caseCard button,
 .resourceRow button,
 .questionCard button,
-.askBox button,
 .clearAnswerButton,
 .inlineActionButton {
   min-height: 38px;
@@ -3882,11 +3880,6 @@ textarea:focus-visible,
   line-height: 1.6;
 }
 
-.qaShell {
-  max-width: 860px;
-  overflow: hidden;
-}
-
 .segmented {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -3909,139 +3902,6 @@ textarea:focus-visible,
   color: var(--blue);
   font-weight: 800;
   box-shadow: 0 8px 18px rgba(18, 32, 51, 0.08);
-}
-
-.chatArea {
-  display: grid;
-  gap: 16px;
-  padding: 28px;
-}
-
-.bubble {
-  max-width: 78%;
-  border-radius: 8px;
-  padding: 16px 18px;
-}
-
-.bubble.user {
-  justify-self: end;
-  background: #eef6ff;
-  color: #16345f;
-}
-
-.bubble.assistant {
-  display: flex;
-  gap: 12px;
-  background: #f7f9fc;
-  color: #27364a;
-}
-
-.bubble p {
-  margin: 0;
-  line-height: 1.7;
-  white-space: pre-line;
-}
-
-.bubble span {
-  display: block;
-  margin-top: 10px;
-  color: #667085;
-  font-size: 13px;
-}
-
-.sourceList {
-  display: grid;
-  gap: 10px;
-}
-
-.ragFlow {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 8px;
-  border: 1px solid #d7e8ff;
-  border-radius: 8px;
-  background: #f8fbff;
-  padding: 10px;
-}
-
-.ragFlow span {
-  display: inline-flex;
-  min-height: 34px;
-  align-items: center;
-  justify-content: center;
-  gap: 7px;
-  border-radius: 8px;
-  background: white;
-  color: #344054;
-  font-size: 12px;
-  font-weight: 900;
-}
-
-.ragFlow em {
-  display: inline-grid;
-  width: 20px;
-  height: 20px;
-  place-items: center;
-  border-radius: 999px;
-  background: var(--blue);
-  color: white;
-  font-size: 11px;
-  font-style: normal;
-}
-
-.sourceItem {
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: white;
-  padding: 14px 16px;
-}
-
-.sourceItem strong {
-  display: block;
-  color: #101828;
-  font-size: 14px;
-  line-height: 1.45;
-}
-
-.sourceItem p {
-  margin: 7px 0;
-  color: #526174;
-  font-size: 13px;
-  line-height: 1.6;
-}
-
-.sourceItem span {
-  color: var(--blue);
-  font-size: 12px;
-  font-weight: 800;
-}
-
-.askBox {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  border-top: 1px solid var(--line);
-  padding: 16px;
-}
-
-.askBox input {
-  flex: 1;
-  min-width: 260px;
-  min-height: 40px;
-  border: 1px solid #d7e0ec;
-  border-radius: 8px;
-  outline: 0;
-  padding: 0 14px;
-}
-
-.askBox .secondaryAskButton {
-  background: #eef6ff;
-  color: var(--blue);
-}
-
-.askBox button:disabled {
-  cursor: wait;
-  opacity: 0.72;
 }
 
 .caseGrid,
@@ -5661,8 +5521,7 @@ textarea:focus-visible,
   .knowledgeStats,
   .globalSearchGroups,
   .sideStack,
-  .practiceLayout,
-  .ragFlow {
+  .practiceLayout {
     grid-template-columns: 1fr;
   }
 
