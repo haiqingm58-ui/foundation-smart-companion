@@ -138,11 +138,14 @@ def call_llm(
         return None
     context = "\n\n".join(f"[{index + 1}] {item['heading']}\n{item['text'][:900]}" for index, item in enumerate(sources))
     role_labels = {"user": "学生", "assistant": "助教"}
-    history_lines = [
-        f"{role_labels[item['role']]}：{re.sub(r'\s+', ' ', item['content']).strip()[:800]}"
-        for item in (history or [])[-6:]
-        if item.get("role") in role_labels and isinstance(item.get("content"), str) and item["content"].strip()
-    ]
+    history_lines: list[str] = []
+    for item in (history or [])[-6:]:
+        role = item.get("role")
+        content = item.get("content")
+        if role not in role_labels or not isinstance(content, str) or not content.strip():
+            continue
+        normalized_content = re.sub(r"\s+", " ", content).strip()[:800]
+        history_lines.append(f"{role_labels[role]}：{normalized_content}")
     history_context = (
         "\n\n对话上下文（仅用于理解指代，不作为知识依据）：\n" + "\n".join(history_lines)
         if history_lines
